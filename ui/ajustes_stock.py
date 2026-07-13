@@ -11,10 +11,9 @@ from PyQt6.QtGui import QColor
 
 from db.conexion import limpiar_presupuestos_vencidos
 
-COLOR_PRIMARY = "#2563eb"
-COLOR_BG = "#f8fafc"
-COLOR_TEXT_MAIN = "#1e293b"
-COLOR_BORDER = "#e2e8f0"
+from ui.theme import (
+    COLOR_PRIMARY, COLOR_BG, COLOR_TEXT_MAIN, COLOR_BORDER
+)
 
 
 class DialogoConfiguracionGeneral(QDialog):

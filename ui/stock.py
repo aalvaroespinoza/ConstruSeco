@@ -21,16 +21,10 @@ from ui.ajustes_stock import (
 )
 from PyQt6.QtCore import QSettings
 
-# Colores de Tema
-COLOR_PRIMARY = "#2563eb"
-COLOR_BG = "#f8fafc"
-COLOR_CARD_BG = "#ffffff"
-COLOR_TEXT_MAIN = "#1e293b"
-COLOR_TEXT_SEC = "#64748b"
-COLOR_BORDER = "#e2e8f0"
-COLOR_SUCCESS = "#10b981"
-COLOR_WARNING = "#f59e0b"
-COLOR_DANGER = "#ef4444"
+from ui.theme import (
+    COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG, COLOR_TEXT_MAIN,
+    COLOR_TEXT_SEC, COLOR_BORDER, COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER
+)
 
 
 from PyQt6.QtCore import pyqtSignal

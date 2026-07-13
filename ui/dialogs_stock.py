@@ -17,13 +17,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ASSETS_PROD_DIR = BASE_DIR / "assets" / "productos"
 ASSETS_PROD_DIR.mkdir(parents=True, exist_ok=True)
 
-# Estilos reutilizados de stock.py
-COLOR_PRIMARY = "#2563eb"
-COLOR_BG = "#f8fafc"
-COLOR_CARD_BG = "#ffffff"
-COLOR_BORDER = "#e2e8f0"
-COLOR_TEXT_MAIN = "#1e293b"
-COLOR_DANGER = "#ef4444"
+from ui.theme import (
+    COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG,
+    COLOR_BORDER, COLOR_TEXT_MAIN, COLOR_DANGER
+)
 
 
 def migrar_esquema_stock(conn):

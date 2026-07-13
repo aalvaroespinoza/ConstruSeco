@@ -14,13 +14,10 @@ from PyQt6.QtGui import QColor
 
 from db.queries import obtener_stocks_todos
 
-COLOR_PRIMARY = "#2563eb"
-COLOR_BG = "#f8fafc"
-COLOR_CARD_BG = "#ffffff"
-COLOR_BORDER = "#e2e8f0"
-COLOR_TEXT_MAIN = "#1e293b"
-COLOR_SUCCESS = "#10b981"
-COLOR_DANGER = "#ef4444"
+from ui.theme import (
+    COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG,
+    COLOR_BORDER, COLOR_TEXT_MAIN, COLOR_SUCCESS, COLOR_DANGER
+)
 
 
 def normalizar_unidad(u: str) -> str:
