@@ -13,6 +13,8 @@ Reglas arquitectónicas:
 """
 import re
 
+from ui.modal import DialogoModalIntegrado
+from ui.modal import ModalOverlay, ModalResult
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QComboBox, QFrame, QMessageBox, QWidget
@@ -53,31 +55,6 @@ _INPUT_ERROR = (
     f"padding: 7px 10px; background-color: #fff5f5; "
     f"color: {COLOR_TEXT_MAIN}; font-size: 13px;"
 )
-_COMBO_NORMAL = (
-    f"QComboBox {{ border: 1px solid {COLOR_BORDER}; border-radius: 6px; "
-    f"padding: 6px 10px; background-color: {COLOR_CARD_BG}; "
-    f"color: {COLOR_TEXT_MAIN}; font-size: 13px; }}\n"
-    f"QComboBox QAbstractItemView {{ "
-    f"background-color: {COLOR_CARD_BG}; "
-    f"border: 1px solid {COLOR_BORDER}; "
-    f"border-radius: 4px; "
-    f"selection-background-color: #ebf5ff; "
-    f"selection-color: {COLOR_TEXT_MAIN}; "
-    f"outline: none; "
-    f"}}\n"
-    f"QComboBox QAbstractItemView::item {{ "
-    f"padding: 8px 10px; "
-    f"}}\n"
-    f"QComboBox QAbstractItemView::item:selected {{ "
-    f"background-color: #ebf5ff; "
-    f"color: {COLOR_TEXT_MAIN}; "
-    f"}}\n"
-    f"QComboBox QAbstractItemView::item:hover {{ "
-    f"background-color: #ebf5ff; "
-    f"color: {COLOR_TEXT_MAIN}; "
-    f"}}"
-)
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # COMPONENTES INTERNOS
@@ -117,8 +94,9 @@ class _CampoFormulario(QFrame):
             widget.setStyleSheet(_INPUT_NORMAL)
             widget.setMinimumHeight(36)
         elif isinstance(widget, QComboBox):
-            widget.setStyleSheet(_COMBO_NORMAL)
             widget.setMinimumHeight(36)
+            # No aplicamos estilos manuales ni vistas, usamos el QComboBox nativo 
+            # para que herede exactamente el mismo estilo global que el combobox de Unidad en Stock
 
         # Error label (oculto por defecto)
         self._lbl_error = QLabel("")
@@ -171,7 +149,7 @@ def _separador_seccion(titulo: str) -> QFrame:
 # DIÁLOGO PRINCIPAL
 # ══════════════════════════════════════════════════════════════════════════════
 
-class DialogoFormularioCliente(QFrame):
+class DialogoFormularioCliente(DialogoModalIntegrado):
     """
     Formulario compartido para crear o editar un cliente, ahora integrado como QFrame.
 
@@ -298,6 +276,7 @@ class DialogoFormularioCliente(QFrame):
 
         combo_iva = QComboBox()
         combo_iva.addItems(CONDICIONES_IVA)
+
         campo_iva = _CampoFormulario("Condición IVA", combo_iva)
         self._campos["condicion_iva"] = campo_iva
         ly.addWidget(campo_iva)
@@ -510,11 +489,3 @@ class DialogoFormularioCliente(QFrame):
 
     def set_modal_parent(self, modal):
         self._modal_parent = modal
-
-    def accept(self):
-        if self._modal_parent:
-            self._modal_parent.accept()
-
-    def reject(self):
-        if self._modal_parent:
-            self._modal_parent.reject()

@@ -1,3 +1,4 @@
+from ui.modal import DialogoModalIntegrado
 import sqlite3
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -128,7 +129,7 @@ def exportar_inventario_excel(conn, parent_window):
         QMessageBox.critical(parent_window, "Error", f"No se pudo exportar el inventario: {e}")
 
 
-class DialogoImportarExcel(QDialog):
+class DialogoImportarExcel(DialogoModalIntegrado):
     def __init__(self, conexion_db, parent=None):
         super().__init__(parent)
         self.conn = conexion_db

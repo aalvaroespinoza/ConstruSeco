@@ -1,5 +1,13 @@
 import sqlite3
 import os
+import unicodedata
+
+def normalizar_texto_busqueda(valor) -> str:
+    if valor is None:
+        return ""
+    texto = str(valor).strip().casefold()
+    texto = unicodedata.normalize('NFD', texto)
+    return ''.join(c for c in texto if unicodedata.category(c) != 'Mn')
 
 def obtener_conexion():
     """
@@ -14,6 +22,9 @@ def obtener_conexion():
     # Evita que se elimine un producto si tiene movimientos de stock o facturas asociadas.
     conn.execute("PRAGMA foreign_keys = ON;")
     conn.execute("PRAGMA busy_timeout = 5000;")
+    
+    # Registrar función de normalización de búsquedas para SQLite
+    conn.create_function("NORMALIZAR", 1, normalizar_texto_busqueda)
     
     return conn
 

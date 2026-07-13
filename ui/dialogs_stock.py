@@ -11,6 +11,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QCursor
 
 from db.queries import UNIDADES_PERMITIDAS
+from ui.modal import DialogoModalIntegrado
 
 # Rutas
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -164,7 +165,7 @@ class ImageSelectorWidget(QFrame):
 # =====================================================================
 
 
-class DialogoAgregarProducto(QDialog):
+class DialogoAgregarProducto(DialogoModalIntegrado):
     def __init__(self, conexion_db, parent=None):
         super().__init__(parent)
         self.conn = conexion_db
@@ -452,7 +453,7 @@ class DialogoAgregarProducto(QDialog):
                 QMessageBox.critical(self, "Error", str(e))
 
 
-class DialogoEditarProducto(QDialog):
+class DialogoEditarProducto(DialogoModalIntegrado):
     def __init__(self, conexion_db, producto_data, parent=None):
         super().__init__(parent)
         self.conn = conexion_db
@@ -592,7 +593,7 @@ class DialogoEditarProducto(QDialog):
             QMessageBox.critical(self, "Error", str(e))
 
 
-class DialogoStockMinimo(QDialog):
+class DialogoStockMinimo(DialogoModalIntegrado):
     def __init__(self, conexion_db, producto_data, parent=None):
         super().__init__(parent)
         self.conn = conexion_db
@@ -611,6 +612,7 @@ class DialogoStockMinimo(QDialog):
         layout.addLayout(form)
         
         btn = QPushButton("Guardar")
+        btn.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 4px; font-weight: bold;")
         btn.clicked.connect(self.guardar)
         layout.addWidget(btn)
         
@@ -635,7 +637,7 @@ class DialogoStockMinimo(QDialog):
 # DIÁLOGOS DE MOVIMIENTOS E INVENTARIO
 # =====================================================================
 
-class DialogoEntradaStock(QDialog):
+class DialogoEntradaStock(DialogoModalIntegrado):
     def __init__(self, conexion_db, producto_data, parent=None):
         super().__init__(parent)
         self.conn = conexion_db
@@ -705,7 +707,7 @@ class DialogoEntradaStock(QDialog):
             QMessageBox.critical(self, "Error", str(e))
 
 
-class DialogoAjusteInventario(QDialog):
+class DialogoAjusteInventario(DialogoModalIntegrado):
     """
     Ajuste ciego o inventariado. El usuario ingresa cuánto HAY realmente,
     el sistema calcula la diferencia y genera el movimiento para igualar.
@@ -813,7 +815,7 @@ class DialogoAjusteInventario(QDialog):
             self.conn.rollback()
             QMessageBox.critical(self, "Error", str(e))
 
-class DialogoAlertasInventario(QDialog):
+class DialogoAlertasInventario(DialogoModalIntegrado):
     def __init__(self, datos_catalogo, callback_seleccionar, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Alertas de Inventario")
@@ -1036,7 +1038,7 @@ class VistaDetalleProducto(QFrame):
         
         card_layout.addWidget(frame_det)
         
-        main_layout.addWidget(self.card)
+        main_layout.addWidget(self.card, alignment=Qt.AlignmentFlag.AlignCenter)
         
     def eventFilter(self, obj, event):
         if obj == self.parent_widget and event.type() == event.Type.Resize:

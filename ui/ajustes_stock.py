@@ -1,3 +1,4 @@
+from ui.modal import DialogoModalIntegrado
 import sqlite3
 from datetime import datetime
 
@@ -16,7 +17,7 @@ from ui.theme import (
 )
 
 
-class DialogoConfiguracionGeneral(QDialog):
+class DialogoConfiguracionGeneral(DialogoModalIntegrado):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Configuración General de Stock")
@@ -74,12 +75,12 @@ class DialogoConfiguracionGeneral(QDialog):
         self.accept()
 
 
-class DialogoHistorialMovimientos(QDialog):
+class DialogoHistorialMovimientos(DialogoModalIntegrado):
     def __init__(self, conexion_db, parent=None):
         super().__init__(parent)
         self.conn = conexion_db
         self.setWindowTitle("Historial de Movimientos de Stock")
-        self.resize(800, 500)
+        self.setMinimumSize(1050, 650)
         self.init_ui()
         self.cargar_datos()
 
@@ -160,7 +161,7 @@ class DialogoHistorialMovimientos(QDialog):
             self.tabla.setItem(i, 5, QTableWidgetItem(info_doc))
 
 
-class DialogoVisualizacionInventario(QDialog):
+class DialogoVisualizacionInventario(DialogoModalIntegrado):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Opciones de Visualización")

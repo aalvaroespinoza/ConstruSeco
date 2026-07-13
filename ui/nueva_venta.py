@@ -714,9 +714,8 @@ class PestanaNuevaVenta(QWidget):
         layout_principal.addWidget(self.splitter_operacion, stretch=1)
 
     def modal_nuevo_cliente(self):
-        formulario = DialogoFormularioCliente(self.conn)
-        modal = ModalOverlay(self, formulario)
-        if modal.exec() == ModalResult.Accepted and formulario.id_guardado is not None:
+        formulario = DialogoFormularioCliente(self.conn, parent=self)
+        if formulario.exec() == QDialog.DialogCode.Accepted and formulario.id_guardado is not None:
             id_nuevo = formulario.id_guardado
             try:
                 # Actualizar el listado en memoria

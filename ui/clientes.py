@@ -18,7 +18,8 @@ Reglas arquitectónicas:
   - dialogs_clientes importa solo de db/ y ui/theme.py → seguro importar aquí
 """
 
-from PyQt6.QtWidgets import (
+from PyQt6.QtWidgets import ( QDialog,
+
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QFrame, QTableWidget, QTableWidgetItem, QHeaderView,
     QAbstractItemView, QSplitter, QScrollArea, QComboBox,
@@ -870,6 +871,8 @@ class PestanaClientes(QWidget):
         ly.setContentsMargins(12, 10, 12, 10)
         ly.setSpacing(16)
         
+
+
         # Estado
         ly_estado = QVBoxLayout()
         ly_estado.setSpacing(4)
@@ -877,6 +880,7 @@ class PestanaClientes(QWidget):
         lbl_est.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 11px; font-weight: bold;")
         self._cb_f_estado = QComboBox()
         self._cb_f_estado.addItems(["TODOS", "ACTIVOS", "INACTIVOS"])
+        self._cb_f_estado.currentIndexChanged.connect(self._aplicar_filtros_desde_ui)
         ly_estado.addWidget(lbl_est)
         ly_estado.addWidget(self._cb_f_estado)
         ly.addLayout(ly_estado)
@@ -888,6 +892,7 @@ class PestanaClientes(QWidget):
         lbl_comp.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 11px; font-weight: bold;")
         self._cb_f_compras = QComboBox()
         self._cb_f_compras.addItems(["TODOS", "SI", "NO"])
+        self._cb_f_compras.currentIndexChanged.connect(self._aplicar_filtros_desde_ui)
         ly_compras.addWidget(lbl_comp)
         ly_compras.addWidget(self._cb_f_compras)
         ly.addLayout(ly_compras)
@@ -899,6 +904,7 @@ class PestanaClientes(QWidget):
         lbl_iva.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 11px; font-weight: bold;")
         self._cb_f_iva = QComboBox()
         self._cb_f_iva.addItems(["TODAS", "Consumidor Final", "Responsable Inscripto", "Monotributista", "Exento", "No Responsable"])
+        self._cb_f_iva.currentIndexChanged.connect(self._aplicar_filtros_desde_ui)
         ly_iva.addWidget(lbl_iva)
         ly_iva.addWidget(self._cb_f_iva)
         ly.addLayout(ly_iva)
@@ -910,6 +916,7 @@ class PestanaClientes(QWidget):
         lbl_loc.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 11px; font-weight: bold;")
         self._cb_f_loc = QComboBox()
         self._cb_f_loc.addItem("TODAS")
+        self._cb_f_loc.currentIndexChanged.connect(self._aplicar_filtros_desde_ui)
         # Se poblará luego
         ly_loc.addWidget(lbl_loc)
         ly_loc.addWidget(self._cb_f_loc)
@@ -927,12 +934,7 @@ class PestanaClientes(QWidget):
         self._btn_limpiar_filtros.setProperty("class", "secundario")
         self._btn_limpiar_filtros.clicked.connect(self._limpiar_filtros)
         
-        self._btn_aplicar_filtros = QPushButton("Aplicar filtros")
-        self._btn_aplicar_filtros.setProperty("class", "primario")
-        self._btn_aplicar_filtros.clicked.connect(self._aplicar_filtros_desde_ui)
-        
         ly_btns_h.addWidget(self._btn_limpiar_filtros)
-        ly_btns_h.addWidget(self._btn_aplicar_filtros)
         ly_btns.addLayout(ly_btns_h)
         ly.addLayout(ly_btns)
 
@@ -948,14 +950,16 @@ class PestanaClientes(QWidget):
             ciudades = qc.obtener_ciudades(self.conn)
             ciudades = ["TODAS"] + ciudades
             if set(actuales) != set(ciudades):
+                self._cb_f_loc.blockSignals(True)
                 self._cb_f_loc.clear()
                 self._cb_f_loc.addItems(ciudades)
+                self._cb_f_loc.blockSignals(False)
 
     def _limpiar_filtros(self):
-        self._cb_f_estado.setCurrentIndex(0)
-        self._cb_f_compras.setCurrentIndex(0)
-        self._cb_f_iva.setCurrentIndex(0)
-        self._cb_f_loc.setCurrentIndex(0)
+        for cb in (self._cb_f_estado, self._cb_f_compras, self._cb_f_iva, self._cb_f_loc):
+            cb.blockSignals(True)
+            cb.setCurrentIndex(0)
+            cb.blockSignals(False)
         self._aplicar_filtros_desde_ui()
 
     def _aplicar_filtros_desde_ui(self):
@@ -1294,10 +1298,8 @@ class PestanaClientes(QWidget):
 
     def _on_nuevo_cliente(self):
         from ui.dialogs_clientes import DialogoFormularioCliente
-        formulario = DialogoFormularioCliente(self.conn)
-        modal = ModalOverlay(self, formulario)
-        
-        if modal.exec() == ModalResult.Accepted and formulario.id_guardado is not None:
+        formulario = DialogoFormularioCliente(self.conn, parent=self)
+        if formulario.exec() == QDialog.DialogCode.Accepted and formulario.id_guardado is not None:
             nuevo_id = formulario.id_guardado
             # Ir a la primera página para que sea visible
             self._pagina_actual = 1
@@ -1316,10 +1318,8 @@ class PestanaClientes(QWidget):
 
     def _on_editar_cliente(self, id_cliente: int):
         from ui.dialogs_clientes import DialogoFormularioCliente
-        formulario = DialogoFormularioCliente(self.conn, id_cliente=id_cliente)
-        modal = ModalOverlay(self, formulario)
-        
-        if modal.exec() == ModalResult.Accepted and formulario.id_guardado is not None:
+        formulario = DialogoFormularioCliente(self.conn, id_cliente=id_cliente, parent=self)
+        if formulario.exec() == QDialog.DialogCode.Accepted and formulario.id_guardado is not None:
             self._id_cliente_seleccionado = id_cliente
             self.recargar()
             # Actualizar panel lateral con nuevos datos

@@ -15,7 +15,82 @@ class ModalResult:
     Rejected = 0
     Accepted = 1
 
+class DialogoModalIntegrado(QFrame):
+    """
+    Clase base para formularios modales que reemplaza a QDialog.
+    Proporciona un contenedor estilizado y maneja su propio exec()
+    para renderizarse dentro de un ModalOverlay sin romper el contrato
+    funcional de QDialog.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._modal_parent = None
+        self._titulo_inyectado = False
+        
+        from ui.theme import COLOR_CARD_BG, COLOR_BORDER
+        self.setObjectName("dialogo_modal_card")
+        self.setStyleSheet(f"""
+            QFrame#dialogo_modal_card {{
+                background-color: {COLOR_CARD_BG};
+                border-radius: 12px;
+                border: 1px solid {COLOR_BORDER};
+            }}
+        """)
+        
+    def exec(self):
+        # Inyectar título si existe
+        ly = self.layout()
+        if ly:
+            ly.setContentsMargins(24, 24, 24, 24)
+            
+        if ly and self.windowTitle() and not self._titulo_inyectado:
+            from PyQt6.QtWidgets import QLabel, QPushButton, QHBoxLayout, QWidget
+            from PyQt6.QtCore import Qt
+            from ui.theme import COLOR_TEXT_MAIN, COLOR_BORDER
+            
+            header_widget = QWidget()
+            header_layout = QHBoxLayout(header_widget)
+            header_layout.setContentsMargins(0, 0, 0, 12)
+            
+            lbl_title = QLabel(self.windowTitle())
+            lbl_title.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {COLOR_TEXT_MAIN};")
+            
+            btn_close = QPushButton("✕")
+            btn_close.setFixedSize(24, 24)
+            btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_close.setStyleSheet(f"border: none; font-size: 16px; font-weight: bold; color: #94a3b8;")
+            btn_close.clicked.connect(self.reject)
+            
+            header_layout.addWidget(lbl_title)
+            header_layout.addStretch()
+            header_layout.addWidget(btn_close)
+            
+            header_widget.setStyleSheet(f"border-bottom: 1px solid {COLOR_BORDER}; margin-bottom: 12px;")
+            
+            ly.insertWidget(0, header_widget)
+            self._titulo_inyectado = True
+            
+        modal = ModalOverlay(self.parent(), self)
+        res = modal.exec()
+        
+        from PyQt6.QtWidgets import QDialog
+        if res == ModalResult.Accepted:
+            return QDialog.DialogCode.Accepted
+        return QDialog.DialogCode.Rejected
+        
+    def set_modal_parent(self, modal):
+        self._modal_parent = modal
+        
+    def accept(self):
+        if self._modal_parent:
+            self._modal_parent.accept()
+            
+    def reject(self):
+        if self._modal_parent:
+            self._modal_parent.reject()
+
 class ModalOverlay(QFrame):
+
     """
     Overlay reutilizable que oscurece el fondo y bloquea la interacción.
     Puede ejecutar un QEventLoop local para emular el comportamiento de QDialog.exec().
@@ -43,7 +118,6 @@ class ModalOverlay(QFrame):
         self.parent_widget.installEventFilter(self)
         
         main_layout = QVBoxLayout(self)
-        main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # Contenedor del contenido (la "tarjeta" blanca)
         self.card = QFrame()
@@ -63,7 +137,7 @@ class ModalOverlay(QFrame):
         if hasattr(content_widget, 'set_modal_parent'):
             content_widget.set_modal_parent(self)
             
-        main_layout.addWidget(self.card)
+        main_layout.addWidget(self.card, alignment=Qt.AlignmentFlag.AlignCenter)
         
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         if obj == self.parent_widget and event.type() == QEvent.Type.Resize:

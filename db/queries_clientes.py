@@ -104,10 +104,13 @@ def obtener_clientes(
         orden = "nombre_completo"
 
     c = conn.cursor()
-    patron = f"%{filtro}%"
+    from db.conexion import normalizar_texto_busqueda
+    patron_normalizado = f"%{normalizar_texto_busqueda(filtro)}%"
 
-    clausulas_where = ["(c.nombre_completo LIKE ? OR c.cuit_dni LIKE ?)"]
-    params = [patron, patron]
+    clausulas_where = [
+        "(NORMALIZAR(c.nombre_completo) LIKE ? OR NORMALIZAR(c.cuit_dni) LIKE ? OR NORMALIZAR(c.telefono) LIKE ? OR NORMALIZAR(c.email) LIKE ? OR NORMALIZAR(c.ciudad) LIKE ? OR NORMALIZAR(c.direccion) LIKE ? OR NORMALIZAR(c.condicion_iva) LIKE ? OR EXISTS (SELECT 1 FROM notas_cliente n WHERE n.id_cliente = c.id_cliente AND NORMALIZAR(n.contenido) LIKE ?))"
+    ]
+    params = [patron_normalizado] * 8
 
     if estado == "ACTIVOS":
         clausulas_where.append("c.activo = 1")

@@ -150,7 +150,6 @@ class PestanaStock(QWidget):
         self.conn = conexion_db
         migrar_esquema_stock(self.conn)
         self.datos_catalogo = []
-        self.codigo_producto_resaltado = None
         self.init_ui()
         self.cargar_datos()
 
@@ -443,6 +442,25 @@ class PestanaStock(QWidget):
         """)
         self.tabla.cellDoubleClicked.connect(self.on_tabla_double_click)
         
+        # Implementar toggle de selección limpio y seguro
+        _original_mouse_press = self.tabla.mousePressEvent
+        def _custom_mouse_press(event):
+            idx = self.tabla.indexAt(event.pos())
+            if idx.isValid() and event.button() == Qt.MouseButton.LeftButton:
+                # Evitar interferir con la columna de Acciones
+                if idx.column() == 9:
+                    _original_mouse_press(event)
+                    return
+                    
+                selected_rows = [r.row() for r in self.tabla.selectionModel().selectedRows()]
+                if idx.row() in selected_rows:
+                    self.tabla.clearSelection()
+                    self.tabla.setCurrentItem(None)
+                    event.accept()
+                    return
+            _original_mouse_press(event)
+        self.tabla.mousePressEvent = _custom_mouse_press
+        
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Producto/Descripcion
@@ -634,17 +652,7 @@ class PestanaStock(QWidget):
                 item_disp.setBackground(bg_disp)
                 item_disp.setForeground(QColor(color_estado))
                 
-            if getattr(self, "codigo_producto_resaltado", None) == p["codigo"]:
-                brush = QBrush(QColor("#dbeafe"))
-                item_prod.setBackground(brush)
-                item_cod.setBackground(brush)
-                item_uni.setBackground(brush)
-                item_fis.setBackground(brush)
-                item_comp.setBackground(brush)
-                item_min.setBackground(brush)
-                item_precio.setBackground(brush)
-                item_est.setBackground(brush)
-                item_disp.setBackground(brush)
+
                 
             self.tabla.setItem(i, 0, item_cod)
             self.tabla.setItem(i, 1, item_prod)
@@ -713,9 +721,7 @@ class PestanaStock(QWidget):
             l_acc.addWidget(btn_acc)
             self.tabla.setCellWidget(i, 9, w_acc)
             
-            if getattr(self, "codigo_producto_resaltado", None) == p["codigo"]:
-                w_acc.setStyleSheet("background-color: #dbeafe;")
-            
+
             self.tabla.setRowHeight(i, 46)
 
     def reactivar_producto(self, prod):
@@ -771,32 +777,25 @@ class PestanaStock(QWidget):
             self.combo_estado.setCurrentIndex(3)
             
     def limpiar_resaltado(self):
-        """Limpia el resaltado de producto actual y recarga la tabla para restaurar fondos."""
-        if self.codigo_producto_resaltado:
-            self.codigo_producto_resaltado = None
-            self.aplicar_filtros()
+        """Limpia la selección actual de la tabla."""
+        self.tabla.clearSelection()
+        self.tabla.setCurrentItem(None)
 
     def resaltar_producto_por_codigo(self, codigo):
         codigo = str(codigo).strip()
-        self.codigo_producto_resaltado = codigo
         
         # Limpiar filtros si es necesario para asegurar visibilidad
-        changed = False
+        # Esto automáticamente dispara aplicar_filtros() por las señales
         if self.combo_estado.currentIndex() != 0:
             self.combo_estado.setCurrentIndex(0)
-            changed = True
         if self.input_buscar.text() != "":
             self.input_buscar.setText("")
-            changed = True
             
-        if not changed:
-            # Forzamos la recarga si no hubo cambios de filtros
-            self.aplicar_filtros()
-            
-        # Hacer scroll hasta la fila
+        # Hacer scroll hasta la fila y SELECCIONAR NATIVAMENTE
         for row in range(self.tabla.rowCount()):
             item_cod = self.tabla.item(row, 0)
             if item_cod and item_cod.text() == codigo:
+                self.tabla.selectRow(row)
                 self.tabla.scrollToItem(item_cod, QAbstractItemView.ScrollHint.PositionAtCenter)
                 break
                 
