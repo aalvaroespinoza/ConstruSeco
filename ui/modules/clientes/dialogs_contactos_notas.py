@@ -31,9 +31,9 @@ class DialogoNota(DialogoModalIntegrado):
         self.hubo_cambios = False
 
         self.setWindowTitle("Editar Nota" if self.modo_edicion else "Nueva Nota")
-        self.setMinimumWidth(400)
-        self.setModal(True)
-        self.setStyleSheet(f"QDialog {{ background-color: {COLOR_CARD_BG}; }}")
+        self.setMinimumWidth(600)
+        self.setMinimumHeight(400)
+        
 
         self._construir_ui()
         if self.modo_edicion:
@@ -120,8 +120,7 @@ class DialogoContacto(DialogoModalIntegrado):
 
         self.setWindowTitle("Editar Contacto" if self.modo_edicion else "Nuevo Contacto")
         self.setMinimumWidth(450)
-        self.setModal(True)
-        self.setStyleSheet(f"QDialog {{ background-color: {COLOR_CARD_BG}; }}")
+        
 
         self._campos = {}
         self._construir_ui()

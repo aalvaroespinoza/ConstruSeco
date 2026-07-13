@@ -105,12 +105,22 @@ def obtener_clientes(
 
     c = conn.cursor()
     from db.conexion import normalizar_texto_busqueda
-    patron_normalizado = f"%{normalizar_texto_busqueda(filtro)}%"
-
-    clausulas_where = [
-        "(NORMALIZAR(c.nombre_completo) LIKE ? OR NORMALIZAR(c.cuit_dni) LIKE ? OR NORMALIZAR(c.telefono) LIKE ? OR NORMALIZAR(c.email) LIKE ? OR NORMALIZAR(c.ciudad) LIKE ? OR NORMALIZAR(c.direccion) LIKE ? OR NORMALIZAR(c.condicion_iva) LIKE ? OR EXISTS (SELECT 1 FROM notas_cliente n WHERE n.id_cliente = c.id_cliente AND NORMALIZAR(n.contenido) LIKE ?))"
-    ]
-    params = [patron_normalizado] * 8
+    busqueda_norm = normalizar_texto_busqueda(filtro)
+    
+    clausulas_where = []
+    params = []
+    
+    if busqueda_norm:
+        terminos = busqueda_norm.split()
+        for term in terminos:
+            patron = f"%{term}%"
+            clausulas_where.append(
+                "(NORMALIZAR(c.nombre_completo) LIKE ? OR NORMALIZAR(c.cuit_dni) LIKE ? OR NORMALIZAR(c.telefono) LIKE ? OR NORMALIZAR(c.email) LIKE ? OR NORMALIZAR(c.ciudad) LIKE ? OR NORMALIZAR(c.direccion) LIKE ? OR NORMALIZAR(c.condicion_iva) LIKE ? OR EXISTS (SELECT 1 FROM notas_cliente n WHERE n.id_cliente = c.id_cliente AND NORMALIZAR(n.contenido) LIKE ?))"
+            )
+            params.extend([patron] * 8)
+    else:
+        # Dummy condition if no search text
+        clausulas_where.append("1=1")
 
     if estado == "ACTIVOS":
         clausulas_where.append("c.activo = 1")

@@ -7,7 +7,25 @@ def normalizar_texto_busqueda(valor) -> str:
         return ""
     texto = str(valor).strip().casefold()
     texto = unicodedata.normalize('NFD', texto)
-    return ''.join(c for c in texto if unicodedata.category(c) != 'Mn')
+    texto = ''.join(c for c in texto if unicodedata.category(c) != 'Mn')
+    return ' '.join(texto.split())
+
+def coincide_busqueda(texto_busqueda: str, campos: list) -> bool:
+    """
+    Estrategia centralizada de búsqueda en memoria.
+    Verifica que todos los términos de la búsqueda existan en alguno de los campos.
+    """
+    texto = normalizar_texto_busqueda(texto_busqueda)
+    if not texto:
+        return True
+    
+    texto_campos = " ".join([normalizar_texto_busqueda(c) for c in campos if c is not None])
+    
+    for termino in texto.split():
+        if termino not in texto_campos:
+            return False
+    return True
+
 
 def obtener_conexion():
     """

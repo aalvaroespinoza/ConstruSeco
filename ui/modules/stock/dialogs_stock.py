@@ -21,23 +21,13 @@ from ui.core.theme import (
 )
 
 
-def migrar_esquema_stock(conn):
-    """Aplica migraciones idempotentes necesarias para la gestión de stock."""
-    c = conn.cursor()
-    # 1. imagen_path en productos
-    c.execute("PRAGMA table_info(productos)")
-    columnas = [row[1] for row in c.fetchall()]
-    if "imagen_path" not in columnas:
-        c.execute("ALTER TABLE productos ADD COLUMN imagen_path TEXT")
-        
-    # 2. notas en movimientos_stock
-    c.execute("PRAGMA table_info(movimientos_stock)")
-    columnas = [row[1] for row in c.fetchall()]
-    if "notas" not in columnas:
-        c.execute("ALTER TABLE movimientos_stock ADD COLUMN notas TEXT")
-        
-    conn.commit()
-
+from db.queries_stock import (
+    obtener_detalles_producto, crear_producto_con_stock_inicial,
+    sumar_stock_producto_existente, actualizar_producto_y_registrar,
+    obtener_imagen_path, intentar_eliminar_producto,
+    actualizar_stock_minimo, registrar_ingreso_manual,
+    registrar_ajuste_inventario
+)
 
 from ui.components.image_selector import ImageSelectorWidget, resolver_ruta_imagen, ASSETS_PROD_DIR
 
@@ -150,9 +140,7 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
             self._set_modo_existente(False)
             return
             
-        c = self.conn.cursor()
-        c.execute("SELECT descripcion, unidad_base, precio_venta, stock_minimo, imagen_path FROM productos WHERE codigo = ?", (cod,))
-        row = c.fetchone()
+        row = obtener_detalles_producto(self.conn, cod)
         
         if row:
             desc, unidad, precio, min_stock, img = row
@@ -283,61 +271,21 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
 
         final_img = self.img_selector.get_final_path(cod)
         
-        c = self.conn.cursor()
-        
         if self.es_existente:
             try:
-                c.execute("BEGIN TRANSACTION;")
-                fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                
-                c.execute("""
-                    INSERT INTO documentos (numero_interno, tipo, estado, fecha_emision, observaciones)
-                    VALUES (?, 'AJUSTE', 'CONFIRMADO', ?, 'Ingreso por flujo Nuevo Producto / Sumar Stock')
-                """, (f"AGR-{cod}-{int(datetime.now().timestamp())}", fecha))
-                id_doc = c.lastrowid
-                
-                c.execute("""
-                    INSERT INTO movimientos_stock (codigo_producto, tipo_movimiento, cantidad, id_documento_origen, fecha_hora, notas)
-                    VALUES (?, 'ENTRADA', ?, ?, ?, 'Stock sumado desde formulario de alta')
-                """, (cod, stk_ini, id_doc, fecha))
-                
-                self.conn.commit()
+                sumar_stock_producto_existente(self.conn, cod, stk_ini)
                 QMessageBox.information(self, "Éxito", f"Se sumaron {stk_ini:g} unidades al producto existente.")
                 self.accept()
             except Exception as e:
-                self.conn.rollback()
                 QMessageBox.critical(self, "Error", f"Error al sumar stock: {e}")
         else:
             try:
-                c.execute("BEGIN TRANSACTION;")
-                
-                c.execute("""
-                    INSERT INTO productos (codigo, descripcion, unidad_base, precio_venta, stock_minimo, imagen_path)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (cod, desc, uni, precio, stk_min, final_img))
-                
-                if stk_ini > 0:
-                    fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    c.execute("""
-                        INSERT INTO documentos (numero_interno, tipo, estado, fecha_emision, observaciones)
-                        VALUES (?, 'AJUSTE', 'CONFIRMADO', ?, 'Stock inicial')
-                    """, (f"INI-{cod}-{int(datetime.now().timestamp())}", fecha))
-                    id_doc = c.lastrowid
-                    
-                    c.execute("""
-                        INSERT INTO movimientos_stock (codigo_producto, tipo_movimiento, cantidad, id_documento_origen, fecha_hora, notas)
-                        VALUES (?, 'ENTRADA', ?, ?, ?, 'Inventario inicial')
-                    """, (cod, stk_ini, id_doc, fecha))
-                    
-                self.conn.commit()
+                crear_producto_con_stock_inicial(self.conn, cod, desc, uni, precio, stk_min, final_img, stk_ini)
                 QMessageBox.information(self, "Éxito", "Producto registrado correctamente.")
                 self.accept()
-                
             except sqlite3.IntegrityError:
-                self.conn.rollback()
                 QMessageBox.critical(self, "Error", "Ya existe un producto con ese código o descripción.")
             except Exception as e:
-                self.conn.rollback()
                 QMessageBox.critical(self, "Error", str(e))
 
 
@@ -354,10 +302,7 @@ class DialogoEditarProducto(DialogoModalIntegrado):
         main_layout = QVBoxLayout(self)
         
         # Recuperar imagen actual
-        c = self.conn.cursor()
-        c.execute("SELECT imagen_path FROM productos WHERE codigo=?", (self.p_data['codigo'],))
-        row = c.fetchone()
-        img_path = row[0] if row else None
+        img_path = obtener_imagen_path(self.conn, self.p_data['codigo'])
         
         # Imagen
         img_layout = QHBoxLayout()
@@ -412,35 +357,18 @@ class DialogoEditarProducto(DialogoModalIntegrado):
         if reply == QMessageBox.StandardButton.No:
             return
             
-        c = self.conn.cursor()
         try:
-            c.execute("BEGIN TRANSACTION;")
-            
-            # Chequear dependencias
-            c.execute("SELECT COUNT(*) FROM detalle_documentos WHERE codigo_producto=?", (cod,))
-            c_doc = c.fetchone()[0]
-            c.execute("SELECT COUNT(*) FROM movimientos_stock WHERE codigo_producto=?", (cod,))
-            c_mov = c.fetchone()[0]
-            c.execute("SELECT COUNT(*) FROM compromisos_stock WHERE codigo_producto=?", (cod,))
-            c_comp = c.fetchone()[0]
-            
-            if c_doc > 0 or c_mov > 0 or c_comp > 0:
-                # Tiene historial, desactivar
-                c.execute("UPDATE productos SET activo = 0 WHERE codigo = ?", (cod,))
-                self.conn.commit()
+            resultado = intentar_eliminar_producto(self.conn, cod)
+            if resultado == "DESACTIVADO":
                 QMessageBox.information(
                     self, "Producto Desactivado",
                     "Este producto tiene historial asociado y no puede eliminarse definitivamente sin perder trazabilidad. Ha sido desactivado."
                 )
             else:
-                # Sin historial, eliminar fisicamente
-                c.execute("DELETE FROM productos WHERE codigo = ?", (cod,))
-                self.conn.commit()
                 QMessageBox.information(self, "Eliminado", "El producto fue eliminado definitivamente.")
                 
             self.accept()
         except Exception as e:
-            self.conn.rollback()
             QMessageBox.critical(self, "Error", f"No se pudo eliminar: {e}")
 
     def guardar(self):
@@ -462,22 +390,13 @@ class DialogoEditarProducto(DialogoModalIntegrado):
 
         final_img = self.img_selector.get_final_path(cod)
         
-        c = self.conn.cursor()
         try:
-            c.execute("BEGIN TRANSACTION;")
-            c.execute("""
-                UPDATE productos 
-                SET descripcion = ?, precio_venta = ?, stock_minimo = ?, imagen_path = ?
-                WHERE codigo = ?
-            """, (desc, precio, stk_min, final_img, cod))
-            self.conn.commit()
+            actualizar_producto_y_registrar(self.conn, cod, desc, self.p_data['unidad_base'], precio, stk_min, final_img)
             QMessageBox.information(self, "Éxito", "Producto actualizado.")
             self.accept()
         except sqlite3.IntegrityError:
-            self.conn.rollback()
             QMessageBox.critical(self, "Error", "Ya existe otro producto con esa descripción.")
         except Exception as e:
-            self.conn.rollback()
             QMessageBox.critical(self, "Error", str(e))
 
 
@@ -513,9 +432,7 @@ class DialogoStockMinimo(DialogoModalIntegrado):
             return
             
         try:
-            c = self.conn.cursor()
-            c.execute("UPDATE productos SET stock_minimo = ? WHERE codigo = ?", (stk, self.p_data['codigo']))
-            self.conn.commit()
+            actualizar_stock_minimo(self.conn, self.p_data['codigo'], stk)
             self.accept()
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
@@ -569,29 +486,11 @@ class DialogoEntradaStock(DialogoModalIntegrado):
         notas = self.inp_notas.text().strip()
         cod = self.p_data['codigo']
         
-        c = self.conn.cursor()
         try:
-            c.execute("BEGIN TRANSACTION;")
-            
-            fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            num_int = f"ENT-{cod}-{int(datetime.now().timestamp())}"
-            
-            c.execute("""
-                INSERT INTO documentos (numero_interno, tipo, estado, fecha_emision, observaciones)
-                VALUES (?, 'AJUSTE', 'CONFIRMADO', ?, ?)
-            """, (num_int, fecha, f"Ingreso manual: {notas}" if notas else "Ingreso manual"))
-            id_doc = c.lastrowid
-            
-            c.execute("""
-                INSERT INTO movimientos_stock (codigo_producto, tipo_movimiento, cantidad, id_documento_origen, fecha_hora, notas)
-                VALUES (?, 'ENTRADA', ?, ?, ?, ?)
-            """, (cod, cant, id_doc, fecha, notas))
-            
-            self.conn.commit()
+            registrar_ingreso_manual(self.conn, cod, cant, notas)
             QMessageBox.information(self, "Éxito", "Entrada registrada correctamente.")
             self.accept()
         except Exception as e:
-            self.conn.rollback()
             QMessageBox.critical(self, "Error", str(e))
 
 
@@ -678,29 +577,11 @@ class DialogoAjusteInventario(DialogoModalIntegrado):
         tipo_mov = 'ENTRADA' if self.diferencia > 0 else 'SALIDA'
         cant_absoluta = abs(self.diferencia)
         
-        c = self.conn.cursor()
         try:
-            c.execute("BEGIN TRANSACTION;")
-            
-            fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            num_int = f"AJU-{cod}-{int(datetime.now().timestamp())}"
-            
-            c.execute("""
-                INSERT INTO documentos (numero_interno, tipo, estado, fecha_emision, observaciones)
-                VALUES (?, 'AJUSTE', 'CONFIRMADO', ?, ?)
-            """, (num_int, fecha, f"Ajuste inventario: {motivo}"))
-            id_doc = c.lastrowid
-            
-            c.execute("""
-                INSERT INTO movimientos_stock (codigo_producto, tipo_movimiento, cantidad, id_documento_origen, fecha_hora, notas)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (cod, tipo_mov, cant_absoluta, id_doc, fecha, motivo))
-            
-            self.conn.commit()
+            registrar_ajuste_inventario(self.conn, cod, self.diferencia, motivo)
             QMessageBox.information(self, "Éxito", f"Inventario ajustado. {tipo_mov} de {cant_absoluta:g} aplicada.")
             self.accept()
         except Exception as e:
-            self.conn.rollback()
             QMessageBox.critical(self, "Error", str(e))
 
 class DialogoAlertasInventario(DialogoModalIntegrado):

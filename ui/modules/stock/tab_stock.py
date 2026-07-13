@@ -8,8 +8,9 @@ from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QColor, QFont, QCursor, QAction, QBrush
 
 from db.queries import obtener_stocks_todos, obtener_metricas_globales, obtener_productos_frecuentes, UNIDADES_PERMITIDAS
+from db.queries_stock import migrar_esquema_stock
 from ui.modules.stock.dialogs_stock import (
-    migrar_esquema_stock, DialogoAgregarProducto, DialogoEditarProducto,
+    DialogoAgregarProducto, DialogoEditarProducto,
     DialogoStockMinimo, DialogoEntradaStock, DialogoAjusteInventario,
     VistaDetalleProducto
 )
@@ -725,10 +726,9 @@ class PestanaStock(QWidget):
             self.tabla.setRowHeight(i, 46)
 
     def reactivar_producto(self, prod):
-        c = self.conn.cursor()
         try:
-            c.execute("UPDATE productos SET activo = 1 WHERE codigo = ?", (prod['codigo'],))
-            self.conn.commit()
+            from db.queries_stock import reactivar_producto
+            reactivar_producto(self.conn, prod['codigo'])
             QMessageBox.information(self, "Reactivado", f"El producto {prod['codigo']} ha sido reactivado.")
             self.cargar_datos()
         except Exception as e:

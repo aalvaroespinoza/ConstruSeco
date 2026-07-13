@@ -669,13 +669,13 @@ class _PanelDetalle(QScrollArea):
         menu.exec(btn.mapToGlobal(QPoint(0, btn.height())))
 
     def _on_add_nota(self):
-        dlg = DialogoNota(self._conn, self._id_actual, parent=self)
-        if dlg.exec() == dlg.DialogCode.Accepted and dlg.hubo_cambios:
+        dlg = DialogoNota(self._conn, self._id_actual, parent=self.window())
+        if dlg.exec() == QDialog.DialogCode.Accepted and dlg.hubo_cambios:
             self.recargar_solicitado.emit(self._id_actual)
 
     def _on_editar_nota(self, id_nota: int):
-        dlg = DialogoNota(self._conn, self._id_actual, id_nota, parent=self)
-        if dlg.exec() == dlg.DialogCode.Accepted and dlg.hubo_cambios:
+        dlg = DialogoNota(self._conn, self._id_actual, id_nota, parent=self.window())
+        if dlg.exec() == QDialog.DialogCode.Accepted and dlg.hubo_cambios:
             self.recargar_solicitado.emit(self._id_actual)
 
     def _on_eliminar_nota(self, id_nota: int):

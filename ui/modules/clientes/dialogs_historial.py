@@ -25,8 +25,7 @@ class DialogoHistorialCliente(QDialog):
         self.setWindowTitle("Historial Completo del Cliente")
         self.setMinimumWidth(750)
         self.setMinimumHeight(500)
-        self.setModal(True)
-        self.setStyleSheet(f"QDialog {{ background-color: {COLOR_CARD_BG}; }}")
+        
 
         self._construir_ui()
         self._cargar_datos()

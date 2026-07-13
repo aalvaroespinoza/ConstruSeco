@@ -139,9 +139,8 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
             
         sql += " ORDER BY m.fecha_hora DESC LIMIT 200"
         
-        c = self.conn.cursor()
-        c.execute(sql, params)
-        filas = c.fetchall()
+        from db.queries_stock import ejecutar_consulta_historial
+        filas = ejecutar_consulta_historial(self.conn, sql, params)
         
         self.tabla.setRowCount(len(filas))
         for i, (fecha, cod, desc, tm, cant, doc, notas) in enumerate(filas):

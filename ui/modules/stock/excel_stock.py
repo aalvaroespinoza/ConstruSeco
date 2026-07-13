@@ -290,9 +290,8 @@ class DialogoImportarExcel(DialogoModalIntegrado):
             QMessageBox.critical(self, "Formato No Reconocido", msg)
             return
             
-        c = self.conn.cursor()
-        c.execute("SELECT codigo, lower(descripcion) FROM productos WHERE activo = 1")
-        existentes = c.fetchall()
+        from db.queries_stock import obtener_productos_activos_exportacion
+        existentes = obtener_productos_activos_exportacion(self.conn)
         codigos_db = set(str(r[0]).strip() for r in existentes)
         desc_db = set(str(r[1]).strip() for r in existentes)
         
@@ -386,68 +385,10 @@ class DialogoImportarExcel(DialogoModalIntegrado):
             if reply == QMessageBox.StandardButton.No:
                 return
         
-        c = self.conn.cursor()
         try:
-            c.execute("BEGIN TRANSACTION;")
-            fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            ts = int(datetime.now().timestamp())
-            
-            if self.modo_importacion == "SUSTITUIR":
-                # Auditar y desactivar/eliminar actuales
-                c.execute("SELECT codigo FROM productos")
-                todos_actuales = [r[0] for r in c.fetchall()]
-                nuevos_codigos = set(p[0] for p in self.filas_validas)
-                
-                for cod in todos_actuales:
-                    if cod not in nuevos_codigos:
-                        c.execute("SELECT COUNT(*) FROM detalle_documentos WHERE codigo_producto=?", (cod,))
-                        c_doc = c.fetchone()[0]
-                        c.execute("SELECT COUNT(*) FROM movimientos_stock WHERE codigo_producto=?", (cod,))
-                        c_mov = c.fetchone()[0]
-                        c.execute("SELECT COUNT(*) FROM compromisos_stock WHERE codigo_producto=?", (cod,))
-                        c_comp = c.fetchone()[0]
-                        
-                        if c_doc > 0 or c_mov > 0 or c_comp > 0:
-                            c.execute("UPDATE productos SET activo = 0 WHERE codigo = ?", (cod,))
-                        else:
-                            c.execute("DELETE FROM productos WHERE codigo = ?", (cod,))
-            
-            for (cod, desc, uni, precio, stk_ini, stk_min, estado_update) in self.filas_validas:
-                if estado_update == "ACTUALIZAR" and self.modo_importacion != "SUSTITUIR":
-                    c.execute("""
-                        UPDATE productos SET descripcion=?, unidad_base=?, precio_venta=?, stock_minimo=?, activo=1
-                        WHERE codigo=?
-                    """, (desc, uni, precio, stk_min, cod))
-                    # NO agregamos stock inicial para actualizaciones en modo AGREGAR para evitar duplicar
-                else:
-                    # Insertar o actualizar
-                    c.execute("SELECT COUNT(*) FROM productos WHERE codigo=?", (cod,))
-                    if c.fetchone()[0] > 0:
-                        c.execute("""
-                            UPDATE productos SET descripcion=?, unidad_base=?, precio_venta=?, stock_minimo=?, activo=1
-                            WHERE codigo=?
-                        """, (desc, uni, precio, stk_min, cod))
-                    else:
-                        c.execute("""
-                            INSERT INTO productos (codigo, descripcion, unidad_base, precio_venta, stock_minimo, activo)
-                            VALUES (?, ?, ?, ?, ?, 1)
-                        """, (cod, desc, uni, precio, stk_min))
-                    
-                    if stk_ini > 0:
-                        c.execute("""
-                            INSERT INTO documentos (numero_interno, tipo, estado, fecha_emision, observaciones)
-                            VALUES (?, 'AJUSTE', 'CONFIRMADO', ?, 'Importación Excel (Stock inicial)')
-                        """, (f"IMP-{cod}-{ts}", fecha))
-                        id_doc = c.lastrowid
-                        
-                        c.execute("""
-                            INSERT INTO movimientos_stock (codigo_producto, tipo_movimiento, cantidad, id_documento_origen, fecha_hora, notas)
-                            VALUES (?, 'ENTRADA', ?, ?, ?, 'Importación Excel')
-                        """, (cod, stk_ini, id_doc, fecha))
-            
-            self.conn.commit()
+            from db.queries_stock import ejecutar_importacion_excel
+            ejecutar_importacion_excel(self.conn, self.modo_importacion, self.filas_validas)
             QMessageBox.information(self, "Éxito", f"Se procesaron {len(self.filas_validas)} productos exitosamente.")
             self.accept()
         except Exception as e:
-            self.conn.rollback()
             QMessageBox.critical(self, "Error Fatal", f"La importación falló y se revirtió. Detalles:\n{e}")
