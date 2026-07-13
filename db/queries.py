@@ -107,6 +107,7 @@ def obtener_stocks_todos(conn, incluir_inactivos=False) -> list[dict]:
             p.precio_venta,
             p.stock_minimo,
             p.activo,
+            p.imagen_path,
             {_sq_entradas('p')} AS entradas,
             {_sq_salidas('p')}  AS salidas,
             {_sq_comprometido('p')} AS comprometido
@@ -115,7 +116,7 @@ def obtener_stocks_todos(conn, incluir_inactivos=False) -> list[dict]:
         ORDER BY p.descripcion
     """)
     resultado = []
-    for codigo, desc, unidad, precio, stk_min, activo, ent, sal, comp in c.fetchall():
+    for codigo, desc, unidad, precio, stk_min, activo, img_path, ent, sal, comp in c.fetchall():
         fisico = ent - sal
         resultado.append({
             "codigo":       codigo,
@@ -124,6 +125,7 @@ def obtener_stocks_todos(conn, incluir_inactivos=False) -> list[dict]:
             "precio_venta": precio,
             "stock_minimo": stk_min or 0.0,
             "activo":       activo,
+            "imagen_path":  img_path,
             "stock_fisico": fisico,
             "comprometido": comp,
             "atp":          fisico - comp,

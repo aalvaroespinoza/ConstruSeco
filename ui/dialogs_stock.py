@@ -41,6 +41,19 @@ def migrar_esquema_stock(conn):
     conn.commit()
 
 
+def resolver_ruta_imagen(imagen_path):
+    """
+    Función centralizada para resolver la ruta física de una imagen a partir de su referencia.
+    Soporta: None, "", nombres de archivo relativos, y rutas absolutas antiguas.
+    Devuelve un objeto Path si existe el archivo, o None.
+    """
+    if not imagen_path:
+        return None
+    p = Path(imagen_path)
+    if not p.is_absolute():
+        p = ASSETS_PROD_DIR / p.name
+    return p if p.exists() else None
+
 class SelectAllLineEdit(QLineEdit):
     def mousePressEvent(self, event):
         was_focused = self.hasFocus()
@@ -67,7 +80,8 @@ class ImageSelectorWidget(QFrame):
         
         self.lbl_preview = QLabel()
         self.lbl_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_preview.setStyleSheet("border: none;")
+        self.lbl_preview.setStyleSheet("border: none; background: transparent;")
+        self.lbl_preview.setScaledContents(True)
         self.lbl_preview.hide()
         
         self.btn_clear = QPushButton("❌")
@@ -102,49 +116,54 @@ class ImageSelectorWidget(QFrame):
         self._update_preview()
 
     def _update_preview(self):
-        if self.image_path and Path(self.image_path).exists():
-            pixmap = QPixmap(str(self.image_path))
-            scaled_pixmap = pixmap.scaled(
-                100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
-            )
-            self.lbl_preview.setPixmap(scaled_pixmap)
-            self.btn_select.hide()
-            self.lbl_preview.show()
-            self.btn_clear.show()
-        else:
-            self.lbl_preview.clear()
-            self.lbl_preview.hide()
-            self.btn_select.show()
-            self.btn_clear.hide()
+        p = resolver_ruta_imagen(self.image_path)
+        if p:
+            pixmap = QPixmap(p.as_posix())
+            if not pixmap.isNull():
+                scaled_pixmap = pixmap.scaled(
+                    100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+                )
+                self.lbl_preview.setPixmap(scaled_pixmap)
+                self.btn_select.hide()
+                self.lbl_preview.show()
+                self.btn_clear.show()
+                return
+                
+        self._hide_preview()
+
+    def _hide_preview(self):
+        self.lbl_preview.clear()
+        self.lbl_preview.hide()
+        self.btn_select.show()
+        self.btn_clear.hide()
 
     def get_final_path(self, codigo_producto: str):
-        """Copia la imagen a assets/productos si es nueva, y devuelve la ruta relativa o absoluta."""
         if not self.image_path:
             return None
             
         p = Path(self.image_path)
-        # Si ya está en la carpeta de assets, solo devolverla
-        if ASSETS_PROD_DIR in p.parents:
-            return str(p.resolve())
+        if not p.is_absolute():
+            return p.name
             
-        # Si es una nueva, copiarla
-        ext = p.suffix
+        if ASSETS_PROD_DIR.resolve() in p.resolve().parents:
+            return p.name
+            
+        ext = p.suffix.lower()
         new_name = f"{codigo_producto}_{int(datetime.now().timestamp())}{ext}"
         dest = ASSETS_PROD_DIR / new_name
-        shutil.copy2(p, dest)
-        return str(dest.resolve())
+        try:
+            shutil.copy2(p, dest)
+            return dest.name
+        except Exception as e:
+            print(f"Error copiando imagen: {e}")
+            return None
 
 
 # =====================================================================
 # DIÁLOGOS DE PRODUCTOS
 # =====================================================================
 
-class DialogoAgregarProducto(QDialog):
-    def __init__(self, conexion_db, parent=None):
-        super().__init__(parent)
-        self.conn = conexion_db
-        self.setWindowTitle("Nuevo Producto")
-        self.setMinimumWidth(400)
+
 class DialogoAgregarProducto(QDialog):
     def __init__(self, conexion_db, parent=None):
         super().__init__(parent)
@@ -948,20 +967,15 @@ class VistaDetalleProducto(QFrame):
         
         has_image = False
         img_path = producto.get('imagen_path')
-        if img_path:
-            p = Path(img_path)
-            if p.is_absolute():
-                ruta_real = p
-            else:
-                ruta_real = ASSETS_PROD_DIR / p.name
+        p_res = resolver_ruta_imagen(img_path)
+        
+        if p_res:
+            pix = QPixmap(str(p_res))
+            if not pix.isNull():
+                img_label.setPixmap(pix.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                img_label.setStyleSheet("background-color: transparent; border: none;")
+                has_image = True
                 
-            if ruta_real.exists():
-                pix = QPixmap(str(ruta_real))
-                if not pix.isNull():
-                    img_label.setPixmap(pix.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-                    img_label.setStyleSheet("background-color: transparent; border: none;")
-                    has_image = True
-                    
         if not has_image:
             img_label.setText("📦\nSin imagen")
             img_label.setStyleSheet("background-color: #F8FAFC; border-radius: 8px; border: 1px dashed #CBD5E1; color: #94A3B8; font-size: 18px;")
@@ -987,7 +1001,7 @@ class VistaDetalleProducto(QFrame):
         add_row("Código:", producto['codigo'], True)
         add_row("Descripción:", producto['descripcion'], True)
         add_row("Unidad:", producto['unidad_base'])
-        add_row("Precio Venta:", f"$ {producto['precio_base']:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), True, COLOR_PRIMARY)
+        add_row("Precio Venta:", f"$ {producto['precio_venta']:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), True, COLOR_PRIMARY)
         
         atp = producto.get('atp', 0.0)
         min_stk = producto.get('stock_minimo', 0.0)

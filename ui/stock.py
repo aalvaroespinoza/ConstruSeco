@@ -424,7 +424,7 @@ class PestanaStock(QWidget):
         # 5. TABLA PRINCIPAL
         self.tabla = QTableWidget(0, 10)
         self.tabla.setHorizontalHeaderLabels([
-            "Producto", "Código", "Unidad", "Stk. Físico", "Comprometido", 
+            "Código", "Producto", "Unidad", "Stk. Físico", "Comprometido", 
             "Disponible", "Stk. Mínimo", "Precio", "Estado", "Acciones"
         ])
         self.tabla.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -434,12 +434,18 @@ class PestanaStock(QWidget):
         self.tabla.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.tabla.setShowGrid(False)
         self.tabla.setAlternatingRowColors(True)
-        self.tabla.setStyleSheet(self.tabla.styleSheet() + f"QTableWidget {{ alternate-background-color: #fafbfd; }}")
+        self.tabla.setStyleSheet(self.tabla.styleSheet() + """
+            QTableWidget { alternate-background-color: #fafbfd; }
+            QTableWidget::item:selected {
+                background-color: #dbeafe;
+                color: #0f172a;
+            }
+        """)
         self.tabla.cellDoubleClicked.connect(self.on_tabla_double_click)
         
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Producto/Descripcion
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Producto/Descripcion
         header.setSectionResizeMode(9, QHeaderView.ResizeMode.Fixed)    # Acciones
         self.tabla.setColumnWidth(9, 110)
         
@@ -640,8 +646,8 @@ class PestanaStock(QWidget):
                 item_est.setBackground(brush)
                 item_disp.setBackground(brush)
                 
-            self.tabla.setItem(i, 0, item_prod)
-            self.tabla.setItem(i, 1, item_cod)
+            self.tabla.setItem(i, 0, item_cod)
+            self.tabla.setItem(i, 1, item_prod)
             self.tabla.setItem(i, 2, item_uni)
             self.tabla.setItem(i, 3, item_fis)
             self.tabla.setItem(i, 4, item_comp)
@@ -789,7 +795,7 @@ class PestanaStock(QWidget):
             
         # Hacer scroll hasta la fila
         for row in range(self.tabla.rowCount()):
-            item_cod = self.tabla.item(row, 1)
+            item_cod = self.tabla.item(row, 0)
             if item_cod and item_cod.text() == codigo:
                 self.tabla.scrollToItem(item_cod, QAbstractItemView.ScrollHint.PositionAtCenter)
                 break
@@ -797,7 +803,7 @@ class PestanaStock(QWidget):
     def on_tabla_double_click(self, row, col):
         if col == 9:  # Columna de acciones
             return
-        item_cod = self.tabla.item(row, 1)
+        item_cod = self.tabla.item(row, 0)
         if item_cod:
             codigo = item_cod.text()
             for p in self.datos_catalogo:

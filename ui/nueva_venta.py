@@ -10,6 +10,9 @@ from datetime import datetime, timedelta
 import sqlite3
 import re
 from db.queries import subquery_atp, obtener_stock_producto
+from ui.modal import ModalOverlay, ModalResult
+from ui.dialogs_clientes import DialogoFormularioCliente
+from db import queries_clientes as qc
 
 # --- Funciones Helper: Formato Argentino Seguros ---
 def formato_arg(valor):
@@ -698,11 +701,11 @@ class PestanaNuevaVenta(QWidget):
         layout_resumen.addSpacing(8)
         layout_resumen.addLayout(fila_tot)
         
+        self.lbl_total.setMinimumHeight(40)
+        
         layout_footer.addWidget(self.tarjeta_opciones, stretch=55)
         layout_footer.addWidget(self.tarjeta_resumen, stretch=45)
 
-        self.tarjeta_resumen.setMinimumHeight(240)
-        self.contenedor_footer.setMinimumHeight(240)
         self.splitter_operacion.addWidget(self.contenedor_tabla)
         self.splitter_operacion.addWidget(self.contenedor_footer)
         self.splitter_operacion.setStretchFactor(0, 3)
@@ -711,57 +714,29 @@ class PestanaNuevaVenta(QWidget):
         layout_principal.addWidget(self.splitter_operacion, stretch=1)
 
     def modal_nuevo_cliente(self):
-        dlg = QDialog(self)
-        dlg.setWindowTitle("Nuevo Cliente")
-        dlg.setMinimumWidth(300)
-        
-        layout = QFormLayout(dlg)
-        
-        inp_nombre = QLineEdit()
-        inp_cuit = QLineEdit()
-        inp_tel = QLineEdit()
-        
-        layout.addRow("Nombre Completo (*):", inp_nombre)
-        layout.addRow("CUIT/DNI (Opcional):", inp_cuit)
-        layout.addRow("Teléfono (Opcional):", inp_tel)
-        
-        btn_guardar = QPushButton("Guardar")
-        btn_guardar.setStyleSheet("background-color: #2563eb; color: white;")
-        def aceptar_cliente():
-            if not inp_nombre.text().strip():
-                QMessageBox.warning(dlg, "Campo obligatorio", "Ingrese el nombre del cliente.")
-                inp_nombre.setFocus()
-                return
-            dlg.accept()
-
-        btn_guardar.clicked.connect(aceptar_cliente)
-        layout.addRow(btn_guardar)
-        
-        if dlg.exec() == QDialog.DialogCode.Accepted:
-            nombre = inp_nombre.text().strip()
-            cuit = inp_cuit.text().strip()
-            tel = inp_tel.text().strip()
-            if nombre:
-                try:
-                    cursor = self.conn.cursor()
-                    cursor.execute("INSERT INTO clientes (nombre_completo, cuit_dni, telefono) VALUES (?, ?, ?)", 
-                                  (nombre, cuit if cuit else None, tel if tel else None))
-                    self.conn.commit()
-                    id_nuevo = cursor.lastrowid
-                    self.cargar_autocompletado_clientes()
+        formulario = DialogoFormularioCliente(self.conn)
+        modal = ModalOverlay(self, formulario)
+        if modal.exec() == ModalResult.Accepted and formulario.id_guardado is not None:
+            id_nuevo = formulario.id_guardado
+            try:
+                # Actualizar el listado en memoria
+                self.cargar_autocompletado_clientes()
+                # Seleccionarlo
+                det = qc.obtener_detalle_cliente(self.conn, id_nuevo)
+                if det:
                     self.seleccionar_cliente({
                         'id': id_nuevo,
-                        'nombre': nombre,
-                        'cuit': cuit,
-                        'tel': tel
+                        'nombre': det['nombre'],
+                        'cuit': det['cuit_dni'],
+                        'tel': det['telefono']
                     })
-                except Exception as e:
-                    QMessageBox.critical(self, "Error", f"No se pudo guardar el cliente: {e}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Error post-guardado: {e}")
 
     def cargar_autocompletado_clientes(self):
         try:
             cursor = self.conn.cursor()
-            cursor.execute("SELECT id_cliente, nombre_completo, cuit_dni, telefono FROM clientes")
+            cursor.execute("SELECT id_cliente, nombre_completo, cuit_dni, telefono FROM clientes WHERE activo = 1")
             self.lista_clientes = []
             lista_nombres = []
             for row in cursor.fetchall():

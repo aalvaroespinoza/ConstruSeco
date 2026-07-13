@@ -151,9 +151,98 @@ def inicializar_base_datos():
         ON compromisos_stock(codigo_producto, estado)
     """)
 
+    # ── Módulo Clientes: migraciones y tablas complementarias ────────────────
+    _migrar_clientes(cursor)
+
     conn.commit()
     conn.close()
     print("Motor ERP/ATP inicializado con éxito.")
+
+
+def _migrar_clientes(cursor):
+    """
+    Migración idempotente de la infraestructura de datos de Clientes.
+
+    Extiende la tabla clientes con columnas adicionales necesarias para la
+    pestaña Clientes, y crea las tablas contactos_cliente y notas_cliente.
+
+    Todas las operaciones son idempotentes: se ejecutan con seguridad en cada
+    arranque sin importar si ya se aplicaron previamente.
+
+    Esta función centraliza TODO el DDL relacionado con clientes. Ningún
+    archivo de UI debe ejecutar ALTER TABLE ni CREATE TABLE.
+    """
+    # ── 1. Columnas adicionales en tabla clientes ─────────────────────────
+    cursor.execute("PRAGMA table_info(clientes)")
+    columnas_existentes = {row[1] for row in cursor.fetchall()}
+
+    if "activo" not in columnas_existentes:
+        cursor.execute(
+            "ALTER TABLE clientes ADD COLUMN activo INTEGER DEFAULT 1"
+        )
+    if "ciudad" not in columnas_existentes:
+        cursor.execute(
+            "ALTER TABLE clientes ADD COLUMN ciudad TEXT"
+        )
+    if "direccion" not in columnas_existentes:
+        cursor.execute(
+            "ALTER TABLE clientes ADD COLUMN direccion TEXT"
+        )
+    if "condicion_iva" not in columnas_existentes:
+        cursor.execute(
+            "ALTER TABLE clientes ADD COLUMN condicion_iva "
+            "TEXT DEFAULT 'Consumidor Final'"
+        )
+
+    # ── 2. Tabla contactos_cliente ────────────────────────────────────────
+    # Permite registrar múltiples contactos por cliente (persona de contacto,
+    # cargo, teléfono directo, email propio). El campo 'principal' distingue
+    # al contacto de referencia principal del resto.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS contactos_cliente (
+            id_contacto INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_cliente  INTEGER NOT NULL,
+            nombre      TEXT NOT NULL,
+            cargo       TEXT,
+            telefono    TEXT,
+            email       TEXT,
+            principal   INTEGER DEFAULT 0
+                        CHECK(principal IN (0, 1)),
+            FOREIGN KEY(id_cliente)
+                REFERENCES clientes(id_cliente) ON DELETE CASCADE
+        )
+    """)
+
+    # ── 3. Tabla notas_cliente ────────────────────────────────────────────
+    # Observaciones internas por cliente (acuerdos, condiciones especiales,
+    # historial de interacciones, etc.). Append-only recomendado; el DELETE
+    # está disponible pero no es el flujo principal.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS notas_cliente (
+            id_nota    INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_cliente INTEGER NOT NULL,
+            contenido  TEXT NOT NULL,
+            fecha_hora TEXT NOT NULL,
+            FOREIGN KEY(id_cliente)
+                REFERENCES clientes(id_cliente) ON DELETE CASCADE
+        )
+    """)
+
+    # ── 4. Índices de rendimiento ─────────────────────────────────────────
+    # idx_doc_cliente: acelera el cálculo de métricas (ventas, ticket
+    # promedio) y el historial por cliente desde la tabla documentos.
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_doc_cliente
+        ON documentos(id_cliente, tipo, estado)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_contactos_cliente
+        ON contactos_cliente(id_cliente)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_notas_cliente
+        ON notas_cliente(id_cliente)
+    """)
 
 def obtener_stock_disponible(conn, codigo_producto):
     """
