@@ -701,7 +701,8 @@ class PestanaNuevaVenta(QWidget):
         layout_footer.addWidget(self.tarjeta_opciones, stretch=55)
         layout_footer.addWidget(self.tarjeta_resumen, stretch=45)
 
-        self.contenedor_footer.setMinimumHeight(200)
+        self.tarjeta_resumen.setMinimumHeight(240)
+        self.contenedor_footer.setMinimumHeight(240)
         self.splitter_operacion.addWidget(self.contenedor_tabla)
         self.splitter_operacion.addWidget(self.contenedor_footer)
         self.splitter_operacion.setStretchFactor(0, 3)

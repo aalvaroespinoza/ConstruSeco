@@ -1,11 +1,15 @@
 import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 import sqlite3
 from PyQt6.QtWidgets import QApplication
 from ui.stock import PestanaStock
 
 def run_test():
     app = QApplication(sys.argv)
-    conn = sqlite3.connect('corralon_profesional.db')
+    db_path = Path(__file__).resolve().parent.parent / 'corralon_profesional.db'
+    conn = sqlite3.connect(db_path)
 
     ventana = PestanaStock(conn)
     ventana.show()

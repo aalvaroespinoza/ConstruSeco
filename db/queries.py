@@ -4,9 +4,8 @@ db/queries.py — Consultas ATP centralizadas.
 Provee la fórmula canónica de stock (Available to Promise) para reutilización
 entre pantallas sin duplicar lógica.
 
-NOTA: ui/nueva_venta.py mantiene sus propias subconsultas inline por razones
-de compatibilidad y rendimiento en el catálogo en memoria. No refactorizar
-esa pantalla en esta etapa.
+NOTA: La lógica ATP se encuentra 100% centralizada aquí y es consumida 
+activamente por ui/nueva_venta.py y la vista de stock.
 """
 
 # ─── Unidades canónicas ───────────────────────────────────────────────────────

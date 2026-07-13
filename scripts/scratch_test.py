@@ -1,4 +1,7 @@
 import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 import sqlite3
 import shutil
 import db.queries as queries
@@ -7,8 +10,10 @@ def run_tests():
     print("--- INICIANDO VALIDACION ---")
     
     # 1. Setup DB Copy
-    shutil.copy2('corralon_profesional.db', 'test_corralon.db')
-    conn = sqlite3.connect('test_corralon.db')
+    db_path = Path(__file__).resolve().parent.parent / 'corralon_profesional.db'
+    test_db_path = Path(__file__).resolve().parent.parent / 'test_corralon.db'
+    shutil.copy2(db_path, test_db_path)
+    conn = sqlite3.connect(test_db_path)
     
     # 2. Test ATP formulas
     print("TEST: Fórmula ATP")
