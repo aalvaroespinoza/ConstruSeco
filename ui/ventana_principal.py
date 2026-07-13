@@ -1,0 +1,180 @@
+from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, 
+                             QPushButton, QStackedWidget, QLabel, QFrame)
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap
+from pathlib import Path
+from ui.stock import PestanaStock
+from ui.stock import PestanaStock
+from ui.nueva_venta import PestanaNuevaVenta
+
+class VentanaPrincipal(QMainWindow):
+    def __init__(self, conexion_db):
+        super().__init__()
+        self.conn = conexion_db
+        self.setWindowTitle("ConstruSecoPereyra")
+        self.resize(1100, 650)
+        
+        # Forzamos el fondo claro en la ventana contenedora principal
+        self.setStyleSheet("QMainWindow { background-color: #f8fafc; }")
+        
+        self.init_ui()
+
+    def init_ui(self):
+        # Componente central que divide la pantalla en dos (Izquierda: Menú, Derecha: Contenido)
+        widget_central = QWidget()
+        layout_principal = QHBoxLayout(widget_central)
+        layout_principal.setContentsMargins(0, 0, 0, 0) # Sin bordes exteriores
+        layout_principal.setSpacing(0)
+        
+        # 1. BARRA LATERAL (SIDEBAR)
+        sidebar = QFrame()
+        sidebar.setFixedWidth(220)
+        # Aplicamos un estilo gris oscuro/azulado corporativo para la barra lateral
+        sidebar.setStyleSheet("""
+            QFrame {
+                background-color: #0f172a; /* Azul noche oscuro */
+                border: none;
+            }
+            QLabel {
+                color: #f1f5f9;
+                font-size: 18px;
+                font-weight: bold;
+                padding: 20px 10px;
+            }
+            QPushButton {
+                background-color: transparent;
+                color: #94a3b8; /* Gris suave */
+                text-align: left;
+                padding: 12px 20px;
+                font-size: 14px;
+                font-weight: 500;
+                border: none;
+                border-left: 4px solid transparent;
+            }
+            QPushButton:hover {
+                background-color: #1e293b;
+                color: #f8fafc;
+            }
+            QPushButton:checked {
+                background-color: #1e293b;
+                color: #3b82f6; /* Texto azul brillante al estar activo */
+                border-left: 4px solid #3b82f6; /* Línea indicadora azul a la izquierda */
+                font-weight: bold;
+            }
+        """)
+        
+        layout_sidebar = QVBoxLayout(sidebar)
+        layout_sidebar.setContentsMargins(0, 0, 0, 0)
+        layout_sidebar.setSpacing(5)
+        
+        self.lbl_logo = QLabel()
+        self.lbl_logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Intentamos cargar la imagen (si no existe, simplemente queda el espacio vacío)
+        try:
+            # Ruta robusta al logo, basada en la ubicación real de este archivo
+            _logo_path = Path(__file__).resolve().parent.parent / "assets" / "logo.png"
+            pixmap = QPixmap(str(_logo_path)).scaled(
+                100, 100, 
+                Qt.AspectRatioMode.KeepAspectRatio, 
+                Qt.TransformationMode.SmoothTransformation
+            )
+            self.lbl_logo.setPixmap(pixmap)
+        except Exception as e:
+            print("Logo no encontrado todavía, usando espacio vacío.")
+        # Título de la sección superior de la Sidebar
+        lbl_marca = QLabel("  Construseco\nPereyra")
+        lbl_marca.setAlignment(Qt.AlignmentFlag.AlignCenter) # Centramos el texto
+        lbl_marca.setStyleSheet("""
+           QLabel {
+                color: #f1f5f9;
+                font-family: 'Segoe UI', 'Arial', sans-serif; /* Fuente moderna, limpia y sin serifas */
+                font-size: 19px;
+                font-weight: 800; /* Letra bien gruesa para darle peso de título */
+                margin-top: -10px; /* Acercamos el texto hacia arriba (hacia el logo) */
+                margin-bottom: 25px; /* Dejamos buen espacio antes del botón "Nueva Venta" */
+            }
+        """)
+        
+        # Agregamos el logo y el texto a la barra lateral
+        layout_sidebar.addWidget(self.lbl_logo)
+        layout_sidebar.addWidget(lbl_marca)
+        
+        
+        # Creamos los botones del menú
+        self.btn_ventas = QPushButton(" Nueva Venta")
+        self.btn_ventas.setCheckable(True)
+        self.btn_ventas.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        self.btn_stock = QPushButton(" Control de Stock")
+        self.btn_stock.setCheckable(True)
+        self.btn_stock.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        self.btn_clientes = QPushButton(" Clientes")
+        self.btn_clientes.setCheckable(True)
+        self.btn_clientes.setCursor(Qt.CursorShape.PointingHandCursor)
+
+
+        self.btn_presupuestos = QPushButton(" Presupuestos")
+        self.btn_presupuestos.setCheckable(True)
+        self.btn_presupuestos.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        # Agrupamos los botones para que actúen en conjunto (si uno se activa, el otro se desactiva)
+        self.botones_menu = [self.btn_ventas, self.btn_stock, self.btn_clientes, self.btn_presupuestos]
+        for btn in self.botones_menu:
+            layout_sidebar.addWidget(btn)
+            
+        # Resorte inferior invisible para empujar los botones hacia arriba
+        layout_sidebar.addStretch()
+        
+        # 2. CONTENEDOR DE PESTAÑAS (DERECHA)
+        self.contenedor_vistas = QStackedWidget()
+        
+        # Instanciamos tus pestañas reales
+        self.pestana_stock = PestanaStock(self.conn)
+        
+        # Crearemos vistas temporales (placeholders) para las secciones que faltan programar
+        # BORRÁ O COMENTÁ ESTAS LÍNEAS:
+        # self.vista_ventas_temp = QLabel("Pantalla de Nueva Venta (Alvaro )")
+        # self.vista_ventas_temp.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # self.vista_ventas_temp.setStyleSheet("font-size: 18px; color: #64748b; background-color: #f8fafc;")
+
+        # Y AGREGÁ ESTA LÍNEA EXACTAMENTE AHÍ:
+        self.vista_ventas_temp = PestanaNuevaVenta(self.conn)
+        
+        self.vista_presupuestos_temp = QLabel("Pantalla de Presupuestos (Alvaro)")
+        self.vista_presupuestos_temp.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.vista_presupuestos_temp.setStyleSheet("font-size: 18px; color: #64748b; background-color: #f8fafc;")
+
+        self.vista_clientes_temp = QLabel("Pantalla de Clientes (Thomas)")
+        self.vista_clientes_temp.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.vista_clientes_temp.setStyleSheet("font-size: 18px; color: #64748b; background-color: #f8fafc;")
+        
+        # Agregamos las vistas al mazo de cartas (QStackedWidget)
+        self.contenedor_vistas.addWidget(self.vista_ventas_temp)   # Índice 0
+        self.contenedor_vistas.addWidget(self.pestana_stock)        # Índice 1
+        self.contenedor_vistas.addWidget(self.vista_clientes_temp) # Índice 2
+        
+        # Enlazamos los clics de los botones para cambiar de pestaña dinámicamente
+        self.contenedor_vistas.addWidget(self.vista_presupuestos_temp)
+
+        self.btn_ventas.clicked.connect(lambda: self.cambiar_pestana(0, self.btn_ventas))
+        self.btn_stock.clicked.connect(lambda: self.cambiar_pestana(1, self.btn_stock))
+        self.btn_clientes.clicked.connect(lambda: self.cambiar_pestana(2, self.btn_clientes))
+        self.btn_presupuestos.clicked.connect(lambda: self.cambiar_pestana(3, self.btn_presupuestos))
+        # Dejar la primera pestaña (Ventas) seleccionada por defecto al abrir
+        self.cambiar_pestana(0, self.btn_ventas)
+        
+        # Ensamblamos todo en la ventana central
+        layout_principal.addWidget(sidebar)
+        layout_principal.addWidget(self.contenedor_vistas)
+        
+        self.setCentralWidget(widget_central)
+
+    def cambiar_pestana(self, indice, boton_presionado):
+        """Cambia la vista del contenedor de la derecha y actualiza el botón activo en la barra lateral."""
+        self.contenedor_vistas.setCurrentIndex(indice)
+        
+        # Desmarcar todos los botones excepto el que se presionó
+        for btn in self.botones_menu:
+            btn.setChecked(btn == boton_presionado)

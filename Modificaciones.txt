@@ -1,0 +1,2 @@
+1) En la pantalla "Control de Stock", falta agregar un boton de actualizar o bien hacerle una funcion que cuando se seleccione
+ese menu se actualice solo 
