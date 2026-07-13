@@ -6,19 +6,19 @@ Responsabilidades:
   - DialogoContacto: crear/editar contactos de un cliente.
 """
 
-from ui.modal import DialogoModalIntegrado
+from ui.core.modal import DialogoModalIntegrado
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QTextEdit, QCheckBox, QFrame, QMessageBox
 )
 from PyQt6.QtCore import Qt
 
-from ui.theme import (
+from ui.core.theme import (
     COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG, COLOR_TEXT_MAIN,
     COLOR_TEXT_SEC, COLOR_BORDER, COLOR_DANGER
 )
 from db import queries_clientes as qc
-from ui.dialogs_clientes import _CampoFormulario, _RE_EMAIL, _RE_TEL
+from ui.modules.clientes.dialogs_clientes import _CampoFormulario, _RE_EMAIL, _RE_TEL
 
 
 class DialogoNota(DialogoModalIntegrado):

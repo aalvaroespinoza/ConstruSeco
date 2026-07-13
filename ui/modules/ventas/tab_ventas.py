@@ -10,8 +10,8 @@ from datetime import datetime, timedelta
 import sqlite3
 import re
 from db.queries import subquery_atp, obtener_stock_producto
-from ui.modal import ModalOverlay, ModalResult
-from ui.dialogs_clientes import DialogoFormularioCliente
+from ui.core.modal import ModalOverlay, ModalResult
+from ui.modules.clientes.dialogs_clientes import DialogoFormularioCliente
 from db import queries_clientes as qc
 
 # --- Funciones Helper: Formato Argentino Seguros ---

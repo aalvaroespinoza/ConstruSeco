@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QFrame, QVBoxLayout, QWidget, QGraphicsDropShadowEff
 from PyQt6.QtCore import Qt, QEventLoop, QEvent, QObject
 from PyQt6.QtGui import QColor, QKeyEvent
 
-from ui.theme import COLOR_BORDER
+from ui.core.theme import COLOR_BORDER
 
 class ModalResult:
     Rejected = 0
@@ -27,7 +27,7 @@ class DialogoModalIntegrado(QFrame):
         self._modal_parent = None
         self._titulo_inyectado = False
         
-        from ui.theme import COLOR_CARD_BG, COLOR_BORDER
+        from ui.core.theme import COLOR_CARD_BG, COLOR_BORDER
         self.setObjectName("dialogo_modal_card")
         self.setStyleSheet(f"""
             QFrame#dialogo_modal_card {{
@@ -46,7 +46,7 @@ class DialogoModalIntegrado(QFrame):
         if ly and self.windowTitle() and not self._titulo_inyectado:
             from PyQt6.QtWidgets import QLabel, QPushButton, QHBoxLayout, QWidget
             from PyQt6.QtCore import Qt
-            from ui.theme import COLOR_TEXT_MAIN, COLOR_BORDER
+            from ui.core.theme import COLOR_TEXT_MAIN, COLOR_BORDER
             
             header_widget = QWidget()
             header_layout = QHBoxLayout(header_widget)

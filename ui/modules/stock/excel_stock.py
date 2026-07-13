@@ -1,4 +1,4 @@
-from ui.modal import DialogoModalIntegrado
+from ui.core.modal import DialogoModalIntegrado
 import sqlite3
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -15,7 +15,7 @@ from PyQt6.QtGui import QColor
 
 from db.queries import obtener_stocks_todos
 
-from ui.theme import (
+from ui.core.theme import (
     COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG,
     COLOR_BORDER, COLOR_TEXT_MAIN, COLOR_SUCCESS, COLOR_DANGER
 )

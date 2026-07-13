@@ -28,14 +28,14 @@ from PyQt6.QtWidgets import ( QDialog,
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint
 from PyQt6.QtGui import QColor, QAction, QKeySequence
 
-from ui.theme import (
+from ui.core.theme import (
     COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG, COLOR_TEXT_MAIN,
     COLOR_TEXT_SEC, COLOR_BORDER, COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER
 )
-from ui.dialogs_contactos_notas import DialogoNota
+from ui.modules.clientes.dialogs_contactos_notas import DialogoNota
 
-from ui.dialogs_historial import DialogoHistorialCliente
-from ui.modal import ModalOverlay, ModalResult
+from ui.modules.clientes.dialogs_historial import DialogoHistorialCliente
+from ui.core.modal import ModalOverlay, ModalResult
 from db import queries_clientes as qc
 
 
@@ -1297,7 +1297,7 @@ class PestanaClientes(QWidget):
     # ──────────────────────────────────────────────────────────────────────────
 
     def _on_nuevo_cliente(self):
-        from ui.dialogs_clientes import DialogoFormularioCliente
+        from ui.modules.clientes.dialogs_clientes import DialogoFormularioCliente
         formulario = DialogoFormularioCliente(self.conn, parent=self)
         if formulario.exec() == QDialog.DialogCode.Accepted and formulario.id_guardado is not None:
             nuevo_id = formulario.id_guardado
@@ -1317,7 +1317,7 @@ class PestanaClientes(QWidget):
     # ──────────────────────────────────────────────────────────────────────────
 
     def _on_editar_cliente(self, id_cliente: int):
-        from ui.dialogs_clientes import DialogoFormularioCliente
+        from ui.modules.clientes.dialogs_clientes import DialogoFormularioCliente
         formulario = DialogoFormularioCliente(self.conn, id_cliente=id_cliente, parent=self)
         if formulario.exec() == QDialog.DialogCode.Accepted and formulario.id_guardado is not None:
             self._id_cliente_seleccionado = id_cliente

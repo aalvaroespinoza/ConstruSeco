@@ -8,20 +8,20 @@ from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QColor, QFont, QCursor, QAction, QBrush
 
 from db.queries import obtener_stocks_todos, obtener_metricas_globales, obtener_productos_frecuentes, UNIDADES_PERMITIDAS
-from ui.dialogs_stock import (
+from ui.modules.stock.dialogs_stock import (
     migrar_esquema_stock, DialogoAgregarProducto, DialogoEditarProducto,
     DialogoStockMinimo, DialogoEntradaStock, DialogoAjusteInventario,
     VistaDetalleProducto
 )
-from ui.excel_stock import (
+from ui.modules.stock.excel_stock import (
     DialogoImportarExcel, exportar_inventario_excel, generar_plantilla_excel
 )
-from ui.ajustes_stock import (
+from ui.modules.stock.ajustes_stock import (
     DialogoConfiguracionGeneral, DialogoHistorialMovimientos, DialogoVisualizacionInventario
 )
 from PyQt6.QtCore import QSettings
 
-from ui.theme import (
+from ui.core.theme import (
     COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG, COLOR_TEXT_MAIN,
     COLOR_TEXT_SEC, COLOR_BORDER, COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER
 )
@@ -816,7 +816,7 @@ class PestanaStock(QWidget):
 
     def abrir_alertas_inventario(self, event):
         # Dialogo popup para productos con bajo stock o sin stock
-        from ui.dialogs_stock import DialogoAlertasInventario
+        from ui.modules.stock.dialogs_stock import DialogoAlertasInventario
         dlg = DialogoAlertasInventario(self.datos_catalogo, self.resaltar_producto_por_codigo, self)
         dlg.exec()
             

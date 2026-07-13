@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
-from ui.theme import aplicar_tema_claro
+from ui.core.theme import aplicar_tema_claro
 # Importamos la base de datos y tu pestaña recién creada
 from db.conexion import obtener_conexion, inicializar_base_datos, limpiar_presupuestos_vencidos
 from ui.ventana_principal import VentanaPrincipal

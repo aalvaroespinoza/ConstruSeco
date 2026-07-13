@@ -3,9 +3,9 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from pathlib import Path
-from ui.stock import PestanaStock
-from ui.nueva_venta import PestanaNuevaVenta
-from ui.clientes import PestanaClientes
+from ui.modules.stock.tab_stock import PestanaStock
+from ui.modules.ventas.tab_ventas import PestanaNuevaVenta
+from ui.modules.clientes.tab_clientes import PestanaClientes
 
 
 class VentanaPrincipal(QMainWindow):

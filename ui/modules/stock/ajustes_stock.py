@@ -1,4 +1,4 @@
-from ui.modal import DialogoModalIntegrado
+from ui.core.modal import DialogoModalIntegrado
 import sqlite3
 from datetime import datetime
 
@@ -12,7 +12,7 @@ from PyQt6.QtGui import QColor
 
 from db.conexion import limpiar_presupuestos_vencidos
 
-from ui.theme import (
+from ui.core.theme import (
     COLOR_PRIMARY, COLOR_BG, COLOR_TEXT_MAIN, COLOR_BORDER
 )
 
