@@ -1,4 +1,5 @@
 import sys
+import os
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
@@ -9,6 +10,14 @@ from ui.ventana_principal import VentanaPrincipal
 
 
 if __name__ == "__main__":
+    # Fix: en Linux con compositores Wayland estrictos (ej. Hyprland), los popups
+    # nativos de Qt (QComboBox, QMenu, tooltips) pueden renderizarse detrás de
+    # widgets "modal" propios de la app (ver ui/core/modal.py, que no usa QDialog
+    # real sino un QFrame embebido). Forzar XCB evita ese problema de stacking.
+    # setdefault() para no pisar la variable si alguien ya la fijó explícitamente.
+    if sys.platform.startswith("linux"):
+        os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
+
     # Primero nos aseguramos de que las tablas existan en la base de datos
     inicializar_base_datos()
     

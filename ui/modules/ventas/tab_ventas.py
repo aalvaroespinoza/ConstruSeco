@@ -3,14 +3,14 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLineEdit,
                              QHeaderView, QAbstractItemView, QMessageBox, QCheckBox,
                              QComboBox, QFrame, QListWidget, QListWidgetItem, QGraphicsDropShadowEffect,
                              QDialog, QFormLayout, QButtonGroup, QCompleter, QSplitter,
-                             QSplitterHandle, QStyledItemDelegate)
-from PyQt6.QtCore import Qt, QEvent, QTimer
+                             QSplitterHandle, QStyledItemDelegate, QStackedWidget, QSizePolicy)
+from PyQt6.QtCore import Qt, QEvent, QTimer, pyqtSignal
 from PyQt6.QtGui import QShortcut, QKeySequence, QColor, QFont, QPainter
 from datetime import datetime, timedelta
 import sqlite3
 import re
 from db.queries import subquery_atp, obtener_stock_producto
-from ui.core.modal import ModalOverlay, ModalResult
+from ui.core.modal import ModalOverlay, ModalResult, DialogoModalIntegrado
 from ui.modules.clientes.dialogs_clientes import DialogoFormularioCliente
 from db import queries_clientes as qc
 
@@ -81,10 +81,90 @@ class _SplitterVenta(QSplitter):
         return _HandleDivisorVenta(self.orientation(), self)
 
 
+class DialogoVentaExitosa(DialogoModalIntegrado):
+    def __init__(self, num_venta, cliente_txt, fecha_hora, cant_prods, cant_unidades, total, desconto_stock, is_presupuesto=False, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("✓ Presupuesto Creado Correctamente" if is_presupuesto else "✓ Venta Realizada Correctamente")
+        self.setFixedWidth(400)
+        
+        layout = QVBoxLayout(self)
+        layout.setSpacing(16)
+        
+        # --- CÓDIGO DE VENTA ---
+        lbl_codigo_tit = QLabel("Número de Presupuesto" if is_presupuesto else "Código de Operación")
+        lbl_codigo_tit.setStyleSheet("color: #64748b; font-size: 12px; font-weight: bold; text-transform: uppercase;")
+        lbl_codigo_tit.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_codigo = QLabel(f"#{num_venta}")
+        lbl_codigo.setStyleSheet("color: #2563eb; font-size: 32px; font-weight: 900;")
+        lbl_codigo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # --- RESUMEN COMPACTO ---
+        resumen_frame = QFrame()
+        resumen_frame.setStyleSheet("background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;")
+        res_layout = QFormLayout(resumen_frame)
+        res_layout.setContentsMargins(16, 16, 16, 16)
+        res_layout.setSpacing(12)
+        
+        style_label = "color: #475569; font-size: 13px; font-weight: 600;"
+        style_value = "color: #0f172a; font-size: 14px; font-weight: 500;"
+        
+        def add_row(k, v):
+            lk = QLabel(k)
+            lk.setStyleSheet(style_label)
+            lv = QLabel(str(v))
+            lv.setStyleSheet(style_value)
+            lv.setWordWrap(True)
+            res_layout.addRow(lk, lv)
+            
+        add_row("Cliente:", cliente_txt)
+        add_row("Fecha y hora:", fecha_hora)
+        add_row("Productos:", f"{cant_prods} ítem(s) ({cant_unidades:g} unidades)")
+        add_row("Total final:", total)
+        if is_presupuesto:
+            add_row("Validez:", "48 horas desde su creación")
+            
+        add_row("Stock:", f"{'Descontado' if desconto_stock == 'Sí' else 'No descontado'}")
+        
+        # --- BOTONES ---
+        btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(12)
+        
+        self.btn_cerrar = QPushButton("Cerrar")
+        self.btn_cerrar.setObjectName("btn_secundario")
+        self.btn_cerrar.setFixedHeight(40)
+        self.btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_cerrar.clicked.connect(self.accept)
+        
+        self.btn_preview = QPushButton("Vista Previa")
+        self.btn_preview.setObjectName("btn_secundario")
+        self.btn_preview.setFixedHeight(40)
+        self.btn_preview.setEnabled(False)
+        self.btn_preview.setToolTip("Disponible próximamente al implementar el sistema de comprobantes PDF.")
+        
+        self.btn_pdf = QPushButton("Generar PDF")
+        self.btn_pdf.setObjectName("btn_primario")
+        self.btn_pdf.setFixedHeight(40)
+        self.btn_pdf.setEnabled(False)
+        self.btn_pdf.setToolTip("Disponible próximamente al implementar el sistema de comprobantes PDF.")
+        
+        btn_layout.addWidget(self.btn_cerrar)
+        btn_layout.addStretch()
+        btn_layout.addWidget(self.btn_preview)
+        btn_layout.addWidget(self.btn_pdf)
+        
+        layout.addWidget(lbl_codigo_tit)
+        layout.addWidget(lbl_codigo)
+        layout.addWidget(resumen_frame)
+        layout.addLayout(btn_layout)
+
+
 class PestanaNuevaVenta(QWidget):
-    def __init__(self, conexion_db):
+    operacion_completada = pyqtSignal(str)
+    
+    def __init__(self, conexion_db, is_presupuesto=False):
         super().__init__()
         self.conn = conexion_db
+        self.is_presupuesto = is_presupuesto
         self.carrito = [] 
         self.producto_en_foco = None 
         self.catalogo = []
@@ -95,14 +175,13 @@ class PestanaNuevaVenta(QWidget):
         self._suspender_resultados = False
         
         self.cliente_seleccionado = None
-        self.tipo_documento_seleccionado = 'VENTA'
+        self.tipo_documento_seleccionado = 'PRESUPUESTO' if self.is_presupuesto else 'VENTA'
         
         self.migrar_esquema()
         self.init_ui()
         self.cargar_catalogo_memoria()
         self.cargar_autocompletado_clientes()
         self.configurar_atajos()
-        self.on_tipo_doc_cambiado() # Inicializar estado
 
     def migrar_esquema(self):
         from db.queries_ventas import migrar_esquema_ventas
@@ -245,90 +324,118 @@ class PestanaNuevaVenta(QWidget):
         layout_principal.setContentsMargins(28, 28, 28, 28)
         layout_principal.setSpacing(20)
 
-        # --- HEADER: CLIENTE Y TIPO DOC ---
+        # --- HEADER PRINCIPAL Y CLIENTE COMPACTO ---
         self.contenedor_header = QFrame()
         self.contenedor_header.setObjectName("tarjeta_blanca")
         layout_top = QHBoxLayout(self.contenedor_header)
-        layout_top.setContentsMargins(24, 16, 24, 16)
+        layout_top.setContentsMargins(20, 12, 20, 12)
         layout_top.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         
-        # 1. Buscador / Tarjeta Cliente (LADO IZQUIERDO)
-        col_izq = QVBoxLayout()
-        col_izq.setSpacing(4)
-        lbl_cli_tit = QLabel("CLIENTE")
-        lbl_cli_tit.setStyleSheet("color: #667085; font-size: 11px; font-weight: bold; letter-spacing: 0.5px;")
-        col_izq.addWidget(lbl_cli_tit)
+        # Título de la pantalla
+        lbl_titulo = QLabel("Nuevo Presupuesto" if self.is_presupuesto else "Venta")
+        lbl_titulo.setStyleSheet("font-size: 20px; font-weight: 800; color: #172033; letter-spacing: -0.5px;")
+        
+        lbl_subtitulo = QLabel("Validez: 48 horas desde su creación" if self.is_presupuesto else "Mostrador")
+        color_sub = "#2563EB" if self.is_presupuesto else "#64748B"
+        lbl_subtitulo.setStyleSheet(f"font-size: 13px; font-weight: 600; color: {color_sub};")
+        
+        titulo_layout = QVBoxLayout()
+        titulo_layout.setSpacing(0)
+        titulo_layout.addWidget(lbl_titulo)
+        titulo_layout.addWidget(lbl_subtitulo)
+        
+        divisor = QFrame()
+        divisor.setFrameShape(QFrame.Shape.VLine)
+        divisor.setStyleSheet("color: #E4E7EC; margin-left: 12px; margin-right: 12px;")
+        
+        # 1. Buscador / Tarjeta Cliente (LADO IZQUIERDO - FRANJA COMPACTA)
+        col_izq = QHBoxLayout()
+        col_izq.setSpacing(8)
+        col_izq.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        
+        lbl_cli_tit = QLabel("Cliente:")
+        lbl_cli_tit.setStyleSheet("color: #64748B; font-size: 13px; font-weight: 600;")
         
         self.widget_busqueda_cliente = QWidget()
+        self.widget_busqueda_cliente.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)
         layout_busq_cli = QHBoxLayout(self.widget_busqueda_cliente)
         layout_busq_cli.setContentsMargins(0, 0, 0, 0)
         layout_busq_cli.setSpacing(8)
+        
         self.input_cliente = QLineEdit()
-        self.input_cliente.setPlaceholderText("Nombre o CUIT (F3)...")
-        self.input_cliente.setFixedWidth(280)
+        self.input_cliente.setPlaceholderText("Buscar por nombre o CUIT (F3)...")
+        self.input_cliente.setMinimumWidth(300)
+        self.input_cliente.setMaximumWidth(450)
+        self.input_cliente.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.input_cliente.returnPressed.connect(self.procesar_input_cliente)
+        
         self.btn_nuevo_cliente = QPushButton("+ Nuevo")
         self.btn_nuevo_cliente.setObjectName("btn_secundario")
+        self.btn_nuevo_cliente.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.btn_nuevo_cliente.setFixedWidth(80)
+        self.btn_nuevo_cliente.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_nuevo_cliente.clicked.connect(self.modal_nuevo_cliente)
+        
         layout_busq_cli.addWidget(self.input_cliente)
         layout_busq_cli.addWidget(self.btn_nuevo_cliente)
         
         self.widget_tarjeta_cliente = QFrame()
-        self.widget_tarjeta_cliente.setStyleSheet("background-color: #F4F7FB; border-radius: 6px; padding: 4px 8px;")
+        self.widget_tarjeta_cliente.setStyleSheet("background-color: #F8FAFC; border: 1px solid #E4E7EC; border-radius: 6px;")
+        self.widget_tarjeta_cliente.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)
+        self.widget_tarjeta_cliente.setMaximumWidth(450)
         layout_tarjeta_cli = QHBoxLayout(self.widget_tarjeta_cliente)
-        layout_tarjeta_cli.setContentsMargins(8, 4, 8, 4)
-        self.lbl_nombre_cliente = QLabel("<b>Nombre Cliente</b>")
-        self.lbl_datos_cliente = QLabel("CUIT - Tel")
-        self.lbl_datos_cliente.setStyleSheet("color: #667085; font-size: 12px;")
+        layout_tarjeta_cli.setContentsMargins(12, 4, 8, 4)
+        layout_tarjeta_cli.setSpacing(12)
         
-        cli_info_layout = QVBoxLayout()
-        cli_info_layout.setSpacing(0)
-        cli_info_layout.addWidget(self.lbl_nombre_cliente)
-        cli_info_layout.addWidget(self.lbl_datos_cliente)
+        self.lbl_nombre_cliente = QLabel("<b>Nombre Cliente</b>")
+        self.lbl_nombre_cliente.setStyleSheet("color: #1e293b; font-size: 13px;")
+        self.lbl_datos_cliente = QLabel("CUIT/DNI - Tel")
+        self.lbl_datos_cliente.setStyleSheet("color: #64748b; font-size: 12px;")
         
         self.btn_quitar_cliente = QPushButton("✕")
         self.btn_quitar_cliente.setObjectName("btn_quitar_cliente")
+        self.btn_quitar_cliente.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.btn_quitar_cliente.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_quitar_cliente.clicked.connect(self.deseleccionar_cliente)
         
-        layout_tarjeta_cli.addLayout(cli_info_layout)
-        layout_tarjeta_cli.addStretch()
+        layout_tarjeta_cli.addWidget(self.lbl_nombre_cliente)
+        layout_tarjeta_cli.addWidget(self.lbl_datos_cliente)
         layout_tarjeta_cli.addWidget(self.btn_quitar_cliente)
         self.widget_tarjeta_cliente.setVisible(False)
-        self.widget_tarjeta_cliente.setFixedWidth(350)
         
+        col_izq.addWidget(lbl_cli_tit)
         col_izq.addWidget(self.widget_busqueda_cliente)
         col_izq.addWidget(self.widget_tarjeta_cliente)
         
-        # 2. Selector de Tipo de Documento (CENTRO)
-        self.grupo_tipo_doc = QButtonGroup(self)
-        self.btn_tipo_venta = QPushButton("Venta Directa")
-        self.btn_tipo_venta.setObjectName("btn_tipo_doc")
-        self.btn_tipo_venta.setCheckable(True)
-        self.btn_tipo_venta.setChecked(True)
-        self.btn_tipo_venta.setStyleSheet("border-top-right-radius: 0; border-bottom-right-radius: 0;")
+        # Contenedor para ayuda contextual
+        self.contenedor_ayuda_contextual = QFrame()
+        self.contenedor_ayuda_contextual.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.layout_ayuda_contextual = QVBoxLayout(self.contenedor_ayuda_contextual)
+        self.layout_ayuda_contextual.setContentsMargins(12, 0, 0, 0)
         
-        self.btn_tipo_presupuesto = QPushButton("Presupuesto")
-        self.btn_tipo_presupuesto.setObjectName("btn_tipo_doc")
-        self.btn_tipo_presupuesto.setCheckable(True)
-        self.btn_tipo_presupuesto.setStyleSheet("border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: none;")
+        self.btn_ayuda = QPushButton("? Ayuda")
+        self.btn_ayuda.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_ayuda.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.btn_ayuda.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #64748B;
+                border: 1px solid #CBD5E1;
+                border-radius: 6px;
+                padding: 4px 10px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background-color: #F8FAFC;
+                color: #0F172A;
+                border-color: #94A3B8;
+            }
+        """)
+        self.btn_ayuda.clicked.connect(self.mostrar_ayuda_contextual)
+        self.layout_ayuda_contextual.addWidget(self.btn_ayuda, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         
-        self.grupo_tipo_doc.addButton(self.btn_tipo_venta)
-        self.grupo_tipo_doc.addButton(self.btn_tipo_presupuesto)
-        self.grupo_tipo_doc.buttonToggled.connect(self.on_tipo_doc_cambiado)
-        
-        col_centro = QVBoxLayout()
-        col_centro.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        btns_tipo_layout = QHBoxLayout()
-        btns_tipo_layout.setSpacing(0)
-        btns_tipo_layout.addWidget(self.btn_tipo_venta)
-        btns_tipo_layout.addWidget(self.btn_tipo_presupuesto)
-        self.lbl_leyenda_doc = QLabel("")
-        self.lbl_leyenda_doc.setStyleSheet("color: #667085; font-size: 12px; margin-top: 4px;")
-        self.lbl_leyenda_doc.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        col_centro.addLayout(btns_tipo_layout)
-        col_centro.addWidget(self.lbl_leyenda_doc)
+        col_izq.addWidget(self.contenedor_ayuda_contextual)
         
         # 3. Info y Estado (LADO DERECHO)
         self.lbl_info_items = QLabel("🟢 Nueva operación")
@@ -344,35 +451,41 @@ class PestanaNuevaVenta(QWidget):
         col_der.addWidget(self.lbl_info_items, alignment=Qt.AlignmentFlag.AlignRight)
         col_der.addWidget(self.btn_vaciar_carrito, alignment=Qt.AlignmentFlag.AlignRight)
         
+        layout_top.addLayout(titulo_layout)
+        layout_top.addWidget(divisor)
         layout_top.addLayout(col_izq)
-        layout_top.addStretch()
-        layout_top.addLayout(col_centro)
         layout_top.addStretch()
         layout_top.addLayout(col_der)
         
         layout_principal.addWidget(self.contenedor_header, stretch=0)
 
-        # --- BUSCADOR Y CANTIDAD ---
-        self.contenedor_buscador = QFrame()
-        layout_buscador = QHBoxLayout(self.contenedor_buscador)
+        # --- ZONA CENTRAL: BUSCADOR + CARRITO ---
+        self.contenedor_tabla = QFrame()
+        self.contenedor_tabla.setObjectName("tarjeta_blanca")
+        layout_tabla = QVBoxLayout(self.contenedor_tabla)
+        layout_tabla.setContentsMargins(16, 16, 16, 16)
+        layout_tabla.setSpacing(12)
+        
+        # 1. Buscador y Cantidad
+        layout_buscador = QHBoxLayout()
         layout_buscador.setContentsMargins(0, 0, 0, 0)
         layout_buscador.setSpacing(12)
         
         self.input_buscador = QLineEdit()
-        self.input_buscador.setPlaceholderText("🔍 Buscar por código o descripción... (F2)")
+        self.input_buscador.setPlaceholderText("🔍 Buscar producto por código o descripción... (F2)")
         self.input_buscador.setObjectName("input_buscador")
-        self.input_buscador.setMinimumHeight(56)
+        self.input_buscador.setMinimumHeight(48)
         self.input_buscador.setStyleSheet("""
             QLineEdit {
-                background-color: #FFFFFF;
+                background-color: #F8FAFC;
                 border: 1px solid #E4E7EC;
-                border-radius: 12px;
-                font-size: 18px;
-                padding-left: 16px;
+                border-radius: 8px;
+                font-size: 16px;
+                padding-left: 12px;
                 color: #172033;
             }
             QLineEdit:focus {
-                border: 2px solid #2563EB;
+                border: 1px solid #2563EB;
                 background-color: #FFFFFF;
             }
         """)
@@ -381,7 +494,7 @@ class PestanaNuevaVenta(QWidget):
         
         self.combo_unidad = QComboBox()
         self.combo_unidad.setFixedWidth(120)
-        self.combo_unidad.setMinimumHeight(56)
+        self.combo_unidad.setMinimumHeight(48)
         self.combo_unidad.setVisible(False)
         self.combo_unidad.installEventFilter(self)
         self.combo_unidad.currentIndexChanged.connect(self.on_unidad_cambiada)
@@ -389,15 +502,15 @@ class PestanaNuevaVenta(QWidget):
         self.caja_cant_frame = QFrame()
         self.caja_cant_frame.setStyleSheet("""
             QFrame {
-                background-color: #FFFFFF;
+                background-color: #F8FAFC;
                 border: 1px solid #E4E7EC;
-                border-radius: 12px;
+                border-radius: 8px;
             }
             QPushButton#btn_primario {
                 background-color: #2563EB;
                 color: #FFFFFF;
-                border-radius: 8px;
-                padding: 12px 24px;
+                border-radius: 6px;
+                padding: 8px 16px;
                 font-weight: 600;
                 font-size: 14px;
                 border: none;
@@ -407,15 +520,15 @@ class PestanaNuevaVenta(QWidget):
             }
         """)
         caja_cant = QHBoxLayout(self.caja_cant_frame)
-        caja_cant.setContentsMargins(16, 8, 16, 8)
+        caja_cant.setContentsMargins(12, 6, 12, 6)
         caja_cant.setSpacing(12)
         
-        self.lbl_cant = QLabel("CANTIDAD")
-        self.lbl_cant.setStyleSheet("color: #667085; font-size: 11px; font-weight: bold; letter-spacing: 0.5px; border: none; background: transparent;")
+        self.lbl_cant = QLabel("CANT:")
+        self.lbl_cant.setStyleSheet("color: #64748B; font-size: 12px; font-weight: bold; border: none; background: transparent;")
         
         self.input_cantidad = QLineEdit()
         self.input_cantidad.setPlaceholderText("0")
-        self.input_cantidad.setFixedWidth(70)
+        self.input_cantidad.setFixedWidth(60)
         self.input_cantidad.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.input_cantidad.setObjectName("input_cantidad")
         self.input_cantidad.setEnabled(False)
@@ -423,39 +536,38 @@ class PestanaNuevaVenta(QWidget):
         self.input_cantidad.installEventFilter(self)
         self.input_cantidad.setStyleSheet("""
             QLineEdit {
-                border: 1px solid #E4E7EC;
-                border-radius: 6px;
+                border: 1px solid #CBD5E1;
+                border-radius: 4px;
                 font-size: 15px;
-                background-color: #F4F7FB;
+                background-color: #FFFFFF;
                 padding: 4px;
             }
             QLineEdit:focus {
                 border: 1px solid #2563EB;
-                background-color: #FFFFFF;
             }
         """)
         
-        self.btn_agregar = QPushButton("Aceptar")
+        self.btn_agregar = QPushButton("Agregar")
         self.btn_agregar.setObjectName("btn_primario")
+        self.btn_agregar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_agregar.clicked.connect(self.agregar_al_carrito)
         
         caja_cant.addWidget(self.lbl_cant)
         caja_cant.addWidget(self.input_cantidad)
         caja_cant.addWidget(self.btn_agregar)
         
-        lbl_v_por = QLabel("Vender por:")
-        lbl_v_por.setStyleSheet("color: #667085; font-weight: 600; font-size: 14px;")
+        lbl_v_por = QLabel("Por:")
+        lbl_v_por.setStyleSheet("color: #64748B; font-weight: 600; font-size: 13px;")
         
         layout_buscador.addWidget(self.input_buscador, stretch=1)
         layout_buscador.addWidget(lbl_v_por, 0, Qt.AlignmentFlag.AlignRight)
         self.lbl_vender_por = layout_buscador.itemAt(layout_buscador.count() - 1).widget()
         self.lbl_vender_por.setVisible(False)
         layout_buscador.addWidget(self.combo_unidad)
-        
         layout_buscador.addWidget(self.caja_cant_frame)
         
-        layout_principal.addWidget(self.contenedor_buscador, stretch=0)
-
+        layout_tabla.addLayout(layout_buscador)
+        
         # Panel de resultados (Overlay)
         self.panel_resultados = QFrame(self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
         self.panel_resultados.setObjectName("panel_resultados")
@@ -463,15 +575,17 @@ class PestanaNuevaVenta(QWidget):
             QFrame#panel_resultados {
                 background-color: #ffffff;
                 border: 1px solid #cbd5e1;
-                border-radius: 12px;
+                border-radius: 8px;
             }
             QListWidget {
                 border: none;
                 background-color: transparent;
                 outline: none;
+                font-size: 14px;
             }
             QListWidget::item {
-                border-bottom: 1px solid #F4F7FB;
+                border-bottom: 1px solid #F1F5F9;
+                padding: 8px;
             }
             QListWidget::item:selected, QListWidget::item:hover {
                 background-color: #EBF5FF;
@@ -492,30 +606,39 @@ class PestanaNuevaVenta(QWidget):
         self.lista_resultados.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         panel_layout.addWidget(self.lista_resultados)
         
-        # --- GRILLA INTERACTIVA ---
-        self.contenedor_tabla = QFrame()
-        self.contenedor_tabla.setObjectName("tarjeta_blanca")
-        layout_tabla = QVBoxLayout(self.contenedor_tabla)
-        layout_tabla.setContentsMargins(16, 20, 16, 16)
+        # Separador visual entre buscador y tabla
+        sep_tb = QFrame()
+        sep_tb.setFrameShape(QFrame.Shape.HLine)
+        sep_tb.setStyleSheet("background-color: #E4E7EC; max-height: 1px; margin-top: 4px; margin-bottom: 4px;")
+        layout_tabla.addWidget(sep_tb)
         
+        # --- TABLA (CARRITO) Y ESTADO VACÍO ---
         cabecera_tabla = QHBoxLayout()
         lbl_tit_tabla = QLabel("Detalle de la operación")
-        lbl_tit_tabla.setStyleSheet("font-size: 16px; font-weight: bold; color: #172033;")
+        lbl_tit_tabla.setStyleSheet("font-size: 14px; font-weight: bold; color: #172033;")
         self.lbl_resumen_rapido = QLabel("0 productos · 0 unidades")
-        self.lbl_resumen_rapido.setStyleSheet("color: #667085; font-weight: 600;")
+        self.lbl_resumen_rapido.setStyleSheet("color: #64748B; font-weight: 600; font-size: 13px;")
         cabecera_tabla.addWidget(lbl_tit_tabla)
         cabecera_tabla.addStretch()
         cabecera_tabla.addWidget(self.lbl_resumen_rapido)
         
         layout_tabla.addLayout(cabecera_tabla)
-        layout_tabla.addSpacing(16)
         
+        self.stack_tabla = QStackedWidget()
+        
+        # Estado Vacío
+        self.lbl_estado_vacio = QLabel("Busque y agregue un producto para comenzar.")
+        self.lbl_estado_vacio.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_estado_vacio.setStyleSheet("color: #94A3B8; font-size: 14px; font-style: italic; background-color: #F8FAFC; border-radius: 8px;")
+        self.stack_tabla.addWidget(self.lbl_estado_vacio)
+        
+        # Tabla Principal
         self.tabla = QTableWidget(0, 9)
-        self.tabla.setHorizontalHeaderLabels(["Código", "Descripción", "Unidad", "Cantidad", "Equivalencia", "Precio Unit.", "Desc. (%)", "Subtotal", ""])
+        self.tabla.setHorizontalHeaderLabels(["Código", "Descripción", "Unidad", "Cantidad", "Equival.", "Precio Unit.", "Desc. (%)", "Subtotal", ""])
         self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.tabla.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.tabla.verticalHeader().setVisible(False)
-        self.tabla.verticalHeader().setDefaultSectionSize(46)
+        self.tabla.verticalHeader().setDefaultSectionSize(40)
         self.tabla.setShowGrid(False)
         self.tabla.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked | QAbstractItemView.EditTrigger.EditKeyPressed | QAbstractItemView.EditTrigger.AnyKeyPressed)
         
@@ -523,166 +646,183 @@ class PestanaNuevaVenta(QWidget):
         self.tabla.setItemDelegateForColumn(3, self.auto_select_delegate)
         self.tabla.setItemDelegateForColumn(6, self.auto_select_delegate)
         
-        # Ajustar anchos de columna
-        self.tabla.setColumnWidth(0, 90)
-        self.tabla.setColumnWidth(2, 80)
-        self.tabla.setColumnWidth(3, 80)
-        self.tabla.setColumnWidth(4, 120)
-        self.tabla.setColumnWidth(5, 130)
-        self.tabla.setColumnWidth(6, 80)
-        self.tabla.setColumnWidth(7, 140)
+        # Ajustes de ancho priorizando la descripcion
+        self.tabla.setColumnWidth(0, 80)
+        self.tabla.setColumnWidth(2, 70)
+        self.tabla.setColumnWidth(3, 75)
+        self.tabla.setColumnWidth(4, 90)
+        self.tabla.setColumnWidth(5, 110)
+        self.tabla.setColumnWidth(6, 75)
+        self.tabla.setColumnWidth(7, 120)
         self.tabla.setColumnWidth(8, 40)
         
         self.tabla.itemChanged.connect(self.celda_editada)
-        layout_tabla.addWidget(self.tabla, stretch=1)
+        self.stack_tabla.addWidget(self.tabla)
+        
+        # Inicialmente mostrar el estado vacío
+        self.stack_tabla.setCurrentIndex(0)
+        
+        layout_tabla.addWidget(self.stack_tabla, stretch=1)
 
         self.contenedor_tabla.setMinimumHeight(220)
         self.splitter_operacion = _SplitterVenta(Qt.Orientation.Vertical)
         self.splitter_operacion.setChildrenCollapsible(False)
         self.splitter_operacion.setHandleWidth(8)
 
-        # --- FOOTER: OPCIONES Y RESUMEN ---
+        # --- FOOTER: OPCIONES Y RESUMEN COMPACTO ---
         self.contenedor_footer = QFrame()
+        self.contenedor_footer.setObjectName("tarjeta_blanca")
+        # Maximum permite que el layout ceda espacio a la tabla superior hasta llegar a su minimumSizeHint
+        self.contenedor_footer.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         layout_footer = QHBoxLayout(self.contenedor_footer)
-        layout_footer.setContentsMargins(0, 0, 0, 0)
-        layout_footer.setSpacing(20)
+        layout_footer.setContentsMargins(20, 16, 20, 16)
+        layout_footer.setSpacing(24)
         
-        # ── Izquierda: Opciones de la operación ─────────────────────────────
-        self.tarjeta_opciones = QFrame()
-        self.tarjeta_opciones.setObjectName("tarjeta_blanca")
-        layout_op = QVBoxLayout(self.tarjeta_opciones)
-        layout_op.setContentsMargins(12, 12, 12, 12)
-        layout_op.setSpacing(0)
-
-        # Título (misma jerarquía visual que "RESUMEN")
-        lbl_opciones_tit = QLabel("OPCIONES DE LA OPERACIÓN")
-        lbl_opciones_tit.setStyleSheet(
-            "font-weight: 800; font-size: 13px; color: #172033; letter-spacing: 0.5px;"
-        )
-
-        self.chk_descontar = QCheckBox("Descontar del stock")
-        self.chk_descontar.setChecked(True)
-
-        lbl_obs = QLabel("OBSERVACIONES")
-        lbl_obs.setStyleSheet(
-            "color: #667085; font-size: 11px; font-weight: bold; letter-spacing: 0.5px;"
-        )
-
+        # --- ÁREA IZQUIERDA: STOCK Y OBSERVACIONES ---
+        col_izq_footer = QVBoxLayout()
+        col_izq_footer.setSpacing(12)
+        col_izq_footer.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
+        lbl_op_sys = QLabel("Opciones Adicionales")
+        lbl_op_sys.setStyleSheet("color: #172033; font-weight: 700; font-size: 13px;")
+        
+        self.chk_descontar = QCheckBox("Descontar del stock físico")
+        self.chk_descontar.setChecked(not self.is_presupuesto)
+        self.chk_descontar.setEnabled(not self.is_presupuesto)
+        if self.is_presupuesto:
+            self.chk_descontar.setVisible(False)
+        self.chk_descontar.setStyleSheet("color: #475569; font-size: 13px; font-weight: 500;")
+        
+        fila_obs = QVBoxLayout()
+        fila_obs.setSpacing(6)
+        lbl_obs = QLabel(f"Observaciones del {'presupuesto' if self.is_presupuesto else 'venta'}:")
+        lbl_obs.setStyleSheet("color: #475569; font-size: 13px; font-weight: 600;")
         self.input_observaciones = QLineEdit()
-        self.input_observaciones.setPlaceholderText("Ej. Enviar por la tarde...")
+        self.input_observaciones.setPlaceholderText("Ej: Entregar por la tarde...")
         self.input_observaciones.setMinimumHeight(32)
-
-        # Separador horizontal sutil antes de la acción principal
-        sep_op = QFrame()
-        sep_op.setFrameShape(QFrame.Shape.HLine)
-        sep_op.setStyleSheet("background-color: #E4E7EC; max-height: 1px;")
-
-        self.btn_confirmar = QPushButton("Confirmar Venta [F12]")
-        self.btn_confirmar.setObjectName("btn_primario")
-        self.btn_confirmar.setProperty("tipo", "venta")
-        self.btn_confirmar.setFixedHeight(38)   # CTA principal visualmente prominente
-        self.btn_confirmar.clicked.connect(
-            lambda: self.confirmar_operacion(self.tipo_documento_seleccionado)
-        )
-
-        layout_op.addWidget(lbl_opciones_tit)
-        layout_op.addSpacing(8)
-        layout_op.addWidget(self.chk_descontar)
-        layout_op.addSpacing(8)
-        layout_op.addWidget(lbl_obs)
-        layout_op.addSpacing(4)
-        layout_op.addWidget(self.input_observaciones)
-        layout_op.addStretch(1)          # empuja separador + botón al fondo de la tarjeta
-        layout_op.addWidget(sep_op)
-        layout_op.addSpacing(8)
-        layout_op.addWidget(self.btn_confirmar)  # sin AlignLeft → ocupa todo el ancho
+        self.input_observaciones.setStyleSheet("border: 1px solid #E4E7EC; border-radius: 6px; font-size: 13px; padding-left: 8px; background-color: #F8FAFC;")
         
-        # Derecha: Tarjeta resumen
-        self.tarjeta_resumen = QFrame()
-        self.tarjeta_resumen.setObjectName("tarjeta_blanca")
-        layout_resumen = QVBoxLayout(self.tarjeta_resumen)
-        layout_resumen.setContentsMargins(12, 12, 12, 12)
+        fila_obs.addWidget(lbl_obs)
+        fila_obs.addWidget(self.input_observaciones)
         
-        lbl_resumen_tit = QLabel("RESUMEN")
-        lbl_resumen_tit.setStyleSheet("font-weight: 800; font-size: 13px; color: #172033; letter-spacing: 0.5px;")
-        layout_resumen.addWidget(lbl_resumen_tit)
-        layout_resumen.addSpacing(8)
+        col_izq_footer.addWidget(lbl_op_sys)
+        col_izq_footer.addWidget(self.chk_descontar)
+        col_izq_footer.addLayout(fila_obs)
+        col_izq_footer.addStretch(1)
         
+        # Divisor vertical
+        div_footer = QFrame()
+        div_footer.setFrameShape(QFrame.Shape.VLine)
+        div_footer.setStyleSheet("color: #E4E7EC;")
+        
+        # --- ÁREA DERECHA: RESUMEN FINANCIERO Y ACCIÓN ---
+        col_der_footer = QVBoxLayout()
+        col_der_footer.setSpacing(6)
+        
+        # Subtotal
         fila_sub = QHBoxLayout()
         lbl_sub_txt = QLabel("Subtotal")
-        lbl_sub_txt.setStyleSheet("color: #64748B; font-size: 14px;")
-        fila_sub.addWidget(lbl_sub_txt, alignment=Qt.AlignmentFlag.AlignLeft)
-        self.lbl_subtotal = QLabel("$ 0,00", alignment=Qt.AlignmentFlag.AlignRight)
-        self.lbl_subtotal.setStyleSheet("font-size: 15px; font-weight: 600; color: #172033;")
+        lbl_sub_txt.setStyleSheet("color: #64748B; font-size: 13px; font-weight: 500;")
+        self.lbl_subtotal = QLabel("$ 0,00", alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.lbl_subtotal.setStyleSheet("font-size: 14px; font-weight: 600; color: #172033;")
+        fila_sub.addWidget(lbl_sub_txt)
         fila_sub.addWidget(self.lbl_subtotal)
         
+        # Descuento
         fila_desc = QHBoxLayout()
-        lbl_desc_txt = QLabel("Descuento general (%)")
-        lbl_desc_txt.setStyleSheet("color: #64748B; font-size: 13px;")
-        fila_desc.addWidget(lbl_desc_txt, alignment=Qt.AlignmentFlag.AlignLeft)
-        fila_desc.addStretch()
+        fila_desc.setSpacing(4)
+        lbl_desc = QLabel("Desc. general:")
+        lbl_desc.setStyleSheet("color: #475569; font-size: 13px;")
         
         self.input_desc_gral = QLineEdit("0")
-        self.input_desc_gral.setFixedWidth(50)
+        self.input_desc_gral.setFixedWidth(40)
         self.input_desc_gral.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.input_desc_gral.setStyleSheet("border: 1px solid #E4E7EC; border-radius: 6px; padding: 2px; font-size: 13px; background-color: #F8FAFC; color: #2563EB; font-weight: bold;")
+        self.input_desc_gral.setStyleSheet("border: 1px solid #CBD5E1; border-radius: 4px; padding: 2px; font-size: 13px; background-color: #FFFFFF; color: #2563EB; font-weight: bold;")
         self.input_desc_gral.editingFinished.connect(self.on_descuento_general_editado)
         self.input_desc_gral.installEventFilter(self)
+        
+        lbl_desc_pct = QLabel("%")
+        lbl_desc_pct.setStyleSheet("color: #475569; font-size: 13px;")
+        
+        self.lbl_monto_desc = QLabel("-$ 0,00", alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.lbl_monto_desc.setStyleSheet("color: #DC2626; font-size: 13px; font-weight: 500;")
+        
+        fila_desc.addWidget(lbl_desc)
         fila_desc.addWidget(self.input_desc_gral)
+        fila_desc.addWidget(lbl_desc_pct)
+        fila_desc.addStretch()
+        fila_desc.addWidget(self.lbl_monto_desc)
         
-        self.lbl_monto_desc = QLabel("-$ 0,00", alignment=Qt.AlignmentFlag.AlignRight)
-        self.lbl_monto_desc.setStyleSheet("color: #DC2626; font-size: 12px;")
-        
+        # IVA
         fila_iva = QHBoxLayout()
-        self.chk_iva = QCheckBox("Discriminar IVA")
-        self.chk_iva.setStyleSheet("color: #64748B; font-size: 13px;")
+        fila_iva.setSpacing(4)
+        
+        self.chk_iva = QCheckBox("IVA:")
+        self.chk_iva.setStyleSheet("color: #475569; font-size: 13px;")
         self.chk_iva.stateChanged.connect(self.on_iva_toggled)
-        fila_iva.addWidget(self.chk_iva)
-        fila_iva.addStretch()
         
         self.input_iva_porc = QLineEdit("21")
         self.input_iva_porc.setFixedWidth(40)
         self.input_iva_porc.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.input_iva_porc.setStyleSheet("border: 1px solid #E4E7EC; border-radius: 6px; padding: 2px; font-size: 13px; background-color: #F8FAFC;")
+        self.input_iva_porc.setStyleSheet("border: 1px solid #CBD5E1; border-radius: 4px; padding: 2px; font-size: 13px; background-color: #FFFFFF;")
         self.input_iva_porc.setEnabled(False)
         self.input_iva_porc.editingFinished.connect(self.on_iva_editado)
         self.input_iva_porc.installEventFilter(self)
         
-        fila_iva.addWidget(self.input_iva_porc)
-        self.lbl_monto_iva = QLabel("+$ 0,00", alignment=Qt.AlignmentFlag.AlignRight)
+        lbl_iva_pct = QLabel("%")
+        lbl_iva_pct.setStyleSheet("color: #475569; font-size: 13px;")
+        
+        self.lbl_monto_iva = QLabel("+$ 0,00", alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         self.lbl_monto_iva.setStyleSheet("color: #64748B; font-size: 13px; font-weight: 500;")
+        
+        fila_iva.addWidget(self.chk_iva)
+        fila_iva.addWidget(self.input_iva_porc)
+        fila_iva.addWidget(lbl_iva_pct)
+        fila_iva.addStretch()
         fila_iva.addWidget(self.lbl_monto_iva)
         
-        div_resumen = QFrame()
-        div_resumen.setFrameShape(QFrame.Shape.HLine)
-        div_resumen.setStyleSheet("background-color: #E4E7EC;")
+        # Divisor de Total
+        div_total = QFrame()
+        div_total.setFrameShape(QFrame.Shape.HLine)
+        div_total.setStyleSheet("background-color: #E4E7EC; max-height: 1px; margin-top: 4px; margin-bottom: 4px;")
         
+        # Fila TOTAL
         fila_tot = QHBoxLayout()
         lbl_tot_t = QLabel("TOTAL")
-        lbl_tot_t.setStyleSheet("font-weight: 900; font-size: 16px; color: #172033; letter-spacing: 0.5px;")
+        lbl_tot_t.setStyleSheet("font-weight: 900; font-size: 16px; color: #172033;")
         
-        self.lbl_total = QLabel("$ 0,00", alignment=Qt.AlignmentFlag.AlignRight)
-        self.lbl_total.setStyleSheet("font-weight: 900; font-size: 28px; color: #2563EB; letter-spacing: -0.5px;")
+        self.lbl_total = QLabel("$ 0,00", alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.lbl_total.setStyleSheet("font-weight: 900; font-size: 26px; color: #2563EB; letter-spacing: -0.5px;")
+        self.lbl_total.setMinimumHeight(32) # Imposibilita matemáticamente que el texto se corte
         
         fila_tot.addWidget(lbl_tot_t, alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignLeft)
-        fila_tot.addStretch()
         fila_tot.addWidget(self.lbl_total, alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight)
         
-        layout_resumen.addLayout(fila_sub)
-        layout_resumen.addSpacing(6)
-        layout_resumen.addLayout(fila_desc)
-        layout_resumen.addWidget(self.lbl_monto_desc, alignment=Qt.AlignmentFlag.AlignRight)
-        layout_resumen.addSpacing(6)
-        layout_resumen.addLayout(fila_iva)
-        layout_resumen.addStretch(1)        # espacio flexible; se comprime a 0 en el mínimo
-        layout_resumen.addWidget(div_resumen)
-        layout_resumen.addSpacing(8)
-        layout_resumen.addLayout(fila_tot)
+        # Botón Acción Principal
+        texto_btn = "Crear Presupuesto [F12]" if self.is_presupuesto else "Confirmar Venta [F12]"
+        self.btn_confirmar = QPushButton(texto_btn)
+        self.btn_confirmar.setObjectName("btn_primario")
+        self.btn_confirmar.setProperty("tipo", "venta")
+        self.btn_confirmar.setFixedHeight(44)
+        self.btn_confirmar.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_confirmar.clicked.connect(lambda: self.confirmar_operacion(self.tipo_documento_seleccionado))
         
-        self.lbl_total.setMinimumHeight(40)
+        col_der_footer.addLayout(fila_sub)
+        col_der_footer.addLayout(fila_desc)
+        col_der_footer.addLayout(fila_iva)
+        col_der_footer.addWidget(div_total)
+        col_der_footer.addLayout(fila_tot)
+        col_der_footer.addWidget(self.btn_confirmar)
         
-        layout_footer.addWidget(self.tarjeta_opciones, stretch=55)
-        layout_footer.addWidget(self.tarjeta_resumen, stretch=45)
+        # widget_der restringe el ancho pero su Policy Vertical es Maximum, permitiendo achicarse
+        widget_der = QWidget()
+        widget_der.setLayout(col_der_footer)
+        widget_der.setFixedWidth(280)
+        widget_der.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Maximum)
+        
+        layout_footer.addLayout(col_izq_footer, stretch=1)
+        layout_footer.addWidget(div_footer)
+        layout_footer.addWidget(widget_der, stretch=0)
 
         self.splitter_operacion.addWidget(self.contenedor_tabla)
         self.splitter_operacion.addWidget(self.contenedor_footer)
@@ -690,6 +830,69 @@ class PestanaNuevaVenta(QWidget):
         self.splitter_operacion.setStretchFactor(1, 1)
         self.splitter_operacion.setSizes([450, 300])
         layout_principal.addWidget(self.splitter_operacion, stretch=1)
+
+    def mostrar_ayuda_contextual(self):
+        if not hasattr(self, 'popup_ayuda'):
+            self.popup_ayuda = QFrame(self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
+            self.popup_ayuda.setStyleSheet("""
+                QFrame {
+                    background-color: #FFFFFF;
+                    border: 1px solid #CBD5E1;
+                    border-radius: 8px;
+                }
+                QLabel {
+                    border: none;
+                }
+            """)
+            self.popup_ayuda.setFixedWidth(360)
+            
+            layout = QVBoxLayout(self.popup_ayuda)
+            layout.setContentsMargins(20, 20, 20, 20)
+            layout.setSpacing(12)
+            
+            titulo_ayuda = "💡 Ayuda: Nuevo Presupuesto" if self.is_presupuesto else "💡 Ayuda: Venta Directa"
+            titulo = QLabel(titulo_ayuda)
+            titulo.setStyleSheet("font-size: 14px; font-weight: bold; color: #0F172A;")
+            
+            ayuda_txt = (
+                "<p style='margin-bottom: 8px;'><b>Operativa Básica:</b><br>"
+                "• <b>Buscar/Agregar:</b> Escribe nombre o código y presiona Enter.<br>"
+                "• <b>Cantidades:</b> Doble clic en la celda 'Cant.' para modificar.<br>"
+                "• <b>Quitar Fila:</b> Clic en la 'X' o selecciona y presiona Delete.<br>"
+            )
+            if not self.is_presupuesto:
+                ayuda_txt += "• <b>Descontar Stock:</b> Si está marcado, la venta reduce el inventario.</p>"
+            else:
+                ayuda_txt += "• <b>Stock:</b> El presupuesto NO descuenta stock físico, genera un compromiso temporal.</p>"
+                
+            ayuda_txt += (
+                "<p><b>Atajos de Teclado:</b><br>"
+                "• <b>F2:</b> Buscar producto<br>"
+                "• <b>F3:</b> Buscar cliente<br>"
+                "• <b>F11:</b> Vaciar carrito (también Esc)<br>"
+                "• <b>F12:</b> Confirmar<br>"
+                "• <b>Del / Backspace:</b> Borrar producto seleccionado</p>"
+            )
+            info = QLabel(ayuda_txt)
+            info.setStyleSheet("font-size: 13px; color: #334155; line-height: 1.4;")
+            info.setWordWrap(True)
+            info.setTextFormat(Qt.TextFormat.RichText)
+            
+            layout.addWidget(titulo)
+            layout.addWidget(info)
+            
+            # Efecto de sombra sutil
+            shadow = QGraphicsDropShadowEffect()
+            shadow.setBlurRadius(20)
+            shadow.setColor(QColor(0, 0, 0, 40))
+            shadow.setOffset(0, 6)
+            self.popup_ayuda.setGraphicsEffect(shadow)
+            
+        # Posicionamiento exacto bajo el botón
+        pos_global = self.btn_ayuda.mapToGlobal(self.btn_ayuda.rect().bottomLeft())
+        # Desplazamos un poco para centrarlo estéticamente bajo el botón o alinearlo
+        self.popup_ayuda.move(pos_global.x() - 10, pos_global.y() + 6)
+        self.popup_ayuda.show()
 
     def modal_nuevo_cliente(self):
         formulario = DialogoFormularioCliente(self.conn, parent=self)
@@ -779,32 +982,7 @@ class PestanaNuevaVenta(QWidget):
         self.widget_busqueda_cliente.setVisible(True)
         self.input_cliente.setFocus()
 
-    def on_tipo_doc_cambiado(self):
-        if self.btn_tipo_presupuesto.isChecked():
-            self.tipo_documento_seleccionado = 'PRESUPUESTO'
-            vence = (datetime.now() + timedelta(hours=48)).strftime('%d/%m/%Y %H:%M')
-            self.lbl_leyenda_doc.setText(f"Congela el precio, no descuenta stock, válido 48hs. Vencería: {vence}")
-            self.chk_descontar.setChecked(False)
-            self.chk_descontar.setEnabled(False)
-            self.btn_confirmar.setText("Guardar Presupuesto [F12]")
-            self.btn_confirmar.setProperty("tipo", "presupuesto")
-        else:
-            self.tipo_documento_seleccionado = 'VENTA'
-            self.lbl_leyenda_doc.setText("Cobra y puede descontar stock según la casilla de abajo.")
-            self.chk_descontar.setEnabled(True)
-            self.chk_descontar.setChecked(True)
-            self.btn_confirmar.setText("Confirmar Venta [F12]")
-            self.btn_confirmar.setProperty("tipo", "venta")
-            
-        # Refrescar estilo del botón
-        self.btn_confirmar.style().unpolish(self.btn_confirmar)
-        self.btn_confirmar.style().polish(self.btn_confirmar)
 
-    def alternar_tipo_documento(self):
-        if self.btn_tipo_venta.isChecked():
-            self.btn_tipo_presupuesto.setChecked(True)
-        else:
-            self.btn_tipo_venta.setChecked(True)
 
     def cargar_catalogo_memoria(self):
         try:
@@ -1065,8 +1243,7 @@ class PestanaNuevaVenta(QWidget):
         return precio_base * factor
 
     def requiere_control_stock(self):
-        """Los presupuestos reservan ATP; una venta sólo lo consume si se marca."""
-        return self.tipo_documento_seleccionado == 'PRESUPUESTO' or self.chk_descontar.isChecked()
+        return self.chk_descontar.isChecked()
 
     def cantidad_base_en_carrito(self, codigo, excluir_fila=None):
         total = 0.0
@@ -1083,7 +1260,6 @@ class PestanaNuevaVenta(QWidget):
     def configurar_atajos(self):
         QShortcut(QKeySequence("F2"), self).activated.connect(self.enfocar_buscador)
         QShortcut(QKeySequence("F3"), self).activated.connect(self.enfocar_cliente)
-        QShortcut(QKeySequence("F5"), self).activated.connect(self.alternar_tipo_documento)
         QShortcut(QKeySequence("F11"), self).activated.connect(self.vaciar_carrito_directo)
         QShortcut(QKeySequence("F12"), self).activated.connect(lambda: self.confirmar_operacion(self.tipo_documento_seleccionado))
         QShortcut(QKeySequence("Esc"), self).activated.connect(self.intentar_vaciar_carrito)
@@ -1365,7 +1541,6 @@ class PestanaNuevaVenta(QWidget):
                 self.iva_aplicado = False
                 self.actualizar_totales()
                 self.deseleccionar_cliente()
-                self.btn_tipo_venta.setChecked(True)
                 self.input_observaciones.clear()
                 self.input_buscador.setFocus()
 
@@ -1419,6 +1594,12 @@ class PestanaNuevaVenta(QWidget):
         # Actualizar labels dependientes
         self.lbl_info_items.setText(f"{estado}")
         self.lbl_resumen_rapido.setText(f"{len(self.carrito)} productos · {unidades_totales:g} unidades")
+        
+        # Actualizar estado vacío
+        if not self.carrito:
+            self.stack_tabla.setCurrentIndex(0)
+        else:
+            self.stack_tabla.setCurrentIndex(1)
 
     def confirmar_operacion(self, tipo):
         if not self.carrito: 
@@ -1438,13 +1619,39 @@ class PestanaNuevaVenta(QWidget):
             id_cliente_final = self.cliente_seleccionado['id'] if self.cliente_seleccionado else None
             obs = self.input_observaciones.text().strip()
             
+            # Recopilar datos reales para el comprobante antes de limpiar
+            fecha_hora = datetime.now().strftime("%d/%m/%Y %H:%M")
+            nombre_cliente = self.cliente_seleccionado['nombre'] if self.cliente_seleccionado else "Consumidor Final"
+            cuit_cliente = self.cliente_seleccionado.get('documento', '') if self.cliente_seleccionado else ""
+            if cuit_cliente:
+                cliente_txt = f"{nombre_cliente} ({cuit_cliente})"
+            else:
+                cliente_txt = nombre_cliente
+                
+            cant_prods = len(self.carrito)
+            unidades_totales = sum(item['cantidad'] for item in self.carrito)
+            total_final_str = self.lbl_total.text()
+            desconto_stock_str = "Sí" if descontar_stock else "No"
+            
             from db.queries_ventas import registrar_operacion_venta
             numero_interno, msg = registrar_operacion_venta(
                 self.conn, tipo, descontar_stock, self.carrito,
                 self.descuento_general, self.iva_aplicado, self.iva_porcentaje,
                 id_cliente_final, obs
             )
-            QMessageBox.information(self, "Operación Exitosa", msg)
+            
+            modal_exito = DialogoVentaExitosa(
+                num_venta=numero_interno,
+                cliente_txt=cliente_txt,
+                fecha_hora=fecha_hora,
+                cant_prods=cant_prods,
+                cant_unidades=unidades_totales,
+                total=total_final_str,
+                desconto_stock=desconto_stock_str,
+                is_presupuesto=self.is_presupuesto,
+                parent=self
+            )
+            modal_exito.exec()
             
             # Reset Total
             self.tabla.setRowCount(0)
@@ -1457,11 +1664,12 @@ class PestanaNuevaVenta(QWidget):
             self.iva_aplicado = False
             self.actualizar_totales()
             self.deseleccionar_cliente()
-            self.btn_tipo_venta.setChecked(True)
             self.input_observaciones.clear()
             self.input_buscador.setFocus()
             
             self.cargar_catalogo_memoria()
+            
+            self.operacion_completada.emit(numero_interno)
             
         except Exception as e:
             self.conn.rollback()

@@ -1,11 +1,12 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
                              QPushButton, QStackedWidget, QLabel, QFrame)
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap
 from pathlib import Path
 from ui.modules.stock.tab_stock import PestanaStock
 from ui.modules.ventas.tab_ventas import PestanaNuevaVenta
 from ui.modules.clientes.tab_clientes import PestanaClientes
+from ui.modules.presupuestos.tab_presupuestos import PestanaPresupuestos
 
 
 class VentanaPrincipal(QMainWindow):
@@ -103,7 +104,7 @@ class VentanaPrincipal(QMainWindow):
         layout_sidebar.addWidget(lbl_marca)
 
         # Creamos los botones del menú
-        self.btn_ventas = QPushButton(" Nueva Venta")
+        self.btn_ventas = QPushButton(" Venta")
         self.btn_ventas.setCheckable(True)
         self.btn_ventas.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -135,11 +136,7 @@ class VentanaPrincipal(QMainWindow):
         self.pestana_stock     = PestanaStock(self.conn)             # Índice 1
         self.pestana_clientes  = PestanaClientes(self.conn)          # Índice 2
 
-        self.vista_presupuestos_temp = QLabel("Pantalla de Presupuestos (Álvaro)")
-        self.vista_presupuestos_temp.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.vista_presupuestos_temp.setStyleSheet(
-            "font-size: 18px; color: #64748b; background-color: #f8fafc;"
-        )
+        self.vista_presupuestos_temp = PestanaPresupuestos(self.conn)
 
         # Agregamos las vistas al mazo de cartas (QStackedWidget)
         self.contenedor_vistas.addWidget(self.vista_ventas_temp)         # Índice 0
@@ -161,6 +158,27 @@ class VentanaPrincipal(QMainWindow):
         layout_principal.addWidget(self.contenedor_vistas)
 
         self.setCentralWidget(widget_central)
+        
+        # Iniciar timer operativo global (Ej: cada 5 min = 300,000 ms)
+        self._timer_limpieza = QTimer(self)
+        self._timer_limpieza.timeout.connect(self._verificar_y_limpiar_vencidos)
+        self._timer_limpieza.start(300_000)
+        
+        # Hacer una limpieza inicial silenciosa
+        QTimer.singleShot(1000, self._verificar_y_limpiar_vencidos)
+
+    def _verificar_y_limpiar_vencidos(self):
+        from db.conexion import limpiar_presupuestos_vencidos
+        afectados = limpiar_presupuestos_vencidos(self.conn)
+        if afectados and afectados > 0:
+            # Recargar Presupuestos para reflejar cambios (vencidos) sin perder selección
+            self.vista_presupuestos_temp.recargar()
+            
+            # Recargar Stock para que el catálogo refleje el ATP liberado
+            self.pestana_stock.cargar_datos()
+            
+            # Recargar catálogo en memoria de la pantalla de Venta/Presupuesto
+            self.vista_ventas_temp.cargar_catalogo_memoria()
 
     def cambiar_pestana(self, indice, boton_presionado):
         """Cambia la vista del contenedor de la derecha y actualiza el botón activo en la barra lateral."""
