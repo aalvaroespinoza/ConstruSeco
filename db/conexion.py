@@ -217,6 +217,8 @@ def inicializar_base_datos():
             fecha_vencimiento TEXT,
 
             id_cliente INTEGER,
+                   
+            observaciones TEXT
 
             total_neto REAL NOT NULL DEFAULT 0.0,
 
