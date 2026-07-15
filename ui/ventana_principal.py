@@ -14,7 +14,7 @@ class VentanaPrincipal(QMainWindow):
         super().__init__()
         self.conn = conexion_db
         self.setWindowTitle("ConstruSecoPereyra")
-        self.resize(1100, 650)
+        # El tamaño inicial ahora está controlado por el sistema para arrancar maximizado
 
         # Forzamos el fondo claro en la ventana contenedora principal
         self.setStyleSheet("QMainWindow { background-color: #f8fafc; }")

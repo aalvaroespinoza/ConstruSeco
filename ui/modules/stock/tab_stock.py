@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QComboBox, QFrame, QDialog, QFormLayout, QMessageBox, QMenu
 )
 from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QColor, QFont, QCursor, QAction, QBrush
+from PyQt6.QtGui import QColor, QFont, QCursor, QAction, QBrush, QPixmap
 
 from db.queries import obtener_stocks_todos, obtener_metricas_globales, obtener_productos_frecuentes, UNIDADES_PERMITIDAS
 from db.queries_stock import migrar_esquema_stock
@@ -421,16 +421,17 @@ class PestanaStock(QWidget):
         
         main_layout.addLayout(filtros_layout)
         
-        # 5. TABLA PRINCIPAL
-        self.tabla = QTableWidget(0, 10)
+        # 5. TABLA PRINCIPAL - 11 columnas con miniatura
+        self.tabla = QTableWidget(0, 11)
         self.tabla.setHorizontalHeaderLabels([
-            "Código", "Producto", "Unidad", "Stk. Físico", "Comprometido", 
+            "Código", "Img", "Producto", "Unidad", "Stk. Físico", "Comprometido", 
             "Disponible", "Stk. Mínimo", "Precio", "Estado", "Acciones"
         ])
         self.tabla.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.tabla.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.tabla.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tabla.verticalHeader().setVisible(False)
+        self.tabla.verticalHeader().setDefaultSectionSize(48)
         self.tabla.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.tabla.setShowGrid(False)
         self.tabla.setAlternatingRowColors(True)
@@ -449,7 +450,7 @@ class PestanaStock(QWidget):
             idx = self.tabla.indexAt(event.pos())
             if idx.isValid() and event.button() == Qt.MouseButton.LeftButton:
                 # Evitar interferir con la columna de Acciones
-                if idx.column() == 9:
+                if idx.column() == 10:
                     _original_mouse_press(event)
                     return
                     
@@ -464,9 +465,11 @@ class PestanaStock(QWidget):
         
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Producto/Descripcion
-        header.setSectionResizeMode(9, QHeaderView.ResizeMode.Fixed)    # Acciones
-        self.tabla.setColumnWidth(9, 110)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)  # Producto/Descripcion
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)    # Img
+        header.setSectionResizeMode(10, QHeaderView.ResizeMode.Fixed)   # Acciones
+        self.tabla.setColumnWidth(1, 52)
+        self.tabla.setColumnWidth(10, 110)
         
         main_layout.addWidget(self.tabla, stretch=1)
         
@@ -585,10 +588,10 @@ class PestanaStock(QWidget):
         mostrar_minimo = settings.value("col_minimo_visible", True, type=bool)
         mostrar_desglose = settings.value("col_desglose_visible", True, type=bool)
         
-        self.tabla.setColumnHidden(7, not mostrar_precio)
-        self.tabla.setColumnHidden(6, not mostrar_minimo)
-        self.tabla.setColumnHidden(3, not mostrar_desglose)
+        self.tabla.setColumnHidden(8, not mostrar_precio)
+        self.tabla.setColumnHidden(7, not mostrar_minimo)
         self.tabla.setColumnHidden(4, not mostrar_desglose)
+        self.tabla.setColumnHidden(5, not mostrar_desglose)
         
         # Helper para alinear centrado
         def item_centrado(texto):
@@ -653,20 +656,38 @@ class PestanaStock(QWidget):
                 item_disp.setBackground(bg_disp)
                 item_disp.setForeground(QColor(color_estado))
                 
-
-                
+            # Miniatura (columna 1)
+            lbl_img = QLabel()
+            lbl_img.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl_img.setFixedSize(44, 44)
+            img_path_raw = p.get("imagen_path")
+            pix = None
+            if img_path_raw:
+                from ui.components.image_selector import resolver_ruta_imagen
+                img_path = resolver_ruta_imagen(img_path_raw)
+                if img_path:
+                    pix = QPixmap(str(img_path))
+                    if pix.isNull():
+                        pix = None
+            if pix:
+                lbl_img.setPixmap(pix.scaled(40, 40, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            else:
+                lbl_img.setText("📦")
+                lbl_img.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 18px;")
+            
             self.tabla.setItem(i, 0, item_cod)
-            self.tabla.setItem(i, 1, item_prod)
-            self.tabla.setItem(i, 2, item_uni)
-            self.tabla.setItem(i, 3, item_fis)
-            self.tabla.setItem(i, 4, item_comp)
-            self.tabla.setItem(i, 5, item_disp)
-            self.tabla.setItem(i, 6, item_min)
-            self.tabla.setItem(i, 7, item_precio)
-            self.tabla.setItem(i, 8, item_est)
+            self.tabla.setCellWidget(i, 1, lbl_img)
+            self.tabla.setItem(i, 2, item_prod)
+            self.tabla.setItem(i, 3, item_uni)
+            self.tabla.setItem(i, 4, item_fis)
+            self.tabla.setItem(i, 5, item_comp)
+            self.tabla.setItem(i, 6, item_disp)
+            self.tabla.setItem(i, 7, item_min)
+            self.tabla.setItem(i, 8, item_precio)
+            self.tabla.setItem(i, 9, item_est)
             
             # Boton Acciones con Menu
-            btn_acc = QPushButton("⚙️ Acciones")
+            btn_acc = QPushButton("⚩️ Acciones")
             btn_acc.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_acc.setStyleSheet(f"""
                 QPushButton {{
@@ -720,7 +741,7 @@ class PestanaStock(QWidget):
             l_acc.setContentsMargins(4,4,4,4)
             l_acc.setAlignment(Qt.AlignmentFlag.AlignCenter)
             l_acc.addWidget(btn_acc)
-            self.tabla.setCellWidget(i, 9, w_acc)
+            self.tabla.setCellWidget(i, 10, w_acc)
             
 
             self.tabla.setRowHeight(i, 46)
@@ -800,7 +821,7 @@ class PestanaStock(QWidget):
                 break
                 
     def on_tabla_double_click(self, row, col):
-        if col == 9:  # Columna de acciones
+        if col == 10:  # Columna de acciones
             return
         item_cod = self.tabla.item(row, 0)
         if item_cod:

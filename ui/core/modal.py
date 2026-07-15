@@ -58,7 +58,11 @@ class DialogoModalIntegrado(QFrame):
             btn_close = QPushButton("✕")
             btn_close.setFixedSize(24, 24)
             btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn_close.setStyleSheet(f"border: none; font-size: 16px; font-weight: bold; color: #94a3b8;")
+            btn_close.setStyleSheet("""
+                QPushButton { border: none; font-size: 16px; font-weight: bold; color: #94a3b8; background: transparent; border-radius: 4px; }
+                QPushButton:hover { background-color: #ef4444; color: white; }
+                QPushButton:pressed { background-color: #b91c1c; color: white; }
+            """)
             btn_close.clicked.connect(self.reject)
             
             header_layout.addWidget(lbl_title)
@@ -140,8 +144,11 @@ class ModalOverlay(QFrame):
         main_layout.addWidget(self.card, alignment=Qt.AlignmentFlag.AlignCenter)
         
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
-        if obj == self.parent_widget and event.type() == QEvent.Type.Resize:
-            self.setGeometry(self.parent_widget.rect())
+        if obj == self.parent_widget:
+            if event.type() == QEvent.Type.Resize:
+                self.setGeometry(self.parent_widget.rect())
+            elif event.type() == QEvent.Type.Hide:
+                self.reject()
         return super().eventFilter(obj, event)
 
     def exec(self) -> int:

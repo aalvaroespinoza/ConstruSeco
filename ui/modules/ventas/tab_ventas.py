@@ -161,10 +161,12 @@ class DialogoVentaExitosa(DialogoModalIntegrado):
 class PestanaNuevaVenta(QWidget):
     operacion_completada = pyqtSignal(str)
     
-    def __init__(self, conexion_db, is_presupuesto=False):
+    def __init__(self, conexion_db, is_presupuesto=False, is_edicion=False, id_presupuesto_edicion=None):
         super().__init__()
         self.conn = conexion_db
         self.is_presupuesto = is_presupuesto
+        self.is_edicion = is_edicion
+        self.id_presupuesto_edicion = id_presupuesto_edicion
         self.carrito = [] 
         self.producto_en_foco = None 
         self.catalogo = []
@@ -182,7 +184,77 @@ class PestanaNuevaVenta(QWidget):
         self.cargar_catalogo_memoria()
         self.cargar_autocompletado_clientes()
         self.configurar_atajos()
-
+        
+        if self.is_edicion and self.id_presupuesto_edicion:
+            self._cargar_datos_edicion()
+            
+    def _cargar_datos_edicion(self):
+        from db.queries_presupuestos import obtener_detalle_presupuesto
+        det = obtener_detalle_presupuesto(self.conn, self.id_presupuesto_edicion)
+        if not det: return
+        
+        # Cliente
+        if det['cliente'] and det['cliente']['id_cliente']:
+            cliente = {
+                'id': det['cliente']['id_cliente'],
+                'nombre': det['cliente']['nombre_completo'],
+                'cuit': det['cliente'].get('cuit_dni', ''),
+                'tel': det['cliente'].get('telefono', ''),
+                'documento': det['cliente'].get('cuit_dni', '')
+            }
+            self.seleccionar_cliente(cliente)
+            
+        # Observaciones
+        if det['observaciones']:
+            self.input_observaciones.setText(det['observaciones'])
+            
+        # Descuento e IVA
+        self.descuento_general = det['descuento_general_porcentaje']
+        self.input_desc_gral.setText(f"{self.descuento_general:g}")
+        self.iva_aplicado = det['iva_aplicado']
+        self.chk_iva.setChecked(self.iva_aplicado)
+        self.iva_porcentaje = det['iva_porcentaje']
+        self.input_iva_porc.setText(f"{self.iva_porcentaje:g}")
+        
+        # Productos
+        for d in det['detalles']:
+            codigo = d['codigo_producto']
+            
+            # Buscar info base del catálogo en memoria
+            prod_base = None
+            for p in self.catalogo:
+                if p['codigo'] == codigo:
+                    prod_base = p
+                    break
+            
+            if not prod_base: continue
+            
+            # Factor de conversión (el original en detalle_documentos no se guarda, deducirlo o usar 1 si es base)
+            factor = 1.0
+            if d['cantidad_unidad_venta'] > 0:
+                factor = d['cantidad_base'] / d['cantidad_unidad_venta']
+                
+            self.insertar_fila(
+                prod={
+                    'codigo': codigo,
+                    'desc': prod_base['desc'],
+                    'unidad_base': prod_base['unidad_base'],
+                    'stock': prod_base['stock'],
+                    'precio_base': prod_base['precio_base']
+                },
+                unidad_venta=d['unidad_venta'],
+                factor_conversion=factor,
+                cantidad=d['cantidad_unidad_venta'],
+                cantidad_base=d['cantidad_base'],
+                precio_unit_mostrado=d['precio_unitario']
+            )
+            # Aplicar descuento de linea
+            if d['descuento_porcentaje'] > 0:
+                self.tabla.item(self.tabla.rowCount() - 1, 6).setText(f"{d['descuento_porcentaje']:g}")
+                self.carrito[-1]['descuento'] = d['descuento_porcentaje']
+                
+        self.actualizar_totales()
+        
     def migrar_esquema(self):
         from db.queries_ventas import migrar_esquema_ventas
         migrar_esquema_ventas(self.conn)
@@ -332,17 +404,13 @@ class PestanaNuevaVenta(QWidget):
         layout_top.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         
         # Título de la pantalla
-        lbl_titulo = QLabel("Nuevo Presupuesto" if self.is_presupuesto else "Venta")
-        lbl_titulo.setStyleSheet("font-size: 20px; font-weight: 800; color: #172033; letter-spacing: -0.5px;")
+        tit_txt = "Nuevo Presupuesto" if self.is_presupuesto else "Venta"
+        sub_txt = "Creación de nuevo presupuesto (Validez 48h)" if self.is_presupuesto else "Venta directa y gestión rápida de productos"
+        ico_txt = "📄" if self.is_presupuesto else "🛒"
         
-        lbl_subtitulo = QLabel("Validez: 48 horas desde su creación" if self.is_presupuesto else "Mostrador")
-        color_sub = "#2563EB" if self.is_presupuesto else "#64748B"
-        lbl_subtitulo.setStyleSheet(f"font-size: 13px; font-weight: 600; color: {color_sub};")
-        
-        titulo_layout = QVBoxLayout()
-        titulo_layout.setSpacing(0)
-        titulo_layout.addWidget(lbl_titulo)
-        titulo_layout.addWidget(lbl_subtitulo)
+        from ui.components.encabezado import crear_encabezado_estandar
+        ly_izq, btn_ayuda = crear_encabezado_estandar(ico_txt, tit_txt, sub_txt)
+        btn_ayuda.clicked.connect(self._mostrar_ayuda)
         
         divisor = QFrame()
         divisor.setFrameShape(QFrame.Shape.VLine)
@@ -407,35 +475,7 @@ class PestanaNuevaVenta(QWidget):
         col_izq.addWidget(self.widget_busqueda_cliente)
         col_izq.addWidget(self.widget_tarjeta_cliente)
         
-        # Contenedor para ayuda contextual
-        self.contenedor_ayuda_contextual = QFrame()
-        self.contenedor_ayuda_contextual.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.layout_ayuda_contextual = QVBoxLayout(self.contenedor_ayuda_contextual)
-        self.layout_ayuda_contextual.setContentsMargins(12, 0, 0, 0)
-        
-        self.btn_ayuda = QPushButton("? Ayuda")
-        self.btn_ayuda.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_ayuda.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.btn_ayuda.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                color: #64748B;
-                border: 1px solid #CBD5E1;
-                border-radius: 6px;
-                padding: 4px 10px;
-                font-size: 12px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #F8FAFC;
-                color: #0F172A;
-                border-color: #94A3B8;
-            }
-        """)
-        self.btn_ayuda.clicked.connect(self.mostrar_ayuda_contextual)
-        self.layout_ayuda_contextual.addWidget(self.btn_ayuda, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        
-        col_izq.addWidget(self.contenedor_ayuda_contextual)
+        col_izq.addWidget(btn_ayuda)
         
         # 3. Info y Estado (LADO DERECHO)
         self.lbl_info_items = QLabel("🟢 Nueva operación")
@@ -451,7 +491,7 @@ class PestanaNuevaVenta(QWidget):
         col_der.addWidget(self.lbl_info_items, alignment=Qt.AlignmentFlag.AlignRight)
         col_der.addWidget(self.btn_vaciar_carrito, alignment=Qt.AlignmentFlag.AlignRight)
         
-        layout_top.addLayout(titulo_layout)
+        layout_top.addLayout(ly_izq)
         layout_top.addWidget(divisor)
         layout_top.addLayout(col_izq)
         layout_top.addStretch()
@@ -579,16 +619,23 @@ class PestanaNuevaVenta(QWidget):
             }
             QListWidget {
                 border: none;
-                background-color: transparent;
+                background-color: #ffffff;
                 outline: none;
                 font-size: 14px;
             }
             QListWidget::item {
                 border-bottom: 1px solid #F1F5F9;
-                padding: 8px;
+                padding: 2px 0px;
+                background-color: #ffffff;
+                color: #172033;
             }
-            QListWidget::item:selected, QListWidget::item:hover {
+            QListWidget::item:selected {
                 background-color: #EBF5FF;
+                color: #172033;
+            }
+            QListWidget::item:hover {
+                background-color: #F0F7FF;
+                color: #172033;
             }
         """)
         shadow = QGraphicsDropShadowEffect()
@@ -665,9 +712,6 @@ class PestanaNuevaVenta(QWidget):
         layout_tabla.addWidget(self.stack_tabla, stretch=1)
 
         self.contenedor_tabla.setMinimumHeight(220)
-        self.splitter_operacion = _SplitterVenta(Qt.Orientation.Vertical)
-        self.splitter_operacion.setChildrenCollapsible(False)
-        self.splitter_operacion.setHandleWidth(8)
 
         # --- FOOTER: OPCIONES Y RESUMEN COMPACTO ---
         self.contenedor_footer = QFrame()
@@ -799,7 +843,11 @@ class PestanaNuevaVenta(QWidget):
         fila_tot.addWidget(self.lbl_total, alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight)
         
         # Botón Acción Principal
-        texto_btn = "Crear Presupuesto [F12]" if self.is_presupuesto else "Confirmar Venta [F12]"
+        if self.is_edicion:
+            texto_btn = "Guardar Cambios [F12]"
+        else:
+            texto_btn = "Crear Presupuesto [F12]" if self.is_presupuesto else "Confirmar Venta [F12]"
+            
         self.btn_confirmar = QPushButton(texto_btn)
         self.btn_confirmar.setObjectName("btn_primario")
         self.btn_confirmar.setProperty("tipo", "venta")
@@ -824,75 +872,49 @@ class PestanaNuevaVenta(QWidget):
         layout_footer.addWidget(div_footer)
         layout_footer.addWidget(widget_der, stretch=0)
 
-        self.splitter_operacion.addWidget(self.contenedor_tabla)
-        self.splitter_operacion.addWidget(self.contenedor_footer)
-        self.splitter_operacion.setStretchFactor(0, 3)
-        self.splitter_operacion.setStretchFactor(1, 1)
-        self.splitter_operacion.setSizes([450, 300])
-        layout_principal.addWidget(self.splitter_operacion, stretch=1)
+        # En lugar de usar un QSplitter rígido que roba espacio, damos a la tabla stretch=1 y al footer stretch=0
+        # Esto hace que la tabla absorba todo el espacio disponible, priorizando su visibilidad.
+        layout_principal.addWidget(self.contenedor_tabla, stretch=1)
+        layout_principal.addWidget(self.contenedor_footer, stretch=0)
 
-    def mostrar_ayuda_contextual(self):
-        if not hasattr(self, 'popup_ayuda'):
-            self.popup_ayuda = QFrame(self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
-            self.popup_ayuda.setStyleSheet("""
-                QFrame {
-                    background-color: #FFFFFF;
-                    border: 1px solid #CBD5E1;
-                    border-radius: 8px;
-                }
-                QLabel {
-                    border: none;
-                }
-            """)
-            self.popup_ayuda.setFixedWidth(360)
+    def _mostrar_ayuda(self):
+        from ui.components.ayuda import DialogoAyudaContextual
+        
+        texto = (
+            "<p><b>FUNCIONES PRINCIPALES:</b></p>"
+            "<ul>"
+            "<li><b>Buscar productos:</b> Utilizá el buscador principal (F2) por código, descripción corta o escaner.</li>"
+            "<li><b>Sugerencias rápidas:</b> Al escribir, verás coincidencias inmediatas con su imagen en miniatura. Navegalas con las flechas del teclado y presioná Enter.</li>"
+            "<li><b>Consultar Stock (ATP):</b> El buscador y el carrito indican el stock <em>disponible real</em> para la venta, evitando vender mercadería ya comprometida.</li>"
+            "<li><b>Modificar el carrito:</b> Podés editar cantidades o aplicar descuentos por ítem haciendo doble clic o Enter sobre la celda correspondiente en la tabla.</li>"
+            "<li><b>Seleccionar Cliente:</b> Buscá un cliente registrado (F3) o crealo rápidamente desde el panel de cliente final.</li>"
+            "</ul>"
+            "<p><b>DIFERENCIA ENTRE VENTA Y PRESUPUESTO:</b></p>"
+            "<ul>"
+            "<li>Una <b>Venta</b> genera un comprobante definitivo y extrae físicamente el producto del inventario.</li>"
+            "<li>Un <b>Presupuesto</b> sólo genera un compromiso temporal del stock (reserva el ATP) sin tocar el físico, válido por 48 horas.</li>"
+            "</ul>"
+            "<p><b>ATAJOS DE TECLADO:</b></p>"
+            "<ul>"
+            "<li><b>F2:</b> Foco en el buscador de productos.</li>"
+            "<li><b>F3:</b> Foco en el buscador de clientes.</li>"
+            "<li><b>Flechas Arriba/Abajo:</b> Navegar la lista de sugerencias de productos.</li>"
+            "<li><b>Enter:</b> Seleccionar un producto de la lista, o editar celdas en el carrito.</li>"
+            "<li><b>Escape:</b> Cerrar las sugerencias o limpiar selección activa.</li>"
+            "</ul>"
+        )
+        
+        if getattr(self, 'is_presupuesto', False):
+            titulo = "Ayuda: Nuevo Presupuesto"
+        else:
+            titulo = "Ayuda: Venta"
             
-            layout = QVBoxLayout(self.popup_ayuda)
-            layout.setContentsMargins(20, 20, 20, 20)
-            layout.setSpacing(12)
-            
-            titulo_ayuda = "💡 Ayuda: Nuevo Presupuesto" if self.is_presupuesto else "💡 Ayuda: Venta Directa"
-            titulo = QLabel(titulo_ayuda)
-            titulo.setStyleSheet("font-size: 14px; font-weight: bold; color: #0F172A;")
-            
-            ayuda_txt = (
-                "<p style='margin-bottom: 8px;'><b>Operativa Básica:</b><br>"
-                "• <b>Buscar/Agregar:</b> Escribe nombre o código y presiona Enter.<br>"
-                "• <b>Cantidades:</b> Doble clic en la celda 'Cant.' para modificar.<br>"
-                "• <b>Quitar Fila:</b> Clic en la 'X' o selecciona y presiona Delete.<br>"
-            )
-            if not self.is_presupuesto:
-                ayuda_txt += "• <b>Descontar Stock:</b> Si está marcado, la venta reduce el inventario.</p>"
-            else:
-                ayuda_txt += "• <b>Stock:</b> El presupuesto NO descuenta stock físico, genera un compromiso temporal.</p>"
-                
-            ayuda_txt += (
-                "<p><b>Atajos de Teclado:</b><br>"
-                "• <b>F2:</b> Buscar producto<br>"
-                "• <b>F3:</b> Buscar cliente<br>"
-                "• <b>F11:</b> Vaciar carrito (también Esc)<br>"
-                "• <b>F12:</b> Confirmar<br>"
-                "• <b>Del / Backspace:</b> Borrar producto seleccionado</p>"
-            )
-            info = QLabel(ayuda_txt)
-            info.setStyleSheet("font-size: 13px; color: #334155; line-height: 1.4;")
-            info.setWordWrap(True)
-            info.setTextFormat(Qt.TextFormat.RichText)
-            
-            layout.addWidget(titulo)
-            layout.addWidget(info)
-            
-            # Efecto de sombra sutil
-            shadow = QGraphicsDropShadowEffect()
-            shadow.setBlurRadius(20)
-            shadow.setColor(QColor(0, 0, 0, 40))
-            shadow.setOffset(0, 6)
-            self.popup_ayuda.setGraphicsEffect(shadow)
-            
-        # Posicionamiento exacto bajo el botón
-        pos_global = self.btn_ayuda.mapToGlobal(self.btn_ayuda.rect().bottomLeft())
-        # Desplazamos un poco para centrarlo estéticamente bajo el botón o alinearlo
-        self.popup_ayuda.move(pos_global.x() - 10, pos_global.y() + 6)
-        self.popup_ayuda.show()
+        dialogo = DialogoAyudaContextual(titulo, "Guía rápida para facturación y reservas", texto, self)
+        dialogo.exec()
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+
 
     def modal_nuevo_cliente(self):
         formulario = DialogoFormularioCliente(self.conn, parent=self)
@@ -1000,6 +1022,7 @@ class PestanaNuevaVenta(QWidget):
                         'unidad_base': str(r[2]),
                         'stock': float(r[3] if r[3] is not None else 0.0),
                         'precio_base': float(r[4] if r[4] is not None else 0.0),
+                        'imagen_path': r[8] if len(r) > 8 else None,
                         'unidades_venta': [
                             {'unidad': str(r[2]), 'factor': 1.0}
                         ]
@@ -1058,6 +1081,37 @@ class PestanaNuevaVenta(QWidget):
                     break
         return finales
 
+    def obtener_sugerencias_rapidas(self) -> list[dict]:
+        from db.queries import obtener_productos_frecuentes
+        frecuentes = obtener_productos_frecuentes(self.conn, limite=8, dias=30)
+        codigos_frec = [f['codigo'] for f in frecuentes]
+        
+        sugerencias = []
+        for cod in codigos_frec:
+            for p in self.catalogo:
+                if p['codigo'] == cod:
+                    sugerencias.append(p)
+                    break
+                    
+        # Fallback si no hay suficientes ventas
+        if len(sugerencias) < 4:
+            sugerencias = []
+            for p in self.catalogo:
+                if p['stock'] > 0:
+                    sugerencias.append(p)
+                if len(sugerencias) >= 8:
+                    break
+            
+            # Si aun no hay 8 con stock, completar con lo que haya
+            if len(sugerencias) < 8:
+                for p in self.catalogo:
+                    if p not in sugerencias:
+                        sugerencias.append(p)
+                    if len(sugerencias) >= 8:
+                        break
+                        
+        return sugerencias
+
     def on_buscador_text_changed(self, texto):
         if not self._suspender_resultados and getattr(self, "producto_en_foco", None) is not None:
             self.producto_en_foco = None
@@ -1067,11 +1121,16 @@ class PestanaNuevaVenta(QWidget):
             self.lbl_vender_por.setVisible(False)
             self.actualizar_etiqueta_cantidad()
             
-        if self._suspender_resultados or not texto.strip():
+        if self._suspender_resultados:
             self.panel_resultados.hide()
             return
             
-        resultados = self.filtrar_productos(texto)
+        texto_busqueda = texto.strip()
+        if not texto_busqueda:
+            resultados = self.obtener_sugerencias_rapidas()
+        else:
+            resultados = self.filtrar_productos(texto_busqueda)
+            
         self.lista_resultados.clear()
         
         if not resultados:
@@ -1087,27 +1146,56 @@ class PestanaNuevaVenta(QWidget):
                 item = QListWidgetItem()
                 
                 w = QWidget()
-                l = QVBoxLayout(w)
-                l.setContentsMargins(10, 6, 10, 6)
-                l.setSpacing(2)
+                w.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+                w.setStyleSheet("background: transparent;")
+                l = QHBoxLayout(w)
+                l.setContentsMargins(10, 4, 10, 4)
+                l.setSpacing(12)
                 
-                lbl_desc = QLabel(p['desc'])
-                lbl_desc.setStyleSheet("font-size: 13px; font-weight: bold; color: #1e293b; background: transparent;")
+                # Imagen
+                from ui.components.image_selector import resolver_ruta_imagen
+                img_path = resolver_ruta_imagen(p.get('imagen_path'))
+                lbl_img = QLabel()
+                lbl_img.setFixedSize(40, 40)
+                lbl_img.setStyleSheet("background: transparent;")
+                if img_path:
+                    from PyQt6.QtGui import QPixmap
+                    pix = QPixmap(str(img_path))
+                    if not pix.isNull():
+                        pix = pix.scaled(40, 40, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+                        lbl_img.setPixmap(pix)
+                        lbl_img.setStyleSheet("border: 1px solid #E4E7EC; border-radius: 4px; background: transparent;")
+                else:
+                    lbl_img.setText("📦")
+                    lbl_img.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    lbl_img.setStyleSheet("background-color: #F8FAFC; border: 1px solid #E4E7EC; border-radius: 4px; font-size: 18px;")
+                
+                # Info Principal
+                info_layout = QVBoxLayout()
+                info_layout.setSpacing(2)
+                info_layout.setContentsMargins(0, 0, 0, 0)
+                
+                lbl_desc = QLabel(f"<b>{p['codigo']}</b> &nbsp; {p['desc']}")
+                lbl_desc.setStyleSheet("font-size: 13px; color: #1e293b; background: transparent;")
                 lbl_desc.setWordWrap(True)
                 
                 stock = p['stock']
                 stock_texto = f"{stock:g}"
-                color_stock = "#ef4444" if stock <= UMBRAL_STOCK_CRITICO else "#64748b"
+                color_stock = "#ef4444" if stock <= UMBRAL_STOCK_CRITICO else "#475569"
                 
-                lbl_sec = QLabel(f"{p['codigo']} &nbsp;·&nbsp; {p['unidad_base']} &nbsp;·&nbsp; Disp: <span style='color:{color_stock}; font-weight:bold;'>{stock_texto}</span> &nbsp;·&nbsp; $ {formato_arg(p['precio_base'])}")
-                lbl_sec.setStyleSheet("font-size: 11px; color: #64748b; background: transparent;")
+                lbl_sec = QLabel(f"Stock Disp: <span style='color:{color_stock}; font-weight:bold;'>{stock_texto}</span> {p['unidad_base']} &nbsp;·&nbsp; <span style='color:#1e293b; font-weight:bold;'>$ {formato_arg(p['precio_base'])}</span>")
+                lbl_sec.setStyleSheet("font-size: 11px; color: #475569; background: transparent;")
                 lbl_sec.setWordWrap(True)
                 
-                l.addWidget(lbl_desc)
-                l.addWidget(lbl_sec)
+                info_layout.addWidget(lbl_desc)
+                info_layout.addWidget(lbl_sec)
                 
-                w.adjustSize()
-                item.setSizeHint(w.sizeHint())
+                l.addWidget(lbl_img)
+                l.addLayout(info_layout)
+                l.addStretch()
+                
+                # Garantizar altura mínima visible
+                item.setSizeHint(w.sizeHint().expandedTo(w.sizeHint().__class__(0, 56)))
                 
                 item.setData(Qt.ItemDataRole.UserRole, p)
                 self.lista_resultados.addItem(item)
@@ -1158,9 +1246,14 @@ class PestanaNuevaVenta(QWidget):
                     self.panel_resultados.hide()
                     return True
             else:
-                if event.key() in [Qt.Key.Key_Down, Qt.Key.Key_Enter, Qt.Key.Key_Return] and len(self.input_buscador.text()) >= 2:
+                if event.key() in [Qt.Key.Key_Down, Qt.Key.Key_Enter, Qt.Key.Key_Return]:
                     self.on_buscador_text_changed(self.input_buscador.text())
                     return True
+                    
+        elif obj == self.input_buscador and event.type() == QEvent.Type.FocusIn:
+            # Mostrar sugerencias automáticamente si está vacío o tiene texto y no hay producto seleccionado
+            if getattr(self, "producto_en_foco", None) is None:
+                QTimer.singleShot(0, lambda: self.on_buscador_text_changed(self.input_buscador.text()))
                     
         elif obj == self.combo_unidad and event.type() == QEvent.Type.KeyPress:
             if event.key() in [Qt.Key.Key_Enter, Qt.Key.Key_Return]:
@@ -1633,12 +1726,21 @@ class PestanaNuevaVenta(QWidget):
             total_final_str = self.lbl_total.text()
             desconto_stock_str = "Sí" if descontar_stock else "No"
             
-            from db.queries_ventas import registrar_operacion_venta
-            numero_interno, msg = registrar_operacion_venta(
-                self.conn, tipo, descontar_stock, self.carrito,
-                self.descuento_general, self.iva_aplicado, self.iva_porcentaje,
-                id_cliente_final, obs
-            )
+            if self.is_edicion and self.id_presupuesto_edicion:
+                from db.queries_presupuestos import editar_presupuesto_activo
+                numero_interno = editar_presupuesto_activo(
+                    self.conn, self.id_presupuesto_edicion, self.carrito,
+                    self.descuento_general, self.iva_aplicado, self.iva_porcentaje,
+                    id_cliente_final, obs
+                )
+                msg = f"Presupuesto #{numero_interno} editado con éxito."
+            else:
+                from db.queries_ventas import registrar_operacion_venta
+                numero_interno, msg = registrar_operacion_venta(
+                    self.conn, tipo, descontar_stock, self.carrito,
+                    self.descuento_general, self.iva_aplicado, self.iva_porcentaje,
+                    id_cliente_final, obs
+                )
             
             modal_exito = DialogoVentaExitosa(
                 num_venta=numero_interno,

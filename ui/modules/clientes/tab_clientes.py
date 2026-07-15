@@ -63,16 +63,18 @@ def _iniciales(nombre: str) -> str:
 # ══════════════════════════════════════════════════════════════════════════════
 
 class _TarjetaMetrica(QFrame):
-    def __init__(self, titulo: str, valor: str = "—", color_borde: str = COLOR_PRIMARY):
+    clicked = pyqtSignal()
+    
+    def __init__(self, titulo: str, valor: str = "—", color_borde: str = COLOR_PRIMARY, interactiva: bool = False):
         super().__init__()
-        self.setStyleSheet(f"""
-            _TarjetaMetrica {{
-                background-color: {COLOR_CARD_BG};
-                border: 1px solid {COLOR_BORDER};
-                border-radius: 8px;
-                border-left: 4px solid {color_borde};
-            }}
-        """)
+        self._color_borde = color_borde
+        self._interactiva = interactiva
+        self._seleccionada = False
+        
+        if self._interactiva:
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
+            
+        self.setStyleSheet(self._style())
         self.setMinimumWidth(150)
         self.setFixedHeight(80)
 
@@ -91,6 +93,31 @@ class _TarjetaMetrica(QFrame):
         )
         layout.addWidget(self._lbl_titulo)
         layout.addWidget(self._lbl_valor)
+
+    def _style(self) -> str:
+        bg = "#EBF5FF" if self._seleccionada else COLOR_CARD_BG
+        hover = f" _TarjetaMetrica:hover {{ background-color: #f8fafc; }}" if self._interactiva and not self._seleccionada else ""
+        border_width = "2px" if self._seleccionada else "1px"
+        border_color = self._color_borde if self._seleccionada else COLOR_BORDER
+        return f"""
+            _TarjetaMetrica {{
+                background-color: {bg};
+                border: {border_width} solid {border_color};
+                border-radius: 8px;
+                border-left: 4px solid {self._color_borde};
+            }}
+            {hover}
+        """
+
+    def set_seleccionada(self, sel: bool):
+        if not self._interactiva: return
+        self._seleccionada = sel
+        self.setStyleSheet(self._style())
+
+    def mousePressEvent(self, event):
+        if self._interactiva and event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
 
     def set_valor(self, valor: str):
         self._lbl_valor.setText(valor)
@@ -807,24 +834,40 @@ class PestanaClientes(QWidget):
         """
 
     def _construir_encabezado(self) -> QHBoxLayout:
+        from ui.components.encabezado import crear_encabezado_estandar
+        ly_izq, btn_ayuda = crear_encabezado_estandar(
+            "👥", "Clientes", "Gestión de clientes e historial comercial"
+        )
+        btn_ayuda.clicked.connect(self._mostrar_ayuda)
+        
         ly = QHBoxLayout()
         ly.setSpacing(12)
-
-        ly_tit = QVBoxLayout()
-        ly_tit.setSpacing(2)
-        lbl_tit = QLabel("Clientes")
-        lbl_tit.setStyleSheet(
-            f"font-size: 22px; font-weight: 900; color: {COLOR_TEXT_MAIN};"
-        )
-        lbl_sub = QLabel("Gestión de clientes")
-        lbl_sub.setStyleSheet(f"font-size: 13px; color: {COLOR_TEXT_SEC};")
-        ly_tit.addWidget(lbl_tit)
-        ly_tit.addWidget(lbl_sub)
-
-        ly.addLayout(ly_tit)
+        ly.addLayout(ly_izq)
         ly.addStretch()
-
+        ly.addWidget(btn_ayuda)
+        
         return ly
+
+    def _mostrar_ayuda(self):
+        from ui.components.ayuda import DialogoAyudaContextual
+        texto = (
+            "<p><b>FUNCIONES PRINCIPALES:</b></p>"
+            "<ul>"
+            "<li><b>Búsqueda de clientes:</b> Utilizá la barra superior para buscar por nombre, CUIT, DNI o email.</li>"
+            "<li><b>Filtros:</b> Múltiples opciones para filtrar entre clientes activos, suspendidos, o inactivos.</li>"
+            "<li><b>Tarjetas KPI (Filtros Rápidos):</b> Al hacer clic en 'Total Clientes', 'Activos' o 'Con Compras' la tabla se filtrará automáticamente.</li>"
+            "<li><b>Métricas Informativas:</b> 'Ventas del Mes' y 'Ticket Promedio' son estadísticas globales puramente informativas basadas en el historial del corralón.</li>"
+            "<li><b>Creación y Edición:</b> Agregá nuevos perfiles o editá su condición de IVA y datos de contacto según necesites.</li>"
+            "</ul>"
+            "<p><b>ATAJOS DE TECLADO:</b></p>"
+            "<ul>"
+            "<li><b>F2:</b> Foco directo en la barra de búsqueda.</li>"
+            "<li><b>Ctrl + N:</b> Crear un nuevo cliente rápidamente.</li>"
+            "<li><b>Escape:</b> Cerrar cualquier diálogo abierto.</li>"
+            "</ul>"
+        )
+        dialogo = DialogoAyudaContextual("Ayuda: Base de Clientes", "Gestión y fidelización de contactos", texto, self)
+        dialogo.exec()
 
     def _construir_herramientas(self) -> QHBoxLayout:
         ly = QHBoxLayout()
@@ -973,6 +1016,11 @@ class PestanaClientes(QWidget):
         self._filtros_avanzados["condicion_iva"] = iva
         self._filtros_avanzados["ciudad"] = loc
         
+        # Sincronizar estado visual de las tarjetas interactivas
+        self._t_total.set_seleccionada(estado == "TODOS" and compras == "TODOS" and iva == "TODAS" and loc == "TODAS")
+        self._t_activos.set_seleccionada(estado == "ACTIVOS")
+        self._t_compras.set_seleccionada(compras == "SI")
+        
         activos = 0
         if estado != "TODOS": activos += 1
         if compras != "TODOS": activos += 1
@@ -993,16 +1041,45 @@ class PestanaClientes(QWidget):
         ly = QHBoxLayout()
         ly.setSpacing(10)
 
-        self._t_total   = _TarjetaMetrica("Total Clientes", "—", COLOR_PRIMARY)
-        self._t_activos = _TarjetaMetrica("Activos",        "—", COLOR_SUCCESS)
-        self._t_compras = _TarjetaMetrica("Con Compras",    "—", COLOR_WARNING)
+        self._t_total   = _TarjetaMetrica("Total Clientes", "—", COLOR_PRIMARY, interactiva=True)
+        self._t_activos = _TarjetaMetrica("Activos",        "—", COLOR_SUCCESS, interactiva=True)
+        self._t_compras = _TarjetaMetrica("Con Compras",    "—", COLOR_WARNING, interactiva=True)
         self._t_ventas  = _TarjetaMetrica("Ventas (Mes)",   "—", "#8b5cf6")
         self._t_ticket  = _TarjetaMetrica("Ticket Promedio","—", "#0ea5e9")
+        
+        self._t_total.clicked.connect(lambda: self._on_kpi_clicked('TOTAL'))
+        self._t_activos.clicked.connect(lambda: self._on_kpi_clicked('ACTIVOS'))
+        self._t_compras.clicked.connect(lambda: self._on_kpi_clicked('COMPRAS'))
 
         for t in (self._t_total, self._t_activos, self._t_compras,
                   self._t_ventas, self._t_ticket):
             ly.addWidget(t, stretch=1)
         return ly
+
+    def _on_kpi_clicked(self, kpi: str):
+        # Desactivar si ya estaba seleccionado
+        if kpi == 'TOTAL' and self._t_total._seleccionada:
+            self._limpiar_filtros()
+            return
+        if kpi == 'ACTIVOS' and self._t_activos._seleccionada:
+            self._cb_f_estado.setCurrentText("TODOS")
+            self._aplicar_filtros_desde_ui()
+            return
+        if kpi == 'COMPRAS' and self._t_compras._seleccionada:
+            self._cb_f_compras.setCurrentText("TODOS")
+            self._aplicar_filtros_desde_ui()
+            return
+            
+        if kpi == 'TOTAL':
+            self._limpiar_filtros()
+            return
+            
+        if kpi == 'ACTIVOS':
+            self._cb_f_estado.setCurrentText("ACTIVOS")
+        elif kpi == 'COMPRAS':
+            self._cb_f_compras.setCurrentText("SI")
+            
+        self._aplicar_filtros_desde_ui()
 
     def _construir_cuerpo(self) -> QSplitter:
         self._splitter = QSplitter(Qt.Orientation.Horizontal)

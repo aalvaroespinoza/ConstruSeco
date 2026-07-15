@@ -73,7 +73,8 @@ class _CampoFormulario(QFrame):
 
     def __init__(self, etiqueta: str, widget, requerido: bool = False):
         super().__init__()
-        self.setStyleSheet("border: none; background: transparent;")
+        self.setObjectName("campo_formulario")
+        self.setStyleSheet("_CampoFormulario#campo_formulario { border: none; background: transparent; }")
         ly = QVBoxLayout(self)
         ly.setContentsMargins(0, 0, 0, 0)
         ly.setSpacing(3)

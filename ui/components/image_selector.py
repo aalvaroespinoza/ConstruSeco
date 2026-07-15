@@ -4,7 +4,7 @@ from datetime import datetime
 from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
-from ui.core.theme import COLOR_BORDER, COLOR_BG
+from ui.core.theme import COLOR_BORDER, COLOR_BG, COLOR_PRIMARY
 
 # Rutas - PROJECT_ROOT está a 3 niveles (ui/components/image_selector.py)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -40,7 +40,10 @@ class ImageSelectorWidget(QFrame):
         self.btn_select = QPushButton("+")
         self.btn_select.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_select.setToolTip("Agregar Imagen")
-        self.btn_select.setStyleSheet(f"background: transparent; border: none; font-size: 48px; color: #94a3b8; font-weight: bold;")
+        self.btn_select.setStyleSheet(f"""
+            QPushButton {{ background: transparent; border: none; font-size: 48px; color: #94a3b8; font-weight: bold; }}
+            QPushButton:hover {{ color: {COLOR_PRIMARY}; background: transparent; border: none; }}
+        """)
         self.btn_select.clicked.connect(self._select_image)
         
         self.lbl_preview = QLabel()
@@ -52,7 +55,9 @@ class ImageSelectorWidget(QFrame):
         self.btn_clear = QPushButton("❌")
         self.btn_clear.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_clear.setToolTip("Eliminar Imagen")
-        self.btn_clear.setStyleSheet(f"background: white; border: 1px solid {COLOR_BORDER}; border-radius: 12px; font-size: 8px; color: red;")
+        self.btn_clear.setStyleSheet(f"""
+            QPushButton {{ background: white; border: 1px solid {COLOR_BORDER}; border-radius: 12px; font-size: 8px; color: red; }}
+        """)
         self.btn_clear.setFixedSize(24, 24)
         self.btn_clear.clicked.connect(self._clear_image)
         

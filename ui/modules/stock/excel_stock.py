@@ -2,24 +2,22 @@ from ui.core.modal import DialogoModalIntegrado
 import sqlite3
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
 from pathlib import Path
 from datetime import datetime
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QMessageBox, QFileDialog, QTableWidget, QTableWidgetItem, QHeaderView,
-    QProgressBar, QScrollArea, QWidget
+    QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QMessageBox, QFileDialog, QTableWidget, QTableWidgetItem, QHeaderView
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
 
 from db.queries import obtener_stocks_todos
-
 from ui.core.theme import (
-    COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG,
+    COLOR_PRIMARY, COLOR_CARD_BG,
     COLOR_BORDER, COLOR_TEXT_MAIN, COLOR_SUCCESS, COLOR_DANGER
 )
-
 
 def normalizar_unidad(u: str) -> str:
     if not u:
@@ -31,7 +29,6 @@ def normalizar_unidad(u: str) -> str:
         return 'm2'
     return None
 
-
 def generar_plantilla_excel(parent_window):
     ruta, _ = QFileDialog.getSaveFileName(
         parent_window, "Guardar Plantilla de Importación",
@@ -42,10 +39,12 @@ def generar_plantilla_excel(parent_window):
 
     try:
         wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Importación de Productos"
         
-        columnas = ["codigo", "descripcion", "unidad", "precio_venta", "stock_inicial", "stock_minimo"]
+        # 1. Hoja principal
+        ws = wb.active
+        ws.title = "Plantilla"
+        
+        columnas = ["Código (*)", "Descripción (*)", "Unidad (*)", "Precio Venta (*)", "Stock Inicial", "Stock Mínimo", "Imagen"]
         ws.append(columnas)
         
         header_fill = PatternFill(start_color="2563eb", end_color="2563eb", fill_type="solid")
@@ -55,16 +54,49 @@ def generar_plantilla_excel(parent_window):
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = Alignment(horizontal="center")
-            ws.column_dimensions[openpyxl.utils.get_column_letter(col_num)].width = 20
+            ws.column_dimensions[get_column_letter(col_num)].width = 25
             
-        # Fila de ejemplo
-        ws.append(["PROD-001", "Cemento Portland 50kg", "u", 8500, 100, 10])
+        # Freeze y Filtro
+        ws.freeze_panes = "A2"
+        ws.auto_filter.ref = f"A1:G1"
+            
+        # Filas de ejemplo
+        ws.append(["PROD-001", "Cemento Portland 50kg", "u", 8500, 100, 10, ""])
+        ws.append(["PROD-002", "Porcelanato Beige 60x60", "m2", 15000, 50, 5, ""])
         
+        # 2. Hoja de instrucciones
+        ws_inst = wb.create_sheet(title="INSTRUCCIONES")
+        
+        instrucciones = [
+            ["INSTRUCCIONES PARA LA IMPORTACIÓN MASIVA", ""],
+            ["", ""],
+            ["1. Campos Obligatorios (*)", "Código, Descripción, Unidad y Precio Venta son obligatorios para productos nuevos."],
+            ["2. Formato Esperado", "Unidad debe ser 'u' o 'm2'. El precio y stock deben ser números positivos."],
+            ["3. Códigos Duplicados en Excel", "Si el archivo Excel contiene el mismo código en varias filas, se marcarán como error."],
+            ["4. Productos Existentes", "Si el código ya existe en el sistema, SOLO se actualizarán sus datos maestros (Descripción, Unidad, Precio, Mínimo, Imagen)."],
+            ["5. Stock Inicial (Existentes)", "Para productos EXISTENTES, la columna Stock Inicial SERÁ IGNORADA para proteger la trazabilidad y no alterar el historial real de movimientos."],
+            ["6. Stock Inicial (Nuevos)", "Para productos NUEVOS, un Stock Inicial mayor a 0 generará automáticamente un movimiento de ENTRADA (Ajuste Inicial) asociando el stock correctamente al sistema ATP."],
+            ["7. Imagen", "Nombre del archivo de imagen (ej: cemento.jpg) guardado en la carpeta de imágenes, o dejar vacío."]
+        ]
+        
+        for row in instrucciones:
+            ws_inst.append(row)
+            
+        ws_inst.column_dimensions["A"].width = 30
+        ws_inst.column_dimensions["B"].width = 120
+        
+        for row in ws_inst.iter_rows(min_row=1, max_row=1):
+            for cell in row:
+                cell.font = Font(bold=True, size=14)
+                
+        for row in ws_inst.iter_rows(min_row=3, max_row=len(instrucciones)):
+            row[0].font = Font(bold=True)
+            row[1].alignment = Alignment(wrap_text=True)
+
         wb.save(ruta)
-        QMessageBox.information(parent_window, "Éxito", "Plantilla generada correctamente.")
+        QMessageBox.information(parent_window, "Éxito", "Plantilla con instrucciones generada correctamente.")
     except Exception as e:
         QMessageBox.critical(parent_window, "Error", f"No se pudo generar la plantilla: {e}")
-
 
 def exportar_inventario_excel(conn, parent_window):
     ruta, _ = QFileDialog.getSaveFileName(
@@ -82,8 +114,9 @@ def exportar_inventario_excel(conn, parent_window):
         ws.title = "Inventario"
         
         columnas = [
-            "Código", "Descripción", "Unidad", "Stock Físico", "Comprometido", 
-            "Disponible", "Stock Mínimo", "Precio Venta", "Valor Inventario", "Estado"
+            "Código", "Producto / Descripción", "Unidad", "Precio de Venta", 
+            "Stock Físico", "Stock Comprometido", "Stock Disponible (ATP)", 
+            "Stock Mínimo", "Estado"
         ]
         ws.append(columnas)
         
@@ -100,20 +133,29 @@ def exportar_inventario_excel(conn, parent_window):
             if atp <= 0: estado = "Sin Stock"
             elif stk_min > 0 and atp <= stk_min: estado = "Stock Bajo"
             
-            valor_inv = p["stock_fisico"] * p["precio_venta"]
-            
-            ws.append([
+            row = [
                 p["codigo"],
                 p["descripcion"],
                 p["unidad_base"],
+                p["precio_venta"],
                 p["stock_fisico"],
                 p["comprometido"],
                 atp,
                 stk_min,
-                p["precio_venta"],
-                valor_inv,
                 estado
-            ])
+            ]
+            ws.append(row)
+            
+        # Formateo
+        ws.freeze_panes = "A2"
+        ws.auto_filter.ref = f"A1:I{len(stocks)+1}"
+        
+        for row in ws.iter_rows(min_row=2, max_row=len(stocks)+1):
+            row[3].number_format = '"$"#,##0.00' # Precio Venta
+            row[4].number_format = '#,##0.00' # Fisico
+            row[5].number_format = '#,##0.00' # Comprometido
+            row[6].number_format = '#,##0.00' # ATP
+            row[7].number_format = '#,##0.00' # Minimo
             
         for col in ws.columns:
             max_length = 0
@@ -121,52 +163,27 @@ def exportar_inventario_excel(conn, parent_window):
             for cell in col:
                 if cell.value:
                     max_length = max(max_length, len(str(cell.value)))
-            ws.column_dimensions[col_letter].width = max_length + 2
+            ws.column_dimensions[col_letter].width = min(max_length + 2, 50)
             
         wb.save(ruta)
         QMessageBox.information(parent_window, "Éxito", f"Inventario exportado correctamente a:\n{ruta}")
     except Exception as e:
         QMessageBox.critical(parent_window, "Error", f"No se pudo exportar el inventario: {e}")
 
-
 class DialogoImportarExcel(DialogoModalIntegrado):
     def __init__(self, conexion_db, parent=None):
         super().__init__(parent)
         self.conn = conexion_db
         self.setWindowTitle("Importar Productos desde Excel")
-        self.setMinimumWidth(800)
+        self.setMinimumWidth(900)
         self.setMinimumHeight(600)
-        self.filas_validas = []
-        self.errores = []
+        self.filas_procesadas = []
         self.columnas_map = {}
-        self.modo_importacion = "AGREGAR"
+        self.stats = {'total': 0, 'nuevos': 0, 'existentes': 0, 'errores': 0, 'ignoradas': 0}
         self.init_ui()
 
     def init_ui(self):
         layout = QVBoxLayout(self)
-        
-        # Opciones de importacion
-        ly_modos = QHBoxLayout()
-        ly_modos.addWidget(QLabel("Modo de Importación:"))
-        
-        from PyQt6.QtWidgets import QRadioButton
-        self.rb_agregar = QRadioButton("Agregar / Actualizar Productos (Seguro)")
-        self.rb_agregar.setChecked(True)
-        self.rb_agregar.toggled.connect(self.cambiar_modo)
-        
-        self.rb_sustituir = QRadioButton("Sustituir Catálogo Actual (Peligroso)")
-        self.rb_sustituir.setStyleSheet("color: #ef4444; font-weight: bold;")
-        self.rb_sustituir.toggled.connect(self.cambiar_modo)
-        
-        ly_modos.addWidget(self.rb_agregar)
-        ly_modos.addWidget(self.rb_sustituir)
-        ly_modos.addStretch()
-        layout.addLayout(ly_modos)
-        
-        self.lbl_advertencia = QLabel("ADVERTENCIA: esta operación puede afectar todo el catálogo actual y no debe ejecutarse sin una copia de seguridad.")
-        self.lbl_advertencia.setStyleSheet("color: white; background-color: #ef4444; padding: 8px; border-radius: 4px; font-weight: bold;")
-        self.lbl_advertencia.hide()
-        layout.addWidget(self.lbl_advertencia)
         
         # Panel superior
         ly_top = QHBoxLayout()
@@ -182,45 +199,25 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         layout.addLayout(ly_top)
         
         # Resumen
-        self.lbl_resumen = QLabel("")
-        self.lbl_resumen.setStyleSheet(f"font-weight: bold; margin-top: 10px;")
+        self.lbl_resumen = QLabel("Esperando archivo...")
+        self.lbl_resumen.setStyleSheet("font-weight: bold; margin-top: 10px; font-size: 13px;")
         layout.addWidget(self.lbl_resumen)
         
-        # Tabla de errores
-        self.tabla_errores = QTableWidget(0, 2)
-        self.tabla_errores.setHorizontalHeaderLabels(["Fila (Excel)", "Error detectado"])
-        self.tabla_errores.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        self.tabla_errores.setStyleSheet(f"border: 1px solid {COLOR_DANGER}; background-color: #fef2f2;")
-        self.tabla_errores.hide()
-        layout.addWidget(self.tabla_errores)
-        
-        # Tabla de correctos (previsualizacion)
-        self.tabla_preview = QTableWidget(0, 6)
-        self.tabla_preview.setHorizontalHeaderLabels(["Código", "Descripción", "Unidad", "Precio", "Stk Inicial", "Stk Mínimo"])
-        self.tabla_preview.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        self.tabla_preview.setStyleSheet(f"border: 1px solid {COLOR_SUCCESS}; background-color: #f0fdf4;")
-        self.tabla_preview.hide()
-        layout.addWidget(self.tabla_preview)
+        # Tabla Unificada
+        self.tabla = QTableWidget(0, 5)
+        self.tabla.setHorizontalHeaderLabels(["Fila", "Código", "Descripción", "Estado", "Mensaje / Detalle"])
+        self.tabla.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        self.tabla.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self.tabla.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        layout.addWidget(self.tabla)
         
         # Boton Confirmar
-        self.btn_confirmar = QPushButton("✅ Confirmar Importación")
+        self.btn_confirmar = QPushButton("✅ Confirmar Importación Segura")
         self.btn_confirmar.setStyleSheet(f"background-color: {COLOR_SUCCESS}; color: white; padding: 12px; border-radius: 4px; font-weight: bold; font-size: 14px;")
         self.btn_confirmar.clicked.connect(self.ejecutar_importacion)
         self.btn_confirmar.setEnabled(False)
         layout.addWidget(self.btn_confirmar)
-
-    def cambiar_modo(self):
-        if self.rb_sustituir.isChecked():
-            self.modo_importacion = "SUSTITUIR"
-            self.lbl_advertencia.show()
-            self.btn_confirmar.setStyleSheet(f"background-color: {COLOR_DANGER}; color: white; padding: 12px; border-radius: 4px; font-weight: bold; font-size: 14px;")
-        else:
-            self.modo_importacion = "AGREGAR"
-            self.lbl_advertencia.hide()
-            self.btn_confirmar.setStyleSheet(f"background-color: {COLOR_SUCCESS}; color: white; padding: 12px; border-radius: 4px; font-weight: bold; font-size: 14px;")
-            
-        if self.lbl_archivo.text() != "Ningún archivo seleccionado":
-            self.procesar_archivo(self.lbl_archivo.text())
 
     def seleccionar_archivo(self):
         ruta, _ = QFileDialog.getOpenFileName(self, "Seleccionar Excel de Importación", "", "Excel Files (*.xlsx)")
@@ -231,14 +228,15 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         self.procesar_archivo(ruta)
 
     def auto_mapear_columnas(self, headers):
-        mapa = {'codigo': -1, 'descripcion': -1, 'unidad': -1, 'precio_venta': -1, 'stock_inicial': -1, 'stock_minimo': -1}
+        mapa = {'codigo': -1, 'descripcion': -1, 'unidad': -1, 'precio_venta': -1, 'stock_inicial': -1, 'stock_minimo': -1, 'imagen': -1}
         aliases = {
-            'codigo': ['código', 'codigo', 'sku', 'sku / código', 'código de barras'],
-            'descripcion': ['producto', 'descripción', 'descripcion', 'articulo', 'artículo', 'material', 'artículo / material'],
-            'unidad': ['unidad', 'medida', 'unidad de medida'],
-            'stock_inicial': ['stock', 'existencia', 'existencia actual', 'cantidad', 'stock físico', 'stock inicial'],
-            'precio_venta': ['precio', 'precio venta', 'precio unitario', 'precio_venta'],
-            'stock_minimo': ['stock mínimo', 'mínimo', 'mínimo deseado', 'stock minimo', 'stock_minimo']
+            'codigo': ['código (*)', 'codigo', 'código', 'sku'],
+            'descripcion': ['descripción (*)', 'descripción', 'descripcion', 'producto'],
+            'unidad': ['unidad (*)', 'unidad', 'medida'],
+            'precio_venta': ['precio venta (*)', 'precio venta', 'precio', 'precio_venta'],
+            'stock_inicial': ['stock inicial', 'stock', 'existencia', 'cantidad'],
+            'stock_minimo': ['stock mínimo', 'stock minimo', 'mínimo'],
+            'imagen': ['imagen', 'img', 'imagen_path']
         }
         
         for idx, h in enumerate(headers):
@@ -251,11 +249,10 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         return mapa
 
     def procesar_archivo(self, ruta):
-        self.filas_validas = []
-        self.errores = []
+        self.filas_procesadas = []
         self.btn_confirmar.setEnabled(False)
-        self.tabla_errores.setRowCount(0)
-        self.tabla_preview.setRowCount(0)
+        self.tabla.setRowCount(0)
+        self.stats = {'total': 0, 'nuevos': 0, 'existentes': 0, 'errores': 0, 'ignoradas': 0}
         
         try:
             wb = openpyxl.load_workbook(ruta, data_only=True)
@@ -272,123 +269,134 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         headers = filas[0]
         mapa = self.auto_mapear_columnas(headers)
         
-        # Validar mapeo
         if mapa['codigo'] == -1 or mapa['descripcion'] == -1:
-            msg = (
-                "No se encontraron las columnas obligatorias.\n\n"
-                "Para poder importar, la primera fila de tu Excel DEBE contener encabezados reconocibles. "
-                "Las columnas requeridas son:\n\n"
-                "1. Código del producto (nombres aceptados: código, sku, código de barras)\n"
-                "2. Descripción del producto (nombres aceptados: producto, descripción, artículo, material)\n\n"
-                "Opcionalmente también podés incluir:\n"
-                "- Unidad (nombres: unidad, medida)\n"
-                "- Precio (nombres: precio, precio venta)\n"
-                "- Stock Inicial (nombres: stock, existencia, cantidad)\n"
-                "- Stock Mínimo (nombres: stock mínimo, mínimo)\n\n"
-                "Por favor, revisá tu archivo, asegurate de que los nombres estén en la primera fila, guardá y volvé a intentarlo."
-            )
-            QMessageBox.critical(self, "Formato No Reconocido", msg)
+            QMessageBox.critical(self, "Formato No Reconocido", "No se encontraron las columnas 'Código' y 'Descripción'.")
             return
             
         from db.queries_stock import obtener_productos_activos_exportacion
         existentes = obtener_productos_activos_exportacion(self.conn)
         codigos_db = set(str(r[0]).strip() for r in existentes)
-        desc_db = set(str(r[1]).strip() for r in existentes)
         
         codigos_excel = set()
-        desc_excel = set()
         
         for i, fila in enumerate(filas[1:], start=2):
-            if not any(fila): continue
+            if not any(fila):
+                self.stats['ignoradas'] += 1
+                continue
+                
+            self.stats['total'] += 1
+            es_error = False
+            estado = ""
+            mensaje = ""
             
             try:
                 cod = str(fila[mapa['codigo']]).strip() if mapa['codigo'] != -1 and fila[mapa['codigo']] is not None else ""
                 desc = str(fila[mapa['descripcion']]).strip() if mapa['descripcion'] != -1 and fila[mapa['descripcion']] is not None else ""
                 uni_raw = str(fila[mapa['unidad']]).strip() if mapa['unidad'] != -1 and fila[mapa['unidad']] is not None else ""
-                precio = float(fila[mapa['precio_venta']]) if mapa['precio_venta'] != -1 and fila[mapa['precio_venta']] is not None else 0.0
-                stk_ini = float(fila[mapa['stock_inicial']]) if mapa['stock_inicial'] != -1 and fila[mapa['stock_inicial']] is not None else 0.0
-                stk_min = float(fila[mapa['stock_minimo']]) if mapa['stock_minimo'] != -1 and fila[mapa['stock_minimo']] is not None else 0.0
+                
+                precio = 0.0
+                if mapa['precio_venta'] != -1 and fila[mapa['precio_venta']] is not None:
+                    precio = float(fila[mapa['precio_venta']])
+                    
+                stk_ini = 0.0
+                if mapa['stock_inicial'] != -1 and fila[mapa['stock_inicial']] is not None:
+                    stk_ini = float(fila[mapa['stock_inicial']])
+                    
+                stk_min = 0.0
+                if mapa['stock_minimo'] != -1 and fila[mapa['stock_minimo']] is not None:
+                    stk_min = float(fila[mapa['stock_minimo']])
+                    
+                img = ""
+                if mapa['imagen'] != -1 and fila[mapa['imagen']] is not None:
+                    img = str(fila[mapa['imagen']]).strip()
+                    
             except ValueError:
-                self.errores.append((i, "Valores numéricos inválidos en la fila."))
+                self.agregar_fila_tabla(i, "N/A", "N/A", "✕ Error", "Valores numéricos inválidos", "#fef2f2")
+                self.stats['errores'] += 1
                 continue
                 
             errs = []
-            if not cod: errs.append("Código vacío.")
-            if not desc: errs.append("Descripción vacía.")
-            if precio < 0 or stk_ini < 0 or stk_min < 0: errs.append("Valores negativos no permitidos.")
+            if not cod: errs.append("Código vacío")
+            if not desc: errs.append("Descripción vacía")
+            if precio < 0 or stk_ini < 0 or stk_min < 0: errs.append("Valores negativos")
             
             uni = normalizar_unidad(uni_raw)
-            if not uni: errs.append(f"Unidad '{uni_raw}' inválida. Use 'u' o 'm2'.")
+            if not uni: errs.append(f"Unidad '{uni_raw}' inválida")
             
-            if self.modo_importacion == "AGREGAR":
-                if cod in codigos_excel: errs.append("Código duplicado dentro del Excel.")
-            else:
-                if cod in codigos_excel: errs.append("Código duplicado dentro del Excel.")
+            if cod in codigos_excel: 
+                errs.append("Código duplicado en Excel")
                 
             if errs:
-                self.errores.append((i, " | ".join(errs)))
+                mensaje = " | ".join(errs)
+                self.agregar_fila_tabla(i, cod, desc, "✕ Error", mensaje, "#fef2f2")
+                self.stats['errores'] += 1
+                continue
+                
+            codigos_excel.add(cod)
+            
+            if cod in codigos_db:
+                estado = "ACTUALIZAR"
+                mensaje = "Se actualizarán datos maestros. Stock inicial ignorado."
+                self.agregar_fila_tabla(i, cod, desc, "⚠ Advertencia", mensaje, "#fef08a")
+                self.stats['existentes'] += 1
             else:
-                codigos_excel.add(cod)
-                desc_excel.add(desc.lower())
+                estado = "NUEVO"
+                mensaje = "Se creará producto. "
+                if stk_ini > 0:
+                    mensaje += f"Generará movimiento de entrada por {stk_ini}."
+                self.agregar_fila_tabla(i, cod, desc, "✓ Válido", mensaje, "#f0fdf4")
+                self.stats['nuevos'] += 1
                 
-                estado_update = "NUEVO"
-                if cod in codigos_db:
-                    estado_update = "ACTUALIZAR"
-                    
-                self.filas_validas.append((cod, desc, uni, precio, stk_ini, stk_min, estado_update))
-                
-        if self.errores:
-            self.filas_validas.clear()
+            self.filas_procesadas.append((cod, desc, uni, precio, stk_ini, stk_min, img, estado))
             
-        self.mostrar_resultados()
+        self.actualizar_resumen()
 
-    def mostrar_resultados(self):
-        total_validas = len(self.filas_validas)
-        total_errores = len(self.errores)
+    def agregar_fila_tabla(self, fila_num, cod, desc, estado, msg, bg_color):
+        idx = self.tabla.rowCount()
+        self.tabla.insertRow(idx)
         
-        if total_errores > 0:
-            self.lbl_resumen.setText(f"❌ Se encontraron {total_errores} fila(s) con errores. Corrige el archivo y vuelve a intentarlo.")
-            self.lbl_resumen.setStyleSheet(f"color: {COLOR_DANGER}; font-weight: bold; font-size: 14px;")
-            self.tabla_errores.show()
-            self.tabla_preview.hide()
+        items = [
+            QTableWidgetItem(str(fila_num)),
+            QTableWidgetItem(cod),
+            QTableWidgetItem(desc),
+            QTableWidgetItem(estado),
+            QTableWidgetItem(msg)
+        ]
+        
+        for it in items:
+            it.setBackground(QColor(bg_color))
             
-            self.tabla_errores.setRowCount(total_errores)
-            for idx, (fila_num, err_txt) in enumerate(self.errores):
-                self.tabla_errores.setItem(idx, 0, QTableWidgetItem(f"Fila {fila_num}"))
-                self.tabla_errores.setItem(idx, 1, QTableWidgetItem(err_txt))
+        self.tabla.setItem(idx, 0, items[0])
+        self.tabla.setItem(idx, 1, items[1])
+        self.tabla.setItem(idx, 2, items[2])
+        self.tabla.setItem(idx, 3, items[3])
+        self.tabla.setItem(idx, 4, items[4])
+
+    def actualizar_resumen(self):
+        st = self.stats
+        resumen = (f"Total filas: {st['total']} | "
+                   f"Nuevos: {st['nuevos']} | "
+                   f"Existentes (Actualizar): {st['existentes']} | "
+                   f"Errores: {st['errores']} | "
+                   f"Ignoradas: {st['ignoradas']}")
+                   
+        if st['errores'] > 0:
+            self.lbl_resumen.setText(f"❌ {resumen}. Hay errores que impedirán la importación.")
+            self.lbl_resumen.setStyleSheet(f"color: {COLOR_DANGER}; font-weight: bold; margin-top: 10px; font-size: 13px;")
+            self.btn_confirmar.setEnabled(False)
         else:
-            self.lbl_resumen.setText(f"✅ Todo correcto. Se importarán/actualizarán {total_validas} producto(s).")
-            self.lbl_resumen.setStyleSheet(f"color: {COLOR_SUCCESS}; font-weight: bold; font-size: 14px;")
-            self.tabla_errores.hide()
-            self.tabla_preview.show()
-            
-            self.tabla_preview.setRowCount(total_validas)
-            for idx, prod in enumerate(self.filas_validas):
-                for col_idx in range(6):
-                    it = QTableWidgetItem(str(prod[col_idx]))
-                    if prod[6] == "ACTUALIZAR":
-                        it.setBackground(QColor("#fef08a")) # Amarillo claro para updates
-                    self.tabla_preview.setItem(idx, col_idx, it)
-                    
-            self.btn_confirmar.setEnabled(True)
+            self.lbl_resumen.setText(f"✅ {resumen}. Listo para importar.")
+            self.lbl_resumen.setStyleSheet(f"color: {COLOR_SUCCESS}; font-weight: bold; margin-top: 10px; font-size: 13px;")
+            if st['total'] > 0:
+                self.btn_confirmar.setEnabled(True)
 
     def ejecutar_importacion(self):
-        if not self.filas_validas: return
-        
-        if self.modo_importacion == "SUSTITUIR":
-            reply = QMessageBox.warning(
-                self, "Confirmar Sustitución",
-                "Está a punto de reemplazar el catálogo actual. Los productos que no estén en el Excel y tengan historial serán desactivados, los que no, eliminados.\n\n¿Desea continuar?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
-            )
-            if reply == QMessageBox.StandardButton.No:
-                return
+        if not self.filas_procesadas or self.stats['errores'] > 0: return
         
         try:
-            from db.queries_stock import ejecutar_importacion_excel
-            ejecutar_importacion_excel(self.conn, self.modo_importacion, self.filas_validas)
-            QMessageBox.information(self, "Éxito", f"Se procesaron {len(self.filas_validas)} productos exitosamente.")
+            from db.queries_stock import ejecutar_importacion_excel_segura
+            ejecutar_importacion_excel_segura(self.conn, self.filas_procesadas)
+            QMessageBox.information(self, "Éxito", f"Se procesaron {len(self.filas_procesadas)} productos exitosamente.")
             self.accept()
         except Exception as e:
-            QMessageBox.critical(self, "Error Fatal", f"La importación falló y se revirtió. Detalles:\n{e}")
+            QMessageBox.critical(self, "Error Fatal", f"La importación falló y se realizó un ROLLBACK. Detalles:\n{e}")

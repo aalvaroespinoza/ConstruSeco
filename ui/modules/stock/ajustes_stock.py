@@ -8,9 +8,8 @@ from PyQt6.QtWidgets import (
     QFormLayout, QCheckBox, QGroupBox
 )
 from PyQt6.QtCore import Qt, QSettings
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QFont
 
-from db.conexion import limpiar_presupuestos_vencidos
 
 from ui.core.theme import (
     COLOR_PRIMARY, COLOR_BG, COLOR_TEXT_MAIN, COLOR_BORDER
@@ -55,7 +54,26 @@ class DialogoConfiguracionGeneral(DialogoModalIntegrado):
         layout.addLayout(form)
         
         self.btn_guardar = QPushButton("Guardar Configuración")
-        self.btn_guardar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px; font-weight: bold;")
+        self.btn_guardar.setObjectName("btn_guardar_config")
+        self.btn_guardar.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_guardar.setStyleSheet(f"""
+            QPushButton#btn_guardar_config {{
+                background-color: {COLOR_PRIMARY}; 
+                color: white; 
+                padding: 10px; 
+                border-radius: 6px;
+                font-weight: bold;
+                border: none;
+            }}
+            QPushButton#btn_guardar_config:hover {{
+                background-color: #1d4ed8;
+                color: white;
+            }}
+            QPushButton#btn_guardar_config:pressed {{
+                background-color: #1e3a8a;
+                color: white;
+            }}
+        """)
         self.btn_guardar.clicked.connect(self.guardar)
         layout.addWidget(self.btn_guardar)
 
@@ -80,7 +98,7 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
         super().__init__(parent)
         self.conn = conexion_db
         self.setWindowTitle("Historial de Movimientos de Stock")
-        self.setMinimumSize(1050, 650)
+        self.setMinimumSize(900, 600)
         self.init_ui()
         self.cargar_datos()
 
@@ -102,11 +120,11 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
         layout.addLayout(ly_busq)
         
         # Tabla
-        self.tabla = QTableWidget(0, 6)
-        self.tabla.setHorizontalHeaderLabels(["Fecha", "Código", "Producto", "Tipo", "Cant.", "Documento / Notas"])
+        self.tabla = QTableWidget(0, 8)
+        self.tabla.setHorizontalHeaderLabels(["Fecha", "Código", "Producto", "Tipo", "Cant.", "Stk Ant.", "Stk Post.", "Origen / Notas"])
         self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.tabla.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        self.tabla.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
+        self.tabla.horizontalHeader().setSectionResizeMode(7, QHeaderView.ResizeMode.Stretch)
         self.tabla.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.tabla.setStyleSheet(f"QTableWidget {{ border: 1px solid {COLOR_BORDER}; }}")
@@ -118,46 +136,88 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
         tipo = self.cmb_tipo.currentText()
         
         sql = """
+            WITH CTE_Saldos AS (
+                SELECT 
+                    m.id_movimiento,
+                    m.fecha_hora, 
+                    m.codigo_producto, 
+                    m.tipo_movimiento, 
+                    m.cantidad, 
+                    m.id_documento_origen,
+                    m.notas,
+                    SUM(CASE WHEN m.tipo_movimiento = 'ENTRADA' THEN m.cantidad ELSE -m.cantidad END)
+                    OVER (
+                        PARTITION BY m.codigo_producto 
+                        ORDER BY m.fecha_hora ASC, m.id_movimiento ASC
+                        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                    ) as stock_posterior
+                FROM movimientos_stock m
+            )
             SELECT 
-                m.fecha_hora, 
-                m.codigo_producto, 
+                c.fecha_hora, 
+                c.codigo_producto, 
                 p.descripcion, 
-                m.tipo_movimiento, 
-                m.cantidad, 
+                c.tipo_movimiento, 
+                c.cantidad, 
+                c.stock_posterior,
                 d.numero_interno,
-                m.notas
-            FROM movimientos_stock m
-            JOIN productos p ON m.codigo_producto = p.codigo
-            LEFT JOIN documentos d ON m.id_documento_origen = d.id_documento
-            WHERE (m.codigo_producto LIKE ? OR p.descripcion LIKE ? OR IFNULL(d.numero_interno, '') LIKE ?)
+                d.tipo,
+                c.notas
+            FROM CTE_Saldos c
+            JOIN productos p ON c.codigo_producto = p.codigo
+            LEFT JOIN documentos d ON c.id_documento_origen = d.id_documento
+            WHERE (c.codigo_producto LIKE ? OR p.descripcion LIKE ? OR IFNULL(d.numero_interno, '') LIKE ? OR IFNULL(c.notas, '') LIKE ?)
         """
-        params = [busqueda, busqueda, busqueda]
+        params = [busqueda, busqueda, busqueda, busqueda]
         
         if tipo != "Todos":
-            sql += " AND m.tipo_movimiento = ?"
+            sql += " AND c.tipo_movimiento = ?"
             params.append(tipo)
             
-        sql += " ORDER BY m.fecha_hora DESC LIMIT 200"
+        sql += " ORDER BY c.fecha_hora DESC, c.id_movimiento DESC LIMIT 200"
         
         from db.queries_stock import ejecutar_consulta_historial
         filas = ejecutar_consulta_historial(self.conn, sql, params)
         
         self.tabla.setRowCount(len(filas))
-        for i, (fecha, cod, desc, tm, cant, doc, notas) in enumerate(filas):
+        for i, (fecha, cod, desc, tm, cant, stk_post, doc, doc_tipo, notas) in enumerate(filas):
             self.tabla.setItem(i, 0, QTableWidgetItem(str(fecha)[:16]))
             self.tabla.setItem(i, 1, QTableWidgetItem(str(cod)))
             self.tabla.setItem(i, 2, QTableWidgetItem(str(desc)))
             
             it_tm = QTableWidgetItem(str(tm))
-            if tm == 'ENTRADA': it_tm.setForeground(QColor("#10b981"))
-            else: it_tm.setForeground(QColor("#ef4444"))
+            if tm == 'ENTRADA': 
+                it_tm.setForeground(QColor("#10b981"))
+                delta = cant
+            else: 
+                it_tm.setForeground(QColor("#ef4444"))
+                delta = -cant
             self.tabla.setItem(i, 3, it_tm)
             
             self.tabla.setItem(i, 4, QTableWidgetItem(f"{cant:g}"))
             
-            info_doc = doc if doc else "Ajuste Directo"
-            if notas: info_doc += f" | {notas}"
-            self.tabla.setItem(i, 5, QTableWidgetItem(info_doc))
+            stk_ant = stk_post - delta
+            self.tabla.setItem(i, 5, QTableWidgetItem(f"{stk_ant:g}"))
+            
+            it_post = QTableWidgetItem(f"{stk_post:g}")
+            it_post.setFont(QFont("Segoe UI", -1, QFont.Weight.Bold))
+            self.tabla.setItem(i, 6, it_post)
+            
+            if doc_tipo == 'VENTA':
+                info_doc = f"Venta #{doc}"
+            elif doc_tipo == 'PRESUPUESTO':
+                info_doc = f"Presupuesto #{doc} confirmado"
+            elif doc_tipo == 'AJUSTE':
+                info_doc = f"Ajuste de inventario #{doc}"
+            elif doc_tipo == 'COMPRA':
+                info_doc = f"Compra #{doc}"
+            elif doc:
+                info_doc = f"{doc_tipo} #{doc}"
+            else:
+                info_doc = "Entrada manual / Ajuste directo"
+                
+            if notas: info_doc += f" ({notas})"
+            self.tabla.setItem(i, 7, QTableWidgetItem(info_doc))
 
 
 class DialogoVisualizacionInventario(DialogoModalIntegrado):

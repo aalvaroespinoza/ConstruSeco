@@ -93,7 +93,7 @@ def obtener_stocks_todos(conn, incluir_inactivos=False) -> list[dict]:
 
     Cada elemento del resultado es un dict con:
         codigo, descripcion, unidad_base, precio_venta, stock_minimo,
-        stock_fisico, comprometido, atp, activo
+        stock_fisico, comprometido, atp, activo, imagen_path
     """
     c = conn.cursor()
     
@@ -115,8 +115,9 @@ def obtener_stocks_todos(conn, incluir_inactivos=False) -> list[dict]:
         {where_clause}
         ORDER BY p.descripcion
     """)
+    
     resultado = []
-    for codigo, desc, unidad, precio, stk_min, activo, img_path, ent, sal, comp in c.fetchall():
+    for codigo, desc, unidad, precio, stk_min, activo, p_img, ent, sal, comp in c.fetchall():
         fisico = ent - sal
         resultado.append({
             "codigo":       codigo,
@@ -125,7 +126,7 @@ def obtener_stocks_todos(conn, incluir_inactivos=False) -> list[dict]:
             "precio_venta": precio,
             "stock_minimo": stk_min or 0.0,
             "activo":       activo,
-            "imagen_path":  img_path,
+            "imagen_path":  p_img,
             "stock_fisico": fisico,
             "comprometido": comp,
             "atp":          fisico - comp,
@@ -168,6 +169,7 @@ def obtener_productos_frecuentes(conn, limite: int = 4, dias: int = 30) -> list[
             p.descripcion, 
             p.unidad_base, 
             p.stock_minimo,
+            p.imagen_path,
             SUM(dd.cantidad_base) as total_vendido,
             {_sq_entradas('p')} AS entradas,
             {_sq_salidas('p')}  AS salidas,
@@ -179,21 +181,23 @@ def obtener_productos_frecuentes(conn, limite: int = 4, dias: int = 30) -> list[
           AND d.estado = 'CONFIRMADO'
           AND d.fecha_emision >= datetime('now', 'localtime', '-{dias} days')
           AND p.activo = 1
-        GROUP BY p.codigo, p.descripcion, p.unidad_base, p.stock_minimo
+        GROUP BY p.codigo, p.descripcion, p.unidad_base, p.stock_minimo, p.imagen_path
         ORDER BY total_vendido DESC
         LIMIT ?
     """, (limite,))
     
     resultado = []
-    for codigo, desc, unidad, stk_min, _, ent, sal, comp in c.fetchall():
+    for codigo, desc, unidad, stk_min, img_path, total_vendido, ent, sal, comp in c.fetchall():
         fisico = ent - sal
         resultado.append({
             "codigo":       codigo,
             "descripcion":  desc,
             "unidad_base":  unidad,
             "stock_minimo": stk_min or 0.0,
+            "imagen_path":  img_path,
             "stock_fisico": fisico,
             "comprometido": comp,
             "atp":          fisico - comp,
+            "vendido":      total_vendido,
         })
     return resultado

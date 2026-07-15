@@ -41,5 +41,5 @@ if __name__ == "__main__":
 
     ventana = VentanaPrincipal(conexion)
     ventana.setWindowIcon(_icono)   # refuerzo en la QMainWindow
-    ventana.show()
+    ventana.showMaximized()
     sys.exit(app.exec())

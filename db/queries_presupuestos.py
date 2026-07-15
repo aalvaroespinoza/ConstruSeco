@@ -361,3 +361,105 @@ def confirmar_presupuesto(conn, id_documento: int) -> str:
     except Exception as e:
         conn.rollback()
         raise e
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECCIÓN 5 — EDICIÓN
+# ══════════════════════════════════════════════════════════════════════════════
+
+def editar_presupuesto_activo(conn, id_documento: int, carrito: list, descuento_general: float, iva_aplicado: bool, iva_porcentaje: float, id_cliente_final: int, obs: str) -> str:
+    """
+    Edita un presupuesto ACTIVO, modificando sus datos y actualizando los compromisos de stock sin duplicar reservas.
+    """
+    c = conn.cursor()
+    
+    try:
+        c.execute("BEGIN IMMEDIATE;")
+        
+        # 1. Validar estado y obtener fecha de vencimiento original
+        c.execute("SELECT estado, numero_interno, fecha_vencimiento FROM documentos WHERE id_documento = ?", (id_documento,))
+        row = c.fetchone()
+        if not row:
+            raise ValueError("El presupuesto no existe.")
+        if row[0] != 'ACTIVO':
+            raise ValueError(f"El presupuesto está en estado {row[0]}, solo se pueden editar presupuestos ACTIVOS.")
+            
+        numero_interno = row[1]
+        fecha_venc = row[2]
+        
+        if not fecha_venc:
+            from datetime import datetime, timedelta
+            fecha_venc = (datetime.now() + timedelta(hours=48)).strftime("%Y-%m-%d %H:%M:%S")
+        
+        # 2. Validar ATP (descontando compromisos previos de este mismo presupuesto)
+        c.execute("SELECT codigo_producto, sum(cantidad_comprometida) FROM compromisos_stock WHERE id_documento = ? AND estado = 'ACTIVO' GROUP BY codigo_producto", (id_documento,))
+        compromisos_actuales = {r[0]: r[1] for r in c.fetchall()}
+        
+        requeridos = {}
+        for item in carrito:
+            codigo = item['codigo']
+            cant_base = item['cantidad'] * item['factor_conversion']
+            requeridos[codigo] = requeridos.get(codigo, 0.0) + cant_base
+            
+        from db.queries import obtener_stock_producto
+        for codigo, cantidad_requerida in requeridos.items():
+            stock = obtener_stock_producto(conn, codigo)
+            disponible_global = stock["atp"]
+            ya_comprometido = compromisos_actuales.get(codigo, 0.0)
+            disponible_real = disponible_global + ya_comprometido
+            
+            if cantidad_requerida > disponible_real:
+                raise ValueError(
+                    f"Stock insuficiente para {codigo}: disponibles reales (incluyendo reserva previa) {disponible_real:g}, "
+                    f"requeridos {cantidad_requerida:g}."
+                )
+                
+        # 3. Borrar detalles y compromisos actuales
+        c.execute("DELETE FROM detalle_documentos WHERE id_documento = ?", (id_documento,))
+        c.execute("DELETE FROM compromisos_stock WHERE id_documento = ? AND estado = 'ACTIVO'", (id_documento,))
+        
+        # 4. Calcular nuevos montos
+        subtotal_bruto = sum([p['cantidad'] * p['precio_unit_mostrado'] * (1 - (p['descuento'] / 100.0)) for p in carrito])
+        subtotal_neto = subtotal_bruto * (1 - (descuento_general / 100.0))
+        iva_monto = subtotal_neto * (iva_porcentaje / 100.0) if iva_aplicado else 0.0
+        total_operacion = subtotal_neto + iva_monto
+        
+        # 5. Actualizar Cabecera
+        c.execute("""
+            UPDATE documentos SET
+                id_cliente = ?,
+                total_final = ?,
+                subtotal_bruto = ?,
+                descuento_general_porcentaje = ?,
+                iva_aplicado = ?,
+                iva_porcentaje = ?,
+                iva_monto = ?,
+                observaciones = ?
+            WHERE id_documento = ?
+        """, (
+            id_cliente_final, total_operacion, subtotal_bruto, descuento_general,
+            1 if iva_aplicado else 0, iva_porcentaje, iva_monto, obs if obs else None, id_documento
+        ))
+        
+        # 6. Insertar nuevos Detalles y Compromisos
+        for item in carrito:
+            subtotal_item = item['cantidad'] * item['precio_unit_mostrado'] * (1 - (item['descuento'] / 100.0))
+            cantidad_base = item['cantidad'] * item['factor_conversion']
+            
+            c.execute("""
+                INSERT INTO detalle_documentos (id_documento, codigo_producto, unidad_venta, cantidad_unidad_venta, cantidad_base, precio_unitario, descuento_porcentaje, subtotal)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                id_documento, item['codigo'], item['unidad_venta'], item['cantidad'],
+                cantidad_base, item['precio_unit_mostrado'], item['descuento'], subtotal_item
+            ))
+            
+            c.execute("""
+                INSERT INTO compromisos_stock (codigo_producto, id_documento, cantidad_comprometida, fecha_vencimiento, estado)
+                VALUES (?, ?, ?, ?, 'ACTIVO')
+            """, (item['codigo'], id_documento, cantidad_base, fecha_venc))
+            
+        conn.commit()
+        return numero_interno
+    except Exception as e:
+        conn.rollback()
+        raise e

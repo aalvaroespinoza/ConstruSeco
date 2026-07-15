@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QFrame, QTableWidget, QTableWidgetItem, QHeaderView,
     QAbstractItemView, QSplitter, QScrollArea, QComboBox, QMessageBox,
-    QGridLayout, QDialog
+    QGridLayout, QDialog, QTextBrowser, QMenu
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QCursor
@@ -18,9 +18,52 @@ from ui.core.theme import (
 from ui.core.modal import DialogoModalIntegrado
 from ui.modules.ventas.tab_ventas import PestanaNuevaVenta
 from db import queries_presupuestos as qp
+from utils.pdf_generator import generar_html_presupuesto, guardar_pdf_presupuesto
 
 def _fmt_moneda(valor: float) -> str:
-    return f"$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    if valor is None: return "0,00"
+    return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+class DialogoVistaPreviaPDF(DialogoModalIntegrado):
+    def __init__(self, conn, id_documento, parent=None):
+        super().__init__(parent)
+        self.conn = conn
+        self.id_documento = id_documento
+        self.setWindowTitle("Vista Previa del Presupuesto")
+        self.setMinimumWidth(850)
+        self.setMinimumHeight(700)
+        
+        ly = QVBoxLayout(self)
+        ly.setContentsMargins(16, 16, 16, 16)
+        
+        det = qp.obtener_detalle_presupuesto(self.conn, self.id_documento)
+        if not det:
+            ly.addWidget(QLabel("Error al cargar el presupuesto."))
+            return
+            
+        html = generar_html_presupuesto(det)
+        
+        self.browser = QTextBrowser()
+        self.browser.setHtml(html)
+        self.browser.setStyleSheet("background-color: white; border: 1px solid #cbd5e1; border-radius: 4px;")
+        ly.addWidget(self.browser)
+        
+        btn_ly = QHBoxLayout()
+        btn_ly.addStretch()
+        
+        btn_cerrar = QPushButton("Cerrar")
+        btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_cerrar.setStyleSheet(f"background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; padding: 8px 20px; border-radius: 6px; font-weight: bold;")
+        btn_cerrar.clicked.connect(self.reject)
+        btn_ly.addWidget(btn_cerrar)
+        
+        btn_pdf = QPushButton("Exportar PDF")
+        btn_pdf.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_pdf.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; border: none; padding: 8px 20px; border-radius: 6px; font-weight: bold;")
+        btn_pdf.clicked.connect(self.accept)
+        btn_ly.addWidget(btn_pdf)
+        
+        ly.addLayout(btn_ly)
 
 class DialogoDetallePresupuesto(DialogoModalIntegrado):
     def __init__(self, conn, id_documento, parent=None):
@@ -36,7 +79,9 @@ class DialogoDetallePresupuesto(DialogoModalIntegrado):
             return
             
         self.setWindowTitle(f"Presupuesto {det['numero_interno']}")
-        self.setMinimumWidth(750)
+        self.setMinimumWidth(1100)
+        self.setMinimumHeight(750)
+        self.resize(1100, 750)
         
         ly = QVBoxLayout(self)
         ly.setContentsMargins(0, 0, 0, 0)
@@ -50,89 +95,169 @@ class DialogoDetallePresupuesto(DialogoModalIntegrado):
         ly_top.setSpacing(12)
         
         lbl_cli = QLabel(det['cliente']['nombre_completo'])
-        lbl_cli.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {COLOR_TEXT_MAIN}; border: none;")
+        lbl_cli.setStyleSheet(f"font-size: 18px; font-weight: 900; color: {COLOR_PRIMARY}; border: none;")
         ly_top.addWidget(lbl_cli, 0, 0, 1, 2)
         
-        ly_top.addWidget(QLabel(f"<b>CUIT/DNI:</b> {det['cliente']['cuit_dni'] or '—'}"), 1, 0)
-        ly_top.addWidget(QLabel(f"<b>Teléfono:</b> {det['cliente']['telefono'] or '—'}"), 1, 1)
+        ly_top.addWidget(QLabel(f"<span style='font-size: 14px; color: #475569;'><b>CUIT/DNI:</b> {det['cliente']['cuit_dni'] or '—'}</span>"), 1, 0)
+        ly_top.addWidget(QLabel(f"<span style='font-size: 14px; color: #475569;'><b>Teléfono:</b> {det['cliente']['telefono'] or '—'}</span>"), 1, 1)
         
-        ly_top.addWidget(QLabel(f"<b>Emisión:</b> {det['fecha_emision'][:10]}"), 2, 0)
-        ly_top.addWidget(QLabel(f"<b>Vencimiento:</b> {det['fecha_vencimiento'][:16]}"), 2, 1)
+        ly_top.addWidget(QLabel(f"<span style='font-size: 14px; color: #475569;'><b>Emisión:</b> {det['fecha_emision'][:10]}</span>"), 2, 0)
         
-        ly_top.addWidget(QLabel(f"<b>Estado:</b> {det['estado']}"), 3, 0)
-        ly_top.addWidget(QLabel(f"<b>Cond. IVA:</b> {det['cliente']['condicion_iva']}"), 3, 1)
+        # Vencimiento destacado
+        self.lbl_venc = QLabel(f"<b>Vencimiento:</b> {det['fecha_vencimiento'][:16] if det['fecha_vencimiento'] else '—'}")
+        self.lbl_venc.setStyleSheet("font-size: 14px; padding: 4px; border-radius: 4px;")
+        ly_top.addWidget(self.lbl_venc, 2, 1)
+        
+        ly_top.addWidget(QLabel(f"<span style='font-size: 14px; color: #475569;'><b>Estado:</b> <b>{det['estado']}</b></span>"), 3, 0)
+        ly_top.addWidget(QLabel(f"<span style='font-size: 14px; color: #475569;'><b>Cond. IVA:</b> {det['cliente']['condicion_iva']}</span>"), 3, 1)
+        
+        if det['estado'] == 'ACTIVO' and det['fecha_vencimiento']:
+            self.venc_str = det['fecha_vencimiento']
+            self.timer_modal = QTimer(self)
+            self.timer_modal.setInterval(1000)
+            self.timer_modal.timeout.connect(self._actualizar_contador)
+            self.timer_modal.start()
+            self._actualizar_contador()
+        else:
+            if det['estado'] == 'VENCIDO':
+                self.lbl_venc.setStyleSheet("font-size: 14px; padding: 4px; border-radius: 4px; color: #991b1b; background-color: #fee2e2; font-weight: bold;")
+            elif det['estado'] == 'CONFIRMADO':
+                self.lbl_venc.setStyleSheet("font-size: 14px; padding: 4px; border-radius: 4px; color: #166534; background-color: #dcfce7; font-weight: bold;")
+            else:
+                self.lbl_venc.setStyleSheet("font-size: 14px; padding: 4px; border-radius: 4px; color: #475569; background-color: #f1f5f9; font-weight: bold;")
         
         ly.addWidget(f_top)
         
-        # 2. Tabla de Detalles
-        tabla = QTableWidget(0, 4)
-        tabla.setHorizontalHeaderLabels(["Producto", "Cant", "P. Unitario", "Subtotal"])
-        tabla.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        tabla.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
-        tabla.setShowGrid(True)
-        tabla.verticalHeader().setVisible(False)
-        tabla.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        tabla.setStyleSheet(f"""
-            QTableWidget {{ border: 1px solid {COLOR_BORDER}; border-radius: 6px; background: {COLOR_CARD_BG}; }}
-            QHeaderView::section {{ background-color: {COLOR_BG}; font-weight: bold; color: {COLOR_TEXT_SEC}; border: none; border-bottom: 1px solid {COLOR_BORDER}; padding: 6px; }}
-            QTableWidget::item {{ padding: 6px; border-bottom: 1px solid #f1f5f9; color: {COLOR_TEXT_MAIN}; }}
-        """)
+        # Botones Inferiores
+        ly_btn = QHBoxLayout()
+        ly_btn.addStretch()
         
-        for i, item in enumerate(det['detalles']):
-            tabla.insertRow(i)
-            tabla.setItem(i, 0, QTableWidgetItem(f"{item['codigo_producto']} - {item['descripcion']}"))
-            tabla.setItem(i, 1, QTableWidgetItem(f"{item['cantidad_unidad_venta']} {item['unidad_venta']}"))
+        btn_preview = QPushButton("Vista Previa")
+        btn_preview.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_preview.setStyleSheet(f"background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; padding: 8px 20px; border-radius: 6px; font-weight: bold; color: {COLOR_TEXT_MAIN};")
+        btn_preview.clicked.connect(self._abrir_vista_previa)
+        
+        btn_pdf = QPushButton("Generar PDF")
+        btn_pdf.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_pdf.setStyleSheet(f"background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; padding: 8px 20px; border-radius: 6px; font-weight: bold; color: {COLOR_TEXT_MAIN};")
+        btn_pdf.clicked.connect(self._generar_pdf)
+        
+        btn_cerrar = QPushButton("Cerrar")
+        btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_cerrar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; border: 1px solid {COLOR_PRIMARY}; padding: 8px 20px; border-radius: 6px; font-weight: bold; color: white;")
+        btn_cerrar.clicked.connect(self.accept)
+        
+        ly_btn.addWidget(btn_preview)
+        ly_btn.addWidget(btn_pdf)
+        ly_btn.addWidget(btn_cerrar)
+        ly.addLayout(ly_btn)
+        
+    def _abrir_vista_previa(self):
+        dlg = DialogoVistaPreviaPDF(self.conn, self.id_documento, self.parent())
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self._generar_pdf()
             
-            it_pu = QTableWidgetItem(_fmt_moneda(item['precio_unitario']))
-            it_pu.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            tabla.setItem(i, 2, it_pu)
+    def _generar_pdf(self):
+        det = qp.obtener_detalle_presupuesto(self.conn, self.id_documento)
+        if not det: return
+        
+        import re
+        cli_name = re.sub(r'[^a-zA-Z0-9_\- ]', '', det['cliente']['nombre_completo']).strip()
+        cli_name = cli_name.replace(' ', '_')
+        default_name = f"Presupuesto_{det['numero_interno']}_{cli_name}.pdf"
+        
+        from PyQt6.QtWidgets import QFileDialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Guardar Presupuesto PDF",
+            default_name,
+            "Documentos PDF (*.pdf)"
+        )
+        if file_path:
+            try:
+                guardar_pdf_presupuesto(det, file_path)
+                from ui.core.modal import DialogoModalIntegrado
+                msg = DialogoModalIntegrado(self.parent())
+                msg.setWindowTitle("Éxito")
+                msg_ly = QVBoxLayout(msg)
+                msg_lbl = QLabel(f"PDF generado correctamente en:<br><br><b>{file_path}</b>")
+                msg_lbl.setWordWrap(True)
+                msg_ly.addWidget(msg_lbl)
+                btn_ok = QPushButton("Aceptar")
+                btn_ok.clicked.connect(msg.accept)
+                msg_ly.addWidget(btn_ok)
+                msg.exec()
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Error al generar el PDF:\n{e}")
+
+    def _actualizar_contador(self):
+        import datetime
+        ahora = datetime.datetime.now()
+        venc_str = self.venc_str
+        try:
+            venc_dt = datetime.datetime.strptime(venc_str, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            venc_dt = datetime.datetime.strptime(venc_str, "%Y-%m-%d")
             
-            it_sub = QTableWidgetItem(_fmt_moneda(item['subtotal']))
-            it_sub.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            tabla.setItem(i, 3, it_sub)
+        if venc_dt <= ahora:
+            self.lbl_venc.setText(f"Vencimiento: {venc_str[:16]} (Vencido)")
+            self.lbl_venc.setStyleSheet("font-size: 14px; padding: 4px 8px; border-radius: 4px; color: #991b1b; background-color: #fee2e2; font-weight: bold;")
+            self.timer_modal.stop()
+        else:
+            diff = venc_dt - ahora
+            segundos = int(diff.total_seconds())
+            dias, res = divmod(segundos, 86400)
+            horas, res = divmod(res, 3600)
+            mins, secs = divmod(res, 60)
             
-        ly.addWidget(tabla, stretch=1)
-        
-        # 3. Observaciones y Totales
-        f_bot = QHBoxLayout()
-        
-        lbl_obs = QLabel(f"<b>Observaciones:</b><br>{det['observaciones'] or 'Sin observaciones'}")
-        lbl_obs.setWordWrap(True)
-        lbl_obs.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 12px;")
-        f_bot.addWidget(lbl_obs, stretch=1)
-        
-        f_tots = QFrame()
-        f_tots.setStyleSheet(f"background-color: {COLOR_BG}; border-radius: 6px; padding: 12px; border: 1px solid {COLOR_BORDER};")
-        ly_tots = QVBoxLayout(f_tots)
-        
-        if det['subtotal_bruto'] != det['total_final']:
-            ly_tots.addWidget(QLabel(f"Subtotal: {_fmt_moneda(det['subtotal_bruto'])}"))
-        if det['total_descuento'] > 0:
-            ly_tots.addWidget(QLabel(f"Descuento: -{_fmt_moneda(det['total_descuento'])}"))
-        if det['iva_monto'] > 0:
-            ly_tots.addWidget(QLabel(f"IVA: {_fmt_moneda(det['iva_monto'])}"))
-            
-        lbl_tot = QLabel(f"TOTAL: {_fmt_moneda(det['total_final'])}")
-        lbl_tot.setStyleSheet(f"font-size: 18px; font-weight: 900; color: {COLOR_PRIMARY};")
-        ly_tots.addWidget(lbl_tot)
-        
-        f_bot.addWidget(f_tots)
-        ly.addLayout(f_bot)
+            if dias > 0:
+                texto = f"{dias}d {horas:02d}:{mins:02d}:{secs:02d}"
+            else:
+                texto = f"{horas:02d}:{mins:02d}:{secs:02d}"
+                
+            color_bg = "#dcfce7"
+            color_text = "#166534"
+            if dias == 0 and horas < 2:
+                color_bg = "#fee2e2"
+                color_text = "#991b1b"
+            elif dias == 0 and horas < 6:
+                color_bg = "#ffedd5"
+                color_text = "#9a3412"
+                
+            self.lbl_venc.setText(f"Vencimiento: {venc_str[:16]}   ⏱ {texto} restantes")
+            self.lbl_venc.setStyleSheet(f"font-size: 14px; padding: 4px 8px; border-radius: 4px; color: {color_text}; background-color: {color_bg}; font-weight: bold;")
 
 class DialogoNuevoPresupuesto(DialogoModalIntegrado):
     def __init__(self, conn, parent=None):
         super().__init__(parent)
         self.conn = conn
         self.setWindowTitle("Crear Nuevo Presupuesto")
-        # El widget de venta es ancho, necesitamos un modal grande
-        self.setMinimumWidth(1100)
-        self.setMinimumHeight(750)
+        # El widget de venta es ancho, necesitamos un modal grande pero que entre en pantallas 1366x768
+        self.setMinimumWidth(900)
+        self.setMinimumHeight(600)
         
         ly = QVBoxLayout(self)
         ly.setContentsMargins(0, 0, 0, 0)
         
         self.pestana_venta = PestanaNuevaVenta(self.conn, is_presupuesto=True)
         # Quitar el color de fondo para integrarlo bien al modal
+        self.pestana_venta.setStyleSheet(self.pestana_venta.styleSheet().replace("#F4F7FB", "transparent"))
+        self.pestana_venta.operacion_completada.connect(self.accept)
+        
+        ly.addWidget(self.pestana_venta)
+        
+class DialogoEditarPresupuesto(DialogoModalIntegrado):
+    def __init__(self, conn, id_documento, parent=None):
+        super().__init__(parent)
+        self.conn = conn
+        self.setWindowTitle(f"Editar Presupuesto #{id_documento}")
+        self.setMinimumWidth(900)
+        self.setMinimumHeight(600)
+        
+        ly = QVBoxLayout(self)
+        ly.setContentsMargins(0, 0, 0, 0)
+        
+        self.pestana_venta = PestanaNuevaVenta(self.conn, is_presupuesto=True, is_edicion=True, id_presupuesto_edicion=id_documento)
         self.pestana_venta.setStyleSheet(self.pestana_venta.styleSheet().replace("#F4F7FB", "transparent"))
         self.pestana_venta.operacion_completada.connect(self.accept)
         
@@ -181,6 +306,136 @@ class _TarjetaMetrica(QFrame):
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
         self.clicked.emit()
+class DialogoConfirmacionPresupuesto(DialogoModalIntegrado):
+    def __init__(self, titulo, mensaje_principal, detalles_html, color_confirmar=COLOR_PRIMARY, txt_confirmar="Confirmar", parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(titulo)
+        self.setMinimumWidth(400)
+        
+        ly = QVBoxLayout(self)
+        ly.setSpacing(16)
+        
+        lbl_msg = QLabel(mensaje_principal)
+        lbl_msg.setWordWrap(True)
+        lbl_msg.setStyleSheet(f"font-size: 14px; color: {COLOR_TEXT_MAIN}; font-weight: bold;")
+        ly.addWidget(lbl_msg)
+        
+        frm_det = QFrame()
+        frm_det.setStyleSheet(f"background-color: #f8fafc; border: 1px solid {COLOR_BORDER}; border-radius: 6px;")
+        ly_det = QVBoxLayout(frm_det)
+        lbl_det = QLabel(detalles_html)
+        lbl_det.setWordWrap(True)
+        lbl_det.setStyleSheet(f"font-size: 13px; color: {COLOR_TEXT_SEC}; border: none;")
+        ly_det.addWidget(lbl_det)
+        ly.addWidget(frm_det)
+        
+        ly_btns = QHBoxLayout()
+        ly_btns.addStretch()
+        
+        btn_cancelar = QPushButton("Cancelar")
+        btn_cancelar.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_cancelar.setStyleSheet(f"""
+            QPushButton {{
+                background-color: white;
+                border: 1px solid {COLOR_BORDER};
+                color: {COLOR_TEXT_MAIN};
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{ background-color: #f1f5f9; }}
+        """)
+        btn_cancelar.clicked.connect(self.reject)
+        
+        btn_conf = QPushButton(txt_confirmar)
+        btn_conf.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_conf.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {color_confirmar};
+                border: none;
+                color: white;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{ opacity: 0.9; }}
+        """)
+        btn_conf.clicked.connect(self.accept)
+        
+        ly_btns.addWidget(btn_cancelar)
+        ly_btns.addWidget(btn_conf)
+        ly.addLayout(ly_btns)
+
+class _CeldaAcciones(QWidget):
+    ver_solicitado = pyqtSignal(int)
+    editar_solicitado = pyqtSignal(int)
+    pdf_solicitado = pyqtSignal(int)
+    preview_solicitado = pyqtSignal(int)
+    confirmar_solicitado = pyqtSignal(int)
+    anular_solicitado = pyqtSignal(int)
+    
+    def __init__(self, id_documento: int, estado: str):
+        super().__init__()
+        self._id = id_documento
+        self._estado = estado
+        
+        ly = QHBoxLayout(self)
+        ly.setContentsMargins(4, 2, 4, 2)
+        ly.setSpacing(4)
+        ly.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Ojo: Ver
+        btn_ver = QPushButton("👁")
+        btn_ver.setToolTip("Ver detalle completo")
+        btn_ver.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_ver.setFixedSize(28, 28)
+        btn_ver.setStyleSheet(f"border: 1px solid {COLOR_BORDER}; border-radius: 4px; background-color: {COLOR_BG}; color: {COLOR_TEXT_MAIN};")
+        btn_ver.clicked.connect(lambda: self.ver_solicitado.emit(self._id))
+        ly.addWidget(btn_ver)
+        
+        # Lápiz: Editar
+        btn_editar = QPushButton("✎")
+        btn_editar.setToolTip("Editar presupuesto")
+        btn_editar.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_editar.setFixedSize(28, 28)
+        
+        if estado == "ACTIVO":
+            btn_editar.setStyleSheet(f"border: 1px solid {COLOR_BORDER}; border-radius: 4px; background-color: {COLOR_BG}; color: {COLOR_TEXT_MAIN};")
+            btn_editar.clicked.connect(lambda: self.editar_solicitado.emit(self._id))
+        else:
+            btn_editar.setEnabled(False)
+            btn_editar.setStyleSheet(f"border: 1px solid #e2e8f0; border-radius: 4px; background-color: #f8fafc; color: #cbd5e1;")
+            
+        ly.addWidget(btn_editar)
+        
+        # Tres puntos: Menú
+        btn_menu = QPushButton("⋮")
+        btn_menu.setToolTip("Más acciones")
+        btn_menu.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_menu.setFixedSize(28, 28)
+        btn_menu.setStyleSheet(f"border: 1px solid {COLOR_BORDER}; border-radius: 4px; background-color: {COLOR_BG}; color: {COLOR_TEXT_MAIN}; font-weight: bold;")
+        
+        menu = QMenu(self)
+        menu.setStyleSheet(f"QMenu {{ background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 4px; }} QMenu::item {{ padding: 6px 24px 6px 12px; }} QMenu::item:selected {{ background-color: #f1f5f9; }}")
+        
+        if estado == "ACTIVO":
+            act_conf = menu.addAction("Confirmar como Venta")
+            act_conf.triggered.connect(lambda: self.confirmar_solicitado.emit(self._id))
+            menu.addSeparator()
+            
+        act_prev = menu.addAction("Vista Previa")
+        act_prev.triggered.connect(lambda: self.preview_solicitado.emit(self._id))
+        
+        act_pdf = menu.addAction("Generar PDF")
+        act_pdf.triggered.connect(lambda: self.pdf_solicitado.emit(self._id))
+        
+        if estado == "ACTIVO":
+            menu.addSeparator()
+            act_anul = menu.addAction("Anular Presupuesto")
+            act_anul.triggered.connect(lambda: self.anular_solicitado.emit(self._id))
+            
+        btn_menu.setMenu(menu)
+        ly.addWidget(btn_menu)
 
 class _PanelVacio(QFrame):
     def __init__(self):
@@ -211,8 +466,11 @@ class _PanelVacio(QFrame):
 
 class _PanelDetalle(QScrollArea):
     ver_detalle_solicitado = pyqtSignal(int)
-    anular_solicitado = pyqtSignal(int)
+    editar_solicitado = pyqtSignal(int)
     confirmar_solicitado = pyqtSignal(int)
+    anular_solicitado = pyqtSignal(int)
+    pdf_solicitado = pyqtSignal(int)
+    preview_solicitado = pyqtSignal(int)
     
     def __init__(self):
         super().__init__()
@@ -227,24 +485,50 @@ class _PanelDetalle(QScrollArea):
         self._layout.setContentsMargins(14, 14, 14, 14)
         self._layout.setSpacing(10)
         
-        # Titulo y Cliente
+        # Titulo, Estado y Cliente (Izquierda)
         self._lbl_num = QLabel("—")
         self._lbl_num.setStyleSheet(f"font-size: 18px; font-weight: 900; color: {COLOR_TEXT_MAIN};")
-        self._layout.addWidget(self._lbl_num)
+        
+        self._lbl_estado_badge = QLabel("")
+        
+        ly_num = QHBoxLayout()
+        ly_num.addWidget(self._lbl_num)
+        ly_num.addWidget(self._lbl_estado_badge)
+        ly_num.addStretch()
         
         self._lbl_cliente = QLabel("—")
         self._lbl_cliente.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {COLOR_TEXT_MAIN};")
         self._lbl_cliente.setWordWrap(True)
-        self._layout.addWidget(self._lbl_cliente)
+        
+        ly_izq = QVBoxLayout()
+        ly_izq.addLayout(ly_num)
+        ly_izq.addWidget(self._lbl_cliente)
+        ly_izq.addStretch()
+        
+        # Validez y Reloj (Derecha)
+        self._lbl_validez = QLabel("—")
+        self._lbl_validez.setStyleSheet(f"font-size: 20px; font-weight: 900; color: {COLOR_PRIMARY};")
+        self._lbl_validez.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        
+        self._lbl_validez_desc = QLabel("restantes")
+        self._lbl_validez_desc.setStyleSheet(f"font-size: 11px; color: {COLOR_TEXT_SEC}; font-weight: bold; text-transform: uppercase;")
+        self._lbl_validez_desc.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+        
+        ly_der = QVBoxLayout()
+        ly_der.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+        ly_der.setSpacing(0)
+        ly_der.addWidget(self._lbl_validez)
+        ly_der.addWidget(self._lbl_validez_desc)
+        
+        ly_encabezado = QHBoxLayout()
+        ly_encabezado.addLayout(ly_izq, stretch=1)
+        ly_encabezado.addLayout(ly_der)
+        self._layout.addLayout(ly_encabezado)
         
         # Info secundaria
         self._lbl_fechas = QLabel("—")
         self._lbl_fechas.setStyleSheet(f"font-size: 12px; color: {COLOR_TEXT_SEC};")
         self._layout.addWidget(self._lbl_fechas)
-        
-        self._lbl_validez = QLabel("—")
-        self._lbl_validez.setStyleSheet(f"font-size: 12px; font-weight: bold; color: {COLOR_PRIMARY};")
-        self._layout.addWidget(self._lbl_validez)
         
         self._lbl_items = QLabel("—")
         self._lbl_items.setStyleSheet(f"font-size: 12px; color: {COLOR_TEXT_SEC};")
@@ -274,11 +558,17 @@ class _PanelDetalle(QScrollArea):
         self._btn_editar = QPushButton("Editar presupuesto")
         self._btn_editar.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_editar.setStyleSheet(f"background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; padding: 8px; border-radius: 6px; font-weight: bold; color: {COLOR_TEXT_MAIN};")
+        self._btn_editar.clicked.connect(lambda: self.editar_solicitado.emit(self._id_actual) if self._id_actual else None)
         
+        self._btn_preview = QPushButton("Vista Previa")
+        self._btn_preview.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_preview.setStyleSheet(f"background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; padding: 8px; border-radius: 6px; font-weight: bold; color: {COLOR_TEXT_MAIN};")
+        self._btn_preview.clicked.connect(lambda: self.preview_solicitado.emit(self._id_actual) if self._id_actual else None)
+
         self._btn_pdf = QPushButton("Generar PDF")
         self._btn_pdf.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_pdf.setStyleSheet(f"background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; padding: 8px; border-radius: 6px; font-weight: bold; color: {COLOR_TEXT_MAIN};")
-        self._btn_pdf.clicked.connect(lambda: QMessageBox.information(self, "PDF", "Funcionalidad pendiente."))
+        self._btn_pdf.clicked.connect(lambda: self.pdf_solicitado.emit(self._id_actual) if self._id_actual else None)
         
         self._btn_confirmar = QPushButton("Confirmar como Venta")
         self._btn_confirmar.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -292,8 +582,9 @@ class _PanelDetalle(QScrollArea):
         
         self._layout.addWidget(self._btn_ver)
         self._layout.addWidget(self._btn_editar)
-        self._layout.addWidget(self._btn_confirmar)
+        self._layout.addWidget(self._btn_preview)
         self._layout.addWidget(self._btn_pdf)
+        self._layout.addWidget(self._btn_confirmar)
         self._layout.addWidget(self._btn_anular)
         
         self.setWidget(self._contenido)
@@ -303,10 +594,35 @@ class _PanelDetalle(QScrollArea):
         det = qp.obtener_detalle_presupuesto(conn, id_documento)
         if not det: return
         
-        self._lbl_num.setText(f"{det['numero_interno']} ({det['estado']})")
+        self._lbl_num.setText(f"{det['numero_interno']}")
+        
+        est = det['estado']
+        if est == 'ACTIVO':
+            self._lbl_estado_badge.setStyleSheet("background-color: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; text-transform: uppercase;")
+        elif est == 'VENCIDO':
+            self._lbl_estado_badge.setStyleSheet("background-color: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; text-transform: uppercase;")
+        elif est == 'CONFIRMADO':
+            self._lbl_estado_badge.setStyleSheet(f"background-color: {COLOR_PRIMARY}20; color: {COLOR_PRIMARY}; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; text-transform: uppercase;")
+        else:
+            self._lbl_estado_badge.setStyleSheet("background-color: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; text-transform: uppercase;")
+        self._lbl_estado_badge.setText(f"{est}")
+        
         self._lbl_cliente.setText(det['cliente']['nombre_completo'])
         self._lbl_fechas.setText(f"Emisión: {det['fecha_emision'][:10]}")
-        self._lbl_validez.setText(f"Validez: Calculando...") # Será actualizado por el QTimer si es ACTIVO
+        
+        if est == 'ACTIVO':
+            self._lbl_validez.setText(f"⏱ Calculando...")
+            self._lbl_validez.setStyleSheet(f"font-size: 20px; font-weight: 900; color: {COLOR_PRIMARY};")
+            self._lbl_validez_desc.show()
+        else:
+            self._lbl_validez_desc.hide()
+            self._lbl_validez.setText(est)
+            if est == 'VENCIDO':
+                self._lbl_validez.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {COLOR_DANGER};")
+            elif est == 'CONFIRMADO':
+                self._lbl_validez.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {COLOR_SUCCESS};")
+            else:
+                self._lbl_validez.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {COLOR_TEXT_SEC};")
         self._lbl_items.setText(f"Ítems: {len(det['detalles'])}")
         self._lbl_total.setText(f"Total: {_fmt_moneda(det['total_final'])}")
         
@@ -394,25 +710,51 @@ class PestanaPresupuestos(QWidget):
         """
 
     def _construir_encabezado(self) -> QHBoxLayout:
-        ly = QHBoxLayout()
-        info = QVBoxLayout()
-        info.setSpacing(2)
-        tit = QLabel("Presupuestos")
-        tit.setStyleSheet(f"font-size: 22px; font-weight: 900; color: {COLOR_TEXT_MAIN}; border: none;")
-        sub = QLabel("Gestión y seguimiento de cotizaciones y compromisos de stock.")
-        sub.setStyleSheet(f"font-size: 13px; color: {COLOR_TEXT_SEC}; border: none;")
-        info.addWidget(tit)
-        info.addWidget(sub)
+        from ui.components.encabezado import crear_encabezado_estandar
+        ly_izq, btn_ayuda = crear_encabezado_estandar(
+            "📄", "Presupuestos", "Seguimiento, validez y gestión de presupuestos"
+        )
+        btn_ayuda.clicked.connect(self._mostrar_ayuda)
 
+        ly = QHBoxLayout()
         self._btn_nuevo = QPushButton("+ Nuevo Presupuesto")
         self._btn_nuevo.setProperty("class", "primario")
         self._btn_nuevo.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_nuevo.clicked.connect(self._abrir_modal_nuevo_presupuesto)
 
-        ly.addLayout(info)
+        ly.addLayout(ly_izq)
         ly.addStretch()
+        ly.addWidget(btn_ayuda, alignment=Qt.AlignmentFlag.AlignTop)
         ly.addWidget(self._btn_nuevo, alignment=Qt.AlignmentFlag.AlignTop)
         return ly
+
+    def _mostrar_ayuda(self):
+        from ui.components.ayuda import DialogoAyudaContextual
+        texto = (
+            "<p><b>FUNCIONES PRINCIPALES:</b></p>"
+            "<ul>"
+            "<li><b>Creación y Consulta:</b> Podés crear nuevos presupuestos y consultar el listado histórico completo.</li>"
+            "<li><b>Estados:</b> Cada presupuesto atraviesa distintas etapas: ACTIVO, VENCIDO, CONFIRMADO (venta realizada) o ANULADO.</li>"
+            "<li><b>Validez (Cuenta regresiva):</b> Tienen un vencimiento de 48 horas. Una cuenta regresiva visual te indica el tiempo restante en color verde, naranja (próximo a vencer) o rojo.</li>"
+            "</ul>"
+            "<p><b>COMPROMISO DE STOCK (ATP):</b></p>"
+            "<ul>"
+            "<li>Un presupuesto <b>ACTIVO</b> compromete temporalmente la disponibilidad de los artículos, para asegurar la reserva sin descontar el stock físico real.</li>"
+            "<li>Al vencerse, el sistema <b>libera automáticamente</b> este compromiso temporal.</li>"
+            "</ul>"
+            "<p><b>ACCIONES POR PRESUPUESTO:</b></p>"
+            "<ul>"
+            "<li><b>👁 (Ver):</b> Abre el detalle completo, válido en cualquier estado.</li>"
+            "<li><b>✎ (Editar):</b> Permite modificar el presupuesto, <b>únicamente si está ACTIVO</b>.</li>"
+            "<li><b>⋮ (Menú de acciones):</b> Permite Confirmar como Venta (solo ACTIVO), Anular (solo ACTIVO), generar una Vista Previa o Exportar a PDF.</li>"
+            "</ul>"
+            "<p><b>ATAJOS DE TECLADO:</b></p>"
+            "<ul>"
+            "<li><b>Escape:</b> Cerrar cualquier diálogo abierto.</li>"
+            "</ul>"
+        )
+        dialogo = DialogoAyudaContextual("Ayuda: Módulo Presupuestos", "Gestión de presupuestos y compromisos de stock", texto, self)
+        dialogo.exec()
 
     def _construir_metricas(self) -> QHBoxLayout:
         ly = QHBoxLayout()
@@ -468,9 +810,18 @@ class PestanaPresupuestos(QWidget):
         self._tabla.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._tabla.setShowGrid(False)
         self._tabla.verticalHeader().setVisible(False)
+        self._tabla.verticalHeader().setDefaultSectionSize(44)
         
         hdr = self._tabla.horizontalHeader()
         hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
+        hdr.setSectionResizeMode(6, QHeaderView.ResizeMode.Fixed)
+        self._tabla.setColumnWidth(5, 110)
+        self._tabla.setColumnWidth(6, 100)
         
         self._tabla.itemSelectionChanged.connect(self._on_seleccion_cambiada)
         
@@ -479,10 +830,12 @@ class PestanaPresupuestos(QWidget):
         self._panel_vacio = _PanelVacio()
         self._panel_detalle = _PanelDetalle()
         self._panel_detalle.ver_detalle_solicitado.connect(self._abrir_modal_detalle)
-        self._panel_detalle.anular_solicitado.connect(self._anular_presupuesto)
+        self._panel_detalle.editar_solicitado.connect(self._editar_presupuesto)
         self._panel_detalle.confirmar_solicitado.connect(self._confirmar_como_venta)
-        self._panel_detalle.hide()
-
+        self._panel_detalle.anular_solicitado.connect(self._anular_presupuesto)
+        self._panel_detalle.pdf_solicitado.connect(self._generar_pdf)
+        self._panel_detalle.preview_solicitado.connect(self._abrir_vista_previa)
+        
         ly_der = QVBoxLayout()
         ly_der.setContentsMargins(0, 0, 0, 0)
         ly_der.addWidget(self._panel_vacio)
@@ -616,29 +969,80 @@ class PestanaPresupuestos(QWidget):
         dlg = DialogoNuevoPresupuesto(self.conn, parent=self.window())
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self.recargar()
+            
+    def _editar_presupuesto(self, id_documento: int):
+        dlg = DialogoEditarPresupuesto(self.conn, id_documento, parent=self.window())
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self.recargar()
+
+    def _abrir_vista_previa(self, id_documento: int):
+        dlg = DialogoVistaPreviaPDF(self.conn, id_documento, parent=self.window())
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self._generar_pdf(id_documento)
+            
+    def _generar_pdf(self, id_documento: int):
+        det = qp.obtener_detalle_presupuesto(self.conn, id_documento)
+        if not det: return
+        
+        import re
+        cli_name = re.sub(r'[^a-zA-Z0-9_\- ]', '', det['cliente']['nombre_completo']).strip()
+        cli_name = cli_name.replace(' ', '_')
+        default_name = f"Presupuesto_{det['numero_interno']}_{cli_name}.pdf"
+        
+        from PyQt6.QtWidgets import QFileDialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Guardar Presupuesto PDF",
+            default_name,
+            "Documentos PDF (*.pdf)"
+        )
+        if file_path:
+            try:
+                guardar_pdf_presupuesto(det, file_path)
+                from ui.core.modal import DialogoModalIntegrado
+                msg = DialogoModalIntegrado(self.window())
+                msg.setWindowTitle("Éxito")
+                msg_ly = QVBoxLayout(msg)
+                msg_lbl = QLabel(f"PDF generado correctamente en:<br><br><b>{file_path}</b>")
+                msg_lbl.setWordWrap(True)
+                msg_ly.addWidget(msg_lbl)
+                btn_ok = QPushButton("Aceptar")
+                btn_ok.clicked.connect(msg.accept)
+                msg_ly.addWidget(btn_ok)
+                msg.exec()
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Error al generar el PDF:\n{e}")
 
     def _anular_presupuesto(self, id_documento: int):
         det = qp.obtener_detalle_presupuesto(self.conn, id_documento)
         if not det or det['estado'] != 'ACTIVO':
-            QMessageBox.warning(self, "Error", "El presupuesto no se puede anular.")
+            from ui.core.modal import DialogoModalIntegrado
+            msg = DialogoModalIntegrado(self.window())
+            msg.setWindowTitle("Error")
+            msg_ly = QVBoxLayout(msg)
+            lbl = QLabel("El presupuesto no se puede anular porque ya no está ACTIVO.")
+            lbl.setStyleSheet(f"font-size: 14px; color: {COLOR_TEXT_MAIN};")
+            msg_ly.addWidget(lbl)
+            btn = QPushButton("Aceptar")
+            btn.clicked.connect(msg.accept)
+            msg_ly.addWidget(btn)
+            msg.exec()
             return
             
-        dlg = QMessageBox(self.window())
-        dlg.setWindowTitle("Confirmar Anulación")
-        dlg.setIcon(QMessageBox.Icon.Warning)
-        dlg.setText(f"¿Estás seguro de anular el presupuesto <b>{det['numero_interno']}</b>?")
-        dlg.setInformativeText(f"Cliente: <b>{det['cliente']['nombre_completo']}</b><br><br>Al anularlo, se <b>liberará todo el stock comprometido</b> de forma inmediata. Esta acción no se puede deshacer y no eliminará el registro histórico.")
-        dlg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
-        dlg.button(QMessageBox.StandardButton.Yes).setText("Sí, anular")
-        dlg.button(QMessageBox.StandardButton.Cancel).setText("Cancelar")
+        detalles = f"Cliente: <b>{det['cliente']['nombre_completo']}</b><br><br>Al anularlo, se <b>liberará todo el stock comprometido</b> de forma inmediata. Esta acción no se puede deshacer y no eliminará el registro histórico."
+        dlg = DialogoConfirmacionPresupuesto(
+            titulo="Confirmar Anulación",
+            mensaje_principal=f"¿Estás seguro de anular el presupuesto <b>{det['numero_interno']}</b>?",
+            detalles_html=detalles,
+            color_confirmar=COLOR_DANGER,
+            txt_confirmar="Sí, anular",
+            parent=self.window()
+        )
         
-        if dlg.exec() == QMessageBox.StandardButton.Yes:
+        if dlg.exec() == QDialog.DialogCode.Accepted:
             try:
                 qp.anular_presupuesto(self.conn, id_documento)
-                # Notificar a la ventana principal para actualizar ATP global si es necesario
-                # Aunque ya refrescamos aquí, podemos emitir una señal o llamar a un método seguro
                 self.recargar()
-                QMessageBox.information(self, "Éxito", f"Presupuesto {det['numero_interno']} anulado correctamente.")
                 
                 # Intentar recargar la pestaña de stock usando una llamada segura al parent
                 try:
@@ -650,35 +1054,45 @@ class PestanaPresupuestos(QWidget):
                 except Exception:
                     pass
             except Exception as e:
+                # Usar QMessageBox genérico para crash de DB inesperado está bien, o uno integrado
                 QMessageBox.critical(self, "Error", f"Ocurrió un error al anular:\n{e}")
 
     def _confirmar_como_venta(self, id_documento: int):
         det = qp.obtener_detalle_presupuesto(self.conn, id_documento)
         if not det or det['estado'] != 'ACTIVO':
-            QMessageBox.warning(self, "Error", "El presupuesto no se puede confirmar.")
+            from ui.core.modal import DialogoModalIntegrado
+            msg = DialogoModalIntegrado(self.window())
+            msg.setWindowTitle("Error")
+            msg_ly = QVBoxLayout(msg)
+            lbl = QLabel("El presupuesto no se puede confirmar porque ya no está ACTIVO.")
+            lbl.setStyleSheet(f"font-size: 14px; color: {COLOR_TEXT_MAIN};")
+            msg_ly.addWidget(lbl)
+            btn = QPushButton("Aceptar")
+            btn.clicked.connect(msg.accept)
+            msg_ly.addWidget(btn)
+            msg.exec()
             return
             
-        dlg = QMessageBox(self.window())
-        dlg.setWindowTitle("Confirmar como Venta")
-        dlg.setIcon(QMessageBox.Icon.Question)
-        
         cant_prods = len(det['detalles'])
-        
-        dlg.setText(f"¿Deseas confirmar el presupuesto <b>{det['numero_interno']}</b> como venta real?")
-        
         total_formateado = f"$ {det['total_final']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         
-        dlg.setInformativeText(
+        detalles = (
             f"Cliente: <b>{det['cliente']['nombre_completo']}</b><br>"
             f"Total: <b>{total_formateado}</b><br>"
             f"Productos: <b>{cant_prods} ítem(s)</b><br><br>"
             f"⚠️ Esta acción es irreversible. Consumirá el material comprometido y registrará la salida física del inventario de forma inmediata."
         )
-        dlg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
-        dlg.button(QMessageBox.StandardButton.Yes).setText("Confirmar Venta")
-        dlg.button(QMessageBox.StandardButton.Cancel).setText("Cancelar")
         
-        if dlg.exec() == QMessageBox.StandardButton.Yes:
+        dlg = DialogoConfirmacionPresupuesto(
+            titulo="Confirmar como Venta",
+            mensaje_principal=f"¿Deseas confirmar el presupuesto <b>{det['numero_interno']}</b> como venta real?",
+            detalles_html=detalles,
+            color_confirmar=COLOR_PRIMARY,
+            txt_confirmar="Confirmar Venta",
+            parent=self.window()
+        )
+        
+        if dlg.exec() == QDialog.DialogCode.Accepted:
             try:
                 num_venta = qp.confirmar_presupuesto(self.conn, id_documento)
                 self.recargar()
@@ -725,6 +1139,8 @@ class PestanaPresupuestos(QWidget):
             return
             
         ahora = datetime.datetime.now()
+        hay_vencidos_nuevos = False
+        
         for item in self._lista_activos:
             venc_str = item["vencimiento"]
             if not venc_str: continue
@@ -739,6 +1155,7 @@ class PestanaPresupuestos(QWidget):
                     
             if venc_dt <= ahora:
                 texto = "Vencido"
+                hay_vencidos_nuevos = True
             else:
                 diff = venc_dt - ahora
                 segundos = int(diff.total_seconds())
@@ -754,12 +1171,35 @@ class PestanaPresupuestos(QWidget):
             it = self._tabla.item(item["fila"], 3)
             if it and it.text() != texto:
                 it.setText(texto)
+                
+                # Colores semánticos
+                color_text = COLOR_SUCCESS
                 if texto == "Vencido":
-                    it.setForeground(QColor(COLOR_DANGER))
+                    color_text = COLOR_DANGER
+                elif "d " not in texto and horas < 2:
+                    color_text = COLOR_DANGER
+                elif "d " not in texto and horas < 6:
+                    color_text = COLOR_WARNING
+                    
+                it.setForeground(QColor(color_text))
                     
             # Sincronizar panel lateral si el item está seleccionado
             if self._id_seleccionado == item["id_documento"]:
-                self._panel_detalle._lbl_validez.setText(f"Validez: {texto}")
+                self._panel_detalle._lbl_validez.setText(f"⏱ {texto}")
+                self._panel_detalle._lbl_validez.setStyleSheet(f"font-size: 24px; font-weight: 900; color: {color_text};")
+                if texto == "Vencido":
+                    self._panel_detalle._lbl_validez_desc.hide()
+                else:
+                    self._panel_detalle._lbl_validez_desc.show()
+                    
+        # Trigger exact moment SQL sync if something crossed 0
+        if hay_vencidos_nuevos:
+            try:
+                vp = self.window()
+                if hasattr(vp, '_verificar_y_limpiar_vencidos'):
+                    vp._verificar_y_limpiar_vencidos()
+            except Exception:
+                pass
 
     # ──────────────────────────────────────────────────────────────────────────
     # CARGA DE DATOS
@@ -802,8 +1242,17 @@ class PestanaPresupuestos(QWidget):
             it_num = QTableWidgetItem(row["numero_interno"])
             it_num.setData(Qt.ItemDataRole.UserRole, row["id_documento"])
             
-            it_cli = QTableWidgetItem(row["cliente"])
-            it_fecha = QTableWidgetItem(row["fecha_emision"][:10] if row["fecha_emision"] else "")
+            it_cli = QTableWidgetItem(f"{row['cliente']}\n{row['cant_items']} ítems")
+            # Fecha con hora
+            fecha_str = row["fecha_emision"]
+            if fecha_str and len(fecha_str) >= 16:
+                fecha_fmt = f"{fecha_str[8:10]}/{fecha_str[5:7]}/{fecha_str[:4]}\n{fecha_str[11:16]}"
+            elif fecha_str and len(fecha_str) >= 10:
+                fecha_fmt = f"{fecha_str[8:10]}/{fecha_str[5:7]}/{fecha_str[:4]}"
+            else:
+                fecha_fmt = ""
+            it_fecha = QTableWidgetItem(fecha_fmt)
+            it_fecha.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             
             st = row["estado"]
             
@@ -824,27 +1273,45 @@ class PestanaPresupuestos(QWidget):
             it_tot = QTableWidgetItem(_fmt_moneda(row["total_final"]))
             it_tot.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             
-            it_est = QTableWidgetItem(st)
-            it_est.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            # Estado (Insignia)
+            w_est = QWidget()
+            ly_est = QHBoxLayout(w_est)
+            ly_est.setContentsMargins(4, 2, 4, 2)
+            ly_est.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl_est = QLabel(st)
+            
             if st == "ACTIVO":
-                it_est.setForeground(QColor(COLOR_SUCCESS))
+                lbl_est.setStyleSheet("background-color: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase;")
             elif st == "VENCIDO":
-                it_est.setForeground(QColor(COLOR_DANGER))
-            elif st == "ANULADO":
-                it_est.setForeground(QColor(COLOR_TEXT_SEC))
+                lbl_est.setStyleSheet("background-color: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase;")
             elif st == "CONFIRMADO":
-                it_est.setForeground(QColor(COLOR_PRIMARY))
+                lbl_est.setStyleSheet(f"background-color: {COLOR_PRIMARY}20; color: {COLOR_PRIMARY}; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase;")
+            elif st == "ANULADO":
+                lbl_est.setStyleSheet("background-color: #f1f5f9; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase;")
+            else:
+                lbl_est.setStyleSheet("background-color: #f1f5f9; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase;")
+            
+            ly_est.addWidget(lbl_est)
+            
+            # Estado: solo widget, NO item de texto para evitar superposición
+            # El setCellWidget reemplaza la celda correctamente
                 
-            it_acc = QTableWidgetItem("...")
-            it_acc.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            # Acciones
+            w_acc = _CeldaAcciones(row["id_documento"], estado=st)
+            w_acc.ver_solicitado.connect(self._abrir_modal_detalle)
+            w_acc.editar_solicitado.connect(self._editar_presupuesto)
+            w_acc.preview_solicitado.connect(self._abrir_vista_previa)
+            w_acc.pdf_solicitado.connect(self._generar_pdf)
+            w_acc.confirmar_solicitado.connect(self._confirmar_como_venta)
+            w_acc.anular_solicitado.connect(self._anular_presupuesto)
             
             self._tabla.setItem(i, 0, it_num)
             self._tabla.setItem(i, 1, it_cli)
             self._tabla.setItem(i, 2, it_fecha)
             self._tabla.setItem(i, 3, it_val)
             self._tabla.setItem(i, 4, it_tot)
-            self._tabla.setItem(i, 5, it_est)
-            self._tabla.setItem(i, 6, it_acc)
+            self._tabla.setCellWidget(i, 5, w_est)
+            self._tabla.setCellWidget(i, 6, w_acc)
             
             if self._id_seleccionado == row["id_documento"]:
                 id_sel_encontrado = True
