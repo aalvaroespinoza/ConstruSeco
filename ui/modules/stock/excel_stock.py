@@ -191,6 +191,7 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         self.lbl_archivo.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; background-color: {COLOR_CARD_BG}; padding: 8px; border: 1px solid {COLOR_BORDER}; border-radius: 4px;")
         
         btn_seleccionar = QPushButton("📂 Seleccionar Excel")
+        btn_seleccionar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_seleccionar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold;")
         btn_seleccionar.clicked.connect(self.seleccionar_archivo)
         
@@ -214,6 +215,7 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         
         # Boton Confirmar
         self.btn_confirmar = QPushButton("✅ Confirmar Importación Segura")
+        self.btn_confirmar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_confirmar.setStyleSheet(f"background-color: {COLOR_SUCCESS}; color: white; padding: 12px; border-radius: 4px; font-weight: bold; font-size: 14px;")
         self.btn_confirmar.clicked.connect(self.ejecutar_importacion)
         self.btn_confirmar.setEnabled(False)

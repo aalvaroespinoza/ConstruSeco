@@ -17,7 +17,7 @@ from ui.core.modal import DialogoModalIntegrado
 
 from ui.core.theme import (
     COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG,
-    COLOR_BORDER, COLOR_TEXT_MAIN, COLOR_DANGER
+    COLOR_BORDER, COLOR_TEXT_MAIN, COLOR_TEXT_SEC, COLOR_DANGER
 )
 
 
@@ -76,11 +76,6 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
         self.inp_precio = SelectAllLineEdit("0.0")
         self.inp_stock_ini = SelectAllLineEdit("0.0")
         
-        from PyQt6.QtCore import QSettings
-        settings = QSettings("ConstrusecoPereyra", "StockConfig")
-        stk_min_def = settings.value("default_stock_min", 0.0, type=float)
-        self.inp_stock_min = SelectAllLineEdit(f"{stk_min_def:g}")
-        
         self.err_codigo = QLabel()
         self.err_codigo.setStyleSheet("color: red; font-size: 11px;")
         self.err_codigo.hide()
@@ -97,10 +92,6 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
         self.err_stock.setStyleSheet("color: red; font-size: 11px;")
         self.err_stock.hide()
         
-        self.err_min = QLabel()
-        self.err_min.setStyleSheet("color: red; font-size: 11px;")
-        self.err_min.hide()
-        
         def add_validated_row(titulo, widget, err_lbl):
             ly = QVBoxLayout()
             ly.setContentsMargins(0,0,0,0)
@@ -114,7 +105,6 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
         add_validated_row("Nombre o Producto (*):", self.inp_desc, self.err_desc)
         self.form.addRow("Unidad:", self.cmb_unidad)
         add_validated_row("Precio Venta ($):", self.inp_precio, self.err_precio)
-        add_validated_row("Stock Mínimo:", self.inp_stock_min, self.err_min)
         
         self.lbl_lbl_stock = QLabel("Cantidad (Agregar Stock):")
         ly_stk = QVBoxLayout()
@@ -128,6 +118,7 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
         main_layout.addLayout(self.form)
         
         self.btn_guardar = QPushButton("Guardar Producto")
+        self.btn_guardar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_guardar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 4px; font-weight: bold;")
         self.btn_guardar.clicked.connect(self.guardar)
         main_layout.addWidget(self.btn_guardar)
@@ -146,7 +137,6 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
             desc, unidad, precio, min_stock, img = row
             self.inp_desc.setText(desc)
             self.inp_precio.setText(f"{precio:g}")
-            self.inp_stock_min.setText(f"{min_stock:g}")
             idx = self.cmb_unidad.findData(unidad)
             if idx >= 0:
                 self.cmb_unidad.setCurrentIndex(idx)
@@ -170,12 +160,10 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
             
             self.inp_desc.setReadOnly(True)
             self.inp_precio.setReadOnly(True)
-            self.inp_stock_min.setReadOnly(True)
             self.cmb_unidad.setEnabled(False)
             
             self.inp_desc.setStyleSheet(disabled_style)
             self.inp_precio.setStyleSheet(disabled_style)
-            self.inp_stock_min.setStyleSheet(disabled_style)
             
             self.img_selector.btn_select.setEnabled(False)
             self.img_selector.btn_clear.setEnabled(False)
@@ -187,12 +175,10 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
             
             self.inp_desc.setReadOnly(False)
             self.inp_precio.setReadOnly(False)
-            self.inp_stock_min.setReadOnly(False)
             self.cmb_unidad.setEnabled(True)
             
             self.inp_desc.setStyleSheet(normal_style)
             self.inp_precio.setStyleSheet(normal_style)
-            self.inp_stock_min.setStyleSheet(normal_style)
             
             self.img_selector.btn_select.setEnabled(True)
             self.img_selector.btn_clear.setEnabled(True)
@@ -201,7 +187,6 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
             # Limpiar labels de error si estaban visibles por algo viejo
             self.err_desc.hide()
             self.err_precio.hide()
-            self.err_min.hide()
 
     def guardar(self):
         cod = self.inp_codigo.text().strip()
@@ -234,17 +219,6 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
                 hay_error = True
                 
         stk_min = 0.0
-        if not self.es_existente:
-            try:
-                stk_min = float(self.inp_stock_min.text().replace(',', '.'))
-                if stk_min < 0: raise ValueError
-            except ValueError:
-                self.inp_stock_min.setStyleSheet("border: 1px solid red;")
-                self.err_min.setText("Debe ser un número >= 0.")
-                self.err_min.show()
-                hay_error = True
-                
-        stk_ini = 0.0
         try:
             stk_ini_str = self.inp_stock_ini.text().strip().replace(',', '.')
             if not stk_ini_str:
@@ -333,10 +307,12 @@ class DialogoEditarProducto(DialogoModalIntegrado):
         
         btn_layout = QHBoxLayout()
         self.btn_eliminar = QPushButton("Eliminar producto")
+        self.btn_eliminar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_eliminar.setStyleSheet(f"background-color: {COLOR_DANGER}; color: white; padding: 10px; border-radius: 4px; font-weight: bold;")
         self.btn_eliminar.clicked.connect(self.eliminar_producto)
         
         self.btn_guardar = QPushButton("Guardar Cambios")
+        self.btn_guardar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_guardar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 4px; font-weight: bold;")
         self.btn_guardar.clicked.connect(self.guardar)
         
@@ -419,6 +395,7 @@ class DialogoStockMinimo(DialogoModalIntegrado):
         layout.addLayout(form)
         
         btn = QPushButton("Guardar")
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 4px; font-weight: bold;")
         btn.clicked.connect(self.guardar)
         layout.addWidget(btn)
@@ -471,6 +448,7 @@ class DialogoEntradaStock(DialogoModalIntegrado):
         layout.addLayout(form)
         
         self.btn_confirmar = QPushButton("Confirmar Entrada")
+        self.btn_confirmar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_confirmar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px;")
         self.btn_confirmar.clicked.connect(self.guardar)
         layout.addWidget(self.btn_confirmar)
@@ -537,6 +515,7 @@ class DialogoAjusteInventario(DialogoModalIntegrado):
         layout.addLayout(form)
         
         self.btn_confirmar = QPushButton("Aplicar Ajuste")
+        self.btn_confirmar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_confirmar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px;")
         self.btn_confirmar.clicked.connect(self.guardar)
         layout.addWidget(self.btn_confirmar)
@@ -588,29 +567,34 @@ class DialogoAlertasInventario(DialogoModalIntegrado):
     def __init__(self, datos_catalogo, callback_seleccionar, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Alertas de Inventario")
-        self.setFixedSize(500, 400)
+        self.setFixedSize(650, 450)
         self.datos = datos_catalogo
         self.callback = callback_seleccionar
         
         self.init_ui()
         
     def init_ui(self):
+        from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
+        from PyQt6.QtGui import QColor, QFont
+        
         layout = QVBoxLayout(self)
         
         lbl_info = QLabel("Productos que requieren atención inmediata:")
         lbl_info.setStyleSheet("font-weight: bold; font-size: 14px;")
         layout.addWidget(lbl_info)
         
-        from PyQt6.QtWidgets import QListWidget, QListWidgetItem, QWidget
-        self.lista = QListWidget()
-        self.lista.setStyleSheet("""
-            QListWidget { border: 1px solid #e2e8f0; border-radius: 6px; }
-            QListWidget::item { border-bottom: 1px solid #f1f5f9; padding: 10px; }
-            QListWidget::item:hover { background-color: #f8fafc; }
-        """)
-        self.lista.itemClicked.connect(self.on_item_clicked)
+        self.tabla = QTableWidget(0, 5)
+        self.tabla.setHorizontalHeaderLabels(["Cód.", "Producto", "Disp.", "Mín.", "Prioridad"])
+        self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.tabla.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.tabla.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.tabla.setStyleSheet(f"QTableWidget {{ border: 1px solid {COLOR_BORDER}; border-radius: 6px; font-size: 13px; }}")
+        self.tabla.itemDoubleClicked.connect(self.on_item_clicked)
         
-        count = 0
+        layout.addWidget(self.tabla)
+        
+        alertas = []
         for p in self.datos:
             atp = p['atp']
             stk_min = p['stock_minimo']
@@ -620,51 +604,53 @@ class DialogoAlertasInventario(DialogoModalIntegrado):
             elif stk_min > 0 and atp <= stk_min: estado = 1
             
             if estado == 0: continue
-            count += 1
             
-            item = QListWidgetItem()
-            w = QWidget()
-            l = QVBoxLayout(w)
-            l.setContentsMargins(8, 6, 8, 6)
-            l.setSpacing(2)
+            alertas.append({
+                'prod': p,
+                'estado': estado,
+                'atp': atp,
+                'stk_min': stk_min
+            })
             
-            lbl_desc = QLabel(f"{p['descripcion']}")
-            lbl_desc.setStyleSheet("font-weight: bold; font-size: 13px; color: #1e293b;")
-            lbl_desc.setWordWrap(True)
-            
-            color = "#ef4444" if estado == 2 else "#f59e0b"
-            texto_estado = "SIN STOCK" if estado == 2 else f"BAJO (Mín: {stk_min:g})"
-            
-            lbl_det = QLabel(f"Cód: {p['codigo']} | Disp: <span style='color:{color}; font-weight:bold;'>{atp:g}</span> {p['unidad_base']} ({texto_estado})")
-            lbl_det.setStyleSheet("font-size: 11px; color: #64748b;")
-            lbl_det.setWordWrap(True)
-            
-            l.addWidget(lbl_desc)
-            l.addWidget(lbl_det)
-            
-            w.adjustSize()
-            item.setSizeHint(w.sizeHint())
-            item.setData(Qt.ItemDataRole.UserRole, p['codigo'])
-            
-            self.lista.addItem(item)
-            self.lista.setItemWidget(item, w)
-            
-        if count == 0:
-            item = QListWidgetItem("No hay alertas activas de inventario.")
-            item.setFlags(Qt.ItemFlag.NoItemFlags)
-            self.lista.addItem(item)
-            
-        layout.addWidget(self.lista)
+        # Sort by critical first, then by ATP
+        alertas.sort(key=lambda x: (-x['estado'], x['atp']))
         
-        btn_cerrar = QPushButton("Cerrar")
-        btn_cerrar.clicked.connect(self.accept)
-        layout.addWidget(btn_cerrar)
-        
+        self.tabla.setRowCount(len(alertas))
+        for i, al in enumerate(alertas):
+            p = al['prod']
+            
+            it_cod = QTableWidgetItem(p['codigo'])
+            it_cod.setData(Qt.ItemDataRole.UserRole, p['codigo'])
+            
+            it_desc = QTableWidgetItem(p['descripcion'])
+            
+            it_disp = QTableWidgetItem(f"{al['atp']:g} {p['unidad_base']}")
+            it_disp.setFont(QFont("Segoe UI", -1, QFont.Weight.Bold))
+            
+            it_min = QTableWidgetItem(f"{al['stk_min']:g}")
+            
+            color = QColor("#ef4444") if al['estado'] == 2 else QColor("#f59e0b")
+            texto_estado = "CRÍTICO (Sin Stock)" if al['estado'] == 2 else "MEDIA (Stock Bajo)"
+            
+            it_est = QTableWidgetItem(texto_estado)
+            it_est.setForeground(color)
+            it_est.setFont(QFont("Segoe UI", -1, QFont.Weight.Bold))
+            
+            self.tabla.setItem(i, 0, it_cod)
+            self.tabla.setItem(i, 1, it_desc)
+            self.tabla.setItem(i, 2, it_disp)
+            self.tabla.setItem(i, 3, it_min)
+            self.tabla.setItem(i, 4, it_est)
+            
+        lbl_hint = QLabel("Doble clic en un producto para gestionarlo.")
+        lbl_hint.setStyleSheet("color: #64748b; font-size: 11px; font-style: italic;")
+        layout.addWidget(lbl_hint)
+
     def on_item_clicked(self, item):
-        codigo = item.data(Qt.ItemDataRole.UserRole)
-        if codigo:
-            self.accept()
-            self.callback(codigo)
+        row = item.row()
+        cod = self.tabla.item(row, 0).data(Qt.ItemDataRole.UserRole)
+        self.callback(cod)
+        self.accept()
 
 class VistaDetalleProducto(QFrame):
     def __init__(self, producto, parent):
@@ -770,7 +756,7 @@ class VistaDetalleProducto(QFrame):
             stk_color = "#D97706" # Warning/Orange
             estado = "Stock Bajo"
             
-        add_row("Stock Físico:", f"{producto.get('stock', 0):g}")
+        add_row("Stock Físico:", f"{producto.get('stock_fisico', 0):g}")
         add_row("Comprometido:", f"{producto.get('comprometido', 0):g}")
         add_row("Disponible (ATP):", f"{atp:g}", True, stk_color)
         add_row("Stock Mínimo:", f"{min_stk:g}")
@@ -806,3 +792,189 @@ class VistaDetalleProducto(QFrame):
     def cerrar(self):
         self.parent_widget.removeEventFilter(self)
         self.deleteLater()
+
+
+class DialogoProductosFrecuentes(DialogoModalIntegrado):
+    def __init__(self, conexion_db, callback_seleccionar, parent=None):
+        super().__init__(parent)
+        self.conn = conexion_db
+        self.callback = callback_seleccionar
+        self.setWindowTitle("Productos Más Frecuentes (Últimos 30 días)")
+        self.setFixedSize(700, 500)
+        
+        self.init_ui()
+        
+    def init_ui(self):
+        from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
+        from PyQt6.QtGui import QColor, QFont
+        from db.queries import obtener_productos_frecuentes
+        
+        layout = QVBoxLayout(self)
+        
+        lbl_info = QLabel("Análisis de rotación de productos:")
+        lbl_info.setStyleSheet("font-weight: bold; font-size: 14px;")
+        layout.addWidget(lbl_info)
+        
+        self.tabla = QTableWidget(0, 5)
+        self.tabla.setHorizontalHeaderLabels(["Cód.", "Producto", "Vendidos", "Stock Actual", "Sugerencia"])
+        self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.tabla.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.tabla.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.tabla.setStyleSheet(f"QTableWidget {{ border: 1px solid {COLOR_BORDER}; border-radius: 6px; font-size: 13px; }}")
+        self.tabla.itemDoubleClicked.connect(self.on_item_clicked)
+        
+        layout.addWidget(self.tabla)
+        
+        # Load up to 50 frequent products
+        frecuentes = obtener_productos_frecuentes(self.conn, limite=50, dias=30)
+        
+        self.tabla.setRowCount(len(frecuentes))
+        for i, p in enumerate(frecuentes):
+            it_cod = QTableWidgetItem(str(p['codigo']))
+            it_cod.setData(Qt.ItemDataRole.UserRole, p['codigo'])
+            it_desc = QTableWidgetItem(str(p['descripcion']))
+            
+            vendidos = p.get('vendido', 0)
+            it_ven = QTableWidgetItem(f"{vendidos:g}")
+            it_ven.setFont(QFont("Segoe UI", -1, QFont.Weight.Bold))
+            
+            atp = p.get('atp', 0)
+            it_disp = QTableWidgetItem(f"{atp:g}")
+            
+            # Suggestion logic
+            sug = "Stock OK"
+            col = QColor("#64748b")
+            
+            if atp <= 0:
+                sug = "URGENTE Reponer"
+                col = QColor("#ef4444")
+            elif atp < vendidos * 0.5:
+                # Stock is less than half of what we sold last month
+                sug = "Considerar Reposición"
+                col = QColor("#f59e0b")
+                
+            it_sug = QTableWidgetItem(sug)
+            it_sug.setForeground(col)
+            it_sug.setFont(QFont("Segoe UI", -1, QFont.Weight.Bold))
+            
+            self.tabla.setItem(i, 0, it_cod)
+            self.tabla.setItem(i, 1, it_desc)
+            self.tabla.setItem(i, 2, it_ven)
+            self.tabla.setItem(i, 3, it_disp)
+            self.tabla.setItem(i, 4, it_sug)
+            
+        lbl_hint = QLabel("Doble clic en un producto para gestionarlo en el Control de Stock.")
+        lbl_hint.setStyleSheet("color: #64748b; font-size: 11px; font-style: italic;")
+        layout.addWidget(lbl_hint)
+
+    def on_item_clicked(self, item):
+        row = item.row()
+        cod = self.tabla.item(row, 0).data(Qt.ItemDataRole.UserRole)
+        self.callback(cod)
+        self.accept()
+
+class DialogoAyudaStock(DialogoModalIntegrado):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Ayuda: Control de Stock")
+        self.setMinimumSize(800, 750)
+        self.resize(800, 750)
+        self.init_ui()
+        
+    def init_ui(self):
+        from PyQt6.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QPushButton
+        from PyQt6.QtCore import Qt
+        
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet(f"QScrollArea {{ border: none; background-color: {COLOR_BG}; }}")
+        
+        content = QWidget()
+        content.setStyleSheet(f"background-color: {COLOR_BG};")
+        ly_content = QVBoxLayout(content)
+        ly_content.setContentsMargins(24, 24, 24, 24)
+        ly_content.setSpacing(16)
+        
+        lbl_tit = QLabel("📖 Guía de Uso: Control de Stock")
+        lbl_tit.setStyleSheet(f"font-size: 20px; font-weight: 900; color: {COLOR_TEXT_MAIN};")
+        ly_content.addWidget(lbl_tit)
+        
+        def add_section(icon, title, text):
+            card = QFrame()
+            card.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
+            ly_card = QVBoxLayout(card)
+            ly_card.setContentsMargins(16, 16, 16, 16)
+            ly_card.setSpacing(8)
+            
+            lbl_title = QLabel(f"{icon} {title}")
+            lbl_title.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {COLOR_PRIMARY}; border: none;")
+            
+            lbl_text = QLabel(text)
+            lbl_text.setStyleSheet(f"font-size: 13px; color: {COLOR_TEXT_SEC}; border: none;")
+            lbl_text.setWordWrap(True)
+            
+            ly_card.addWidget(lbl_title)
+            ly_card.addWidget(lbl_text)
+            ly_content.addWidget(card)
+            
+        add_section("📦", "¿Qué muestra esta pantalla?",
+                    "Esta pantalla centraliza el inventario.\n"
+                    "• <b>Stock Físico:</b> Mercadería real en depósito.\n"
+                    "• <b>Stock Comprometido:</b> Mercadería reservada para ventas o presupuestos.\n"
+                    "• <b>ATP (Disponible):</b> Stock Físico menos el Stock Comprometido (lo que realmente puedes vender).\n"
+                    "• <b>Stock Mínimo:</b> Nivel para generar alertas de reposición.\n"
+                    "• <b>Estado:</b> Indica si está Disponible, con Stock Bajo o Sin Stock.")
+
+        add_section("🛠", "Barra superior",
+                    "• <b>Nuevo Producto:</b> Alta de un artículo al catálogo.\n"
+                    "• <b>Importar / Exportar:</b> Carga o descarga productos mediante Excel.\n"
+                    "• <b>Historial de movimientos:</b> Consulta el registro de todas las operaciones de inventario.\n"
+                    "• <b>Ayuda:</b> Muestra esta guía.")
+                    
+        add_section("⭐", "Productos frecuentes",
+                    "Muestra los artículos con más movimiento reciente. Se generan automáticamente y permiten acceso rápido. Haz clic en 'Ver todos' para el análisis completo de rotación.")
+                    
+        add_section("⚠️", "Alertas de inventario",
+                    "Aparecen cuando un artículo necesita atención:\n"
+                    "• <b>CRÍTICO (Sin Stock):</b> El ATP llegó a cero o es negativo.\n"
+                    "• <b>MEDIA (Stock Bajo):</b> El ATP es menor o igual al Stock Mínimo.\n"
+                    "Úsalas para planificar la reposición de mercadería.")
+                    
+        add_section("📋", "Tabla principal",
+                    "Muestra todos los artículos, cantidades, precios y estados. Puedes filtrar, buscar y ordenar. Desde la columna 'Acciones' o el panel lateral administras el stock.")
+                    
+        add_section("➡️", "Panel derecho",
+                    "Al seleccionar un producto, muestra toda su información:\n"
+                    "• <b>Datos generales:</b> Imagen, código, descripción, unidad, precio y estado.\n"
+                    "• <b>Cantidades:</b> Físico, Comprometido, ATP y Mínimo.\n"
+                    "• <b>Acciones disponibles:</b> Registrar Entradas, Ajustes, Editar datos o Configurar Stock Mínimo.")
+                    
+        add_section("🕒", "Historial de movimientos",
+                    "Muestra la trazabilidad detallada:\n"
+                    "• <b>Entradas / Compras:</b> Incrementan el stock.\n"
+                    "• <b>Salidas / Ventas:</b> Reducen el stock.\n"
+                    "• <b>Ajustes:</b> Correcciones manuales por sobrantes o faltantes (recuentos, mermas).")
+                    
+        add_section("💡", "Consejos",
+                    "• Configura el <b>Stock Mínimo</b> en artículos clave para evitar quiebres de stock.\n"
+                    "• Usa <b>Ajuste</b> solo para correcciones de inventario; para ingresos normales usa <b>Entrada</b>.\n"
+                    "• Mantén las imágenes actualizadas para evitar errores de selección.")
+                    
+        ly_content.addStretch()
+        scroll.setWidget(content)
+        main_layout.addWidget(scroll)
+        
+        btn_cerrar = QPushButton("Cerrar")
+        btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_cerrar.setStyleSheet(f"background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; padding: 10px 20px; border-radius: 6px; border: 1px solid {COLOR_BORDER}; font-weight: bold;")
+        btn_cerrar.clicked.connect(self.accept)
+        
+        ly_btn = QHBoxLayout()
+        ly_btn.addStretch()
+        ly_btn.addWidget(btn_cerrar)
+        ly_btn.setContentsMargins(16, 8, 16, 16)
+        main_layout.addLayout(ly_btn)

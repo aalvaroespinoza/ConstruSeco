@@ -318,10 +318,7 @@ class _PanelDetalle(QScrollArea):
         self._badge_estado = QLabel("ACTIVO")
         self._badge_estado.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._badge_estado.setFixedHeight(22)
-        self._badge_estado.setStyleSheet(
-            "background-color: #d1fae5; color: #065f46; border-radius: 10px; "
-            "font-size: 10px; font-weight: 700; padding: 0 10px; border: none;"
-        )
+        self._badge_estado.setProperty("class", "badge-success")
 
         # Mini métricas
         fila_mk = QHBoxLayout()
@@ -531,16 +528,13 @@ class _PanelDetalle(QScrollArea):
 
         if det["activo"]:
             self._badge_estado.setText("ACTIVO")
-            self._badge_estado.setStyleSheet(
-                "background-color: #d1fae5; color: #065f46; border-radius: 10px; "
-                "font-size: 10px; font-weight: 700; padding: 0 10px; border: none;"
-            )
+            self._badge_estado.setProperty("class", "badge-success")
         else:
             self._badge_estado.setText("INACTIVO")
-            self._badge_estado.setStyleSheet(
-                "background-color: #fee2e2; color: #991b1b; border-radius: 10px; "
-                "font-size: 10px; font-weight: 700; padding: 0 10px; border: none;"
-            )
+            self._badge_estado.setProperty("class", "badge-danger")
+        
+        self._badge_estado.style().unpolish(self._badge_estado)
+        self._badge_estado.style().polish(self._badge_estado)
 
         # Mini métricas
         self._set_mini(self._mk_compras, str(det["total_compras"]))

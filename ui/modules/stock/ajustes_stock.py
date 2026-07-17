@@ -130,6 +130,7 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
         self.tabla.setStyleSheet(f"QTableWidget {{ border: 1px solid {COLOR_BORDER}; }}")
         
         layout.addWidget(self.tabla)
+        self.tabla.itemDoubleClicked.connect(self.abrir_documento_asociado)
 
     def cargar_datos(self):
         busqueda = f"%{self.inp_buscar.text().strip()}%"
@@ -218,7 +219,35 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
                 
             if notas: info_doc += f" ({notas})"
             self.tabla.setItem(i, 7, QTableWidgetItem(info_doc))
+            # Save hidden data for double click
+            item_hidden = QTableWidgetItem(info_doc)
+            item_hidden.setData(Qt.ItemDataRole.UserRole, (doc, doc_tipo, notas, tm, cant, fecha, cod, desc))
+            self.tabla.setItem(i, 7, item_hidden)
 
+
+
+    def abrir_documento_asociado(self, item):
+        row = item.row()
+        item_data = self.tabla.item(row, 7)
+        if not item_data: return
+        data = item_data.data(Qt.ItemDataRole.UserRole)
+        if not data: return
+        
+        doc, doc_tipo, notas, tm, cant, fecha, cod, desc = data
+        
+        if doc_tipo == 'PRESUPUESTO' and doc:
+            from ui.modules.presupuestos.tab_presupuestos import DialogoDetallePresupuesto
+            d = DialogoDetallePresupuesto(self.conn, int(doc), self)
+            d.exec()
+        elif doc_tipo == 'VENTA' and doc:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(self, "Detalle de Venta", f"Documento: Venta #{doc}\nFecha: {fecha}\n\nProducto: {desc} ({cod})\nMovimiento: {tm} de {cant:g} unidades.\n\nNotas: {notas or 'Sin notas adicionales'}")
+        elif doc_tipo == 'AJUSTE' and doc:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(self, "Detalle de Ajuste", f"Documento: Ajuste #{doc}\nFecha: {fecha}\n\nProducto: {desc} ({cod})\nMovimiento: {tm} de {cant:g} unidades.\n\nNotas: {notas or 'Sin notas adicionales'}")
+        else:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(self, "Detalle del Movimiento", f"Operación Manual o Directa\nFecha: {fecha}\n\nProducto: {desc} ({cod})\nMovimiento: {tm} de {cant:g} unidades.\n\nNotas: {notas or 'Sin notas adicionales'}")
 
 class DialogoVisualizacionInventario(DialogoModalIntegrado):
     def __init__(self, parent=None):
@@ -251,6 +280,7 @@ class DialogoVisualizacionInventario(DialogoModalIntegrado):
         layout.addWidget(grp)
         
         self.btn_guardar = QPushButton("Aplicar")
+        self.btn_guardar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_guardar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px;")
         self.btn_guardar.clicked.connect(self.guardar)
         layout.addWidget(self.btn_guardar)

@@ -16,7 +16,7 @@ from ui.core.theme import (
     COLOR_TEXT_SEC, COLOR_BORDER, COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER
 )
 from ui.core.modal import DialogoModalIntegrado
-from ui.modules.ventas.tab_ventas import PestanaNuevaVenta
+from ui.components.operacion_base import OperacionBaseWidget
 from db import queries_presupuestos as qp
 from utils.pdf_documento import generar_pdf_documento
 
@@ -40,95 +40,101 @@ class DialogoDetallePresupuesto(DialogoModalIntegrado):
             return
             
         self.setWindowTitle(f"Detalle de Presupuesto - {det['numero_interno']}")
-        self.setMinimumWidth(1100)
-        self.setMinimumHeight(750)
-        self.resize(1100, 750)
+        self.setMinimumWidth(1000)
+        self.setMinimumHeight(650)
+        self.resize(1000, 650)
         
         ly = QVBoxLayout(self)
         ly.setContentsMargins(24, 24, 24, 24)
         ly.setSpacing(20)
         
-        # Encabezado (Título)
-        lbl_titulo = QLabel(f"Presupuesto {det['numero_interno']}")
-        lbl_titulo.setStyleSheet(f"font-size: 24px; font-weight: 900; color: {COLOR_PRIMARY};")
-        ly.addWidget(lbl_titulo)
+        # Info Header (Cliente y Documento integrados)
+        f_info = QFrame()
+        f_info.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
+        ly_info = QHBoxLayout(f_info)
+        ly_info.setContentsMargins(20, 20, 20, 20)
+        ly_info.setSpacing(40)
         
-        # Layout para las tarjetas (Cliente y Documento)
-        ly_cards = QHBoxLayout()
-        ly_cards.setSpacing(16)
+        # Lado Izquierdo: Cliente
+        ly_cli = QVBoxLayout()
+        ly_cli.setSpacing(8)
+        lbl_cli_t = QLabel("CLIENTE")
+        lbl_cli_t.setStyleSheet("font-size: 12px; font-weight: bold; color: #64748b; letter-spacing: 1px;")
+        lbl_cli_name = QLabel(det['cliente']['nombre_completo'])
+        lbl_cli_name.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {COLOR_TEXT_MAIN};")
         
-        # Tarjeta Cliente
-        f_cliente = QFrame()
-        f_cliente.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
-        ly_cliente = QGridLayout(f_cliente)
-        ly_cliente.setContentsMargins(16, 16, 16, 16)
-        ly_cliente.setSpacing(12)
+        lbl_cli_det = QLabel(f"<b>CUIT/DNI:</b> {det['cliente']['cuit_dni'] or '—'}  |  <b>Tel:</b> {det['cliente']['telefono'] or '—'}<br><b>IVA:</b> {det['cliente']['condicion_iva'] or '—'}")
+        lbl_cli_det.setStyleSheet(f"font-size: 13px; color: {COLOR_TEXT_SEC};")
         
-        lbl_t_cli = QLabel("Información del Cliente")
-        lbl_t_cli.setStyleSheet("font-size: 16px; font-weight: bold; color: #334155; border: none;")
-        ly_cliente.addWidget(lbl_t_cli, 0, 0, 1, 2)
+        ly_cli.addWidget(lbl_cli_t)
+        ly_cli.addWidget(lbl_cli_name)
+        ly_cli.addWidget(lbl_cli_det)
+        ly_cli.addStretch()
         
-        ly_cliente.addWidget(QLabel("<b>Nombre:</b>"), 1, 0)
-        ly_cliente.addWidget(QLabel(det['cliente']['nombre_completo']), 1, 1)
+        # Lado Derecho: Documento
+        ly_doc = QVBoxLayout()
+        ly_doc.setSpacing(8)
         
-        ly_cliente.addWidget(QLabel("<b>CUIT/DNI:</b>"), 2, 0)
-        ly_cliente.addWidget(QLabel(det['cliente']['cuit_dni'] or '—'), 2, 1)
+        ly_doc_top = QHBoxLayout()
+        lbl_doc_t = QLabel(f"PRESUPUESTO {det['numero_interno']}")
+        lbl_doc_t.setStyleSheet(f"font-size: 18px; font-weight: 900; color: {COLOR_PRIMARY};")
         
-        ly_cliente.addWidget(QLabel("<b>Teléfono:</b>"), 3, 0)
-        ly_cliente.addWidget(QLabel(det['cliente']['telefono'] or '—'), 3, 1)
+        est = det['estado']
+        lbl_estado = QLabel(est)
+        lbl_estado.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_estado.setFixedHeight(24)
+        if est == 'ACTIVO':
+            lbl_estado.setProperty("class", "badge-success")
+        elif est == 'VENCIDO':
+            lbl_estado.setProperty("class", "badge-danger")
+        elif est == 'CONFIRMADO':
+            lbl_estado.setProperty("class", "badge-info")
+        else:
+            lbl_estado.setProperty("class", "badge-neutral")
+        lbl_estado.style().unpolish(lbl_estado)
+        lbl_estado.style().polish(lbl_estado)
+            
+        ly_doc_top.addWidget(lbl_doc_t)
+        ly_doc_top.addWidget(lbl_estado)
+        ly_doc_top.addStretch()
         
-        ly_cliente.addWidget(QLabel("<b>Condición IVA:</b>"), 4, 0)
-        ly_cliente.addWidget(QLabel(det['cliente']['condicion_iva'] or '—'), 4, 1)
+        lbl_fechas = QLabel(f"<b>Emisión:</b> {det['fecha_emision']}  |  <b>Vence:</b> {det['fecha_vencimiento'] or '—'}")
+        lbl_fechas.setStyleSheet(f"font-size: 13px; color: {COLOR_TEXT_SEC};")
         
-        ly_cards.addWidget(f_cliente, stretch=1)
-        
-        # Tarjeta Documento
-        f_doc = QFrame()
-        f_doc.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
-        ly_doc = QGridLayout(f_doc)
-        ly_doc.setContentsMargins(16, 16, 16, 16)
-        ly_doc.setSpacing(12)
-        
-        lbl_t_doc = QLabel("Detalles del Documento")
-        lbl_t_doc.setStyleSheet("font-size: 16px; font-weight: bold; color: #334155; border: none;")
-        ly_doc.addWidget(lbl_t_doc, 0, 0, 1, 2)
-        
-        ly_doc.addWidget(QLabel("<b>Estado:</b>"), 1, 0)
-        lbl_estado = QLabel(f"<b>{det['estado']}</b>")
-        if det['estado'] == 'ACTIVO':
-            lbl_estado.setStyleSheet("color: #0284c7;")
-        elif det['estado'] == 'CONFIRMADO':
-            lbl_estado.setStyleSheet("color: #16a34a;")
-        elif det['estado'] == 'VENCIDO':
-            lbl_estado.setStyleSheet("color: #dc2626;")
-        elif det['estado'] == 'ANULADO':
-            lbl_estado.setStyleSheet("color: #475569;")
-        ly_doc.addWidget(lbl_estado, 1, 1)
-        
-        ly_doc.addWidget(QLabel("<b>Emisión:</b>"), 2, 0)
-        ly_doc.addWidget(QLabel(det['fecha_emision']), 2, 1)
-        
-        ly_doc.addWidget(QLabel("<b>Vencimiento:</b>"), 3, 0)
-        self.lbl_venc_fecha = QLabel(det['fecha_vencimiento'] or '—')
-        ly_doc.addWidget(self.lbl_venc_fecha, 3, 1)
-        
-        ly_doc.addWidget(QLabel("<b>Tiempo Restante:</b>"), 4, 0)
+        ly_tiempo = QHBoxLayout()
+        lbl_tiempo_t = QLabel("<b>Tiempo Restante:</b>")
+        lbl_tiempo_t.setStyleSheet(f"font-size: 13px; color: {COLOR_TEXT_SEC};")
         self.lbl_venc_timer = QLabel("—")
-        ly_doc.addWidget(self.lbl_venc_timer, 4, 1)
+        self.lbl_venc_timer.setStyleSheet("font-size: 13px;")
+        ly_tiempo.addWidget(lbl_tiempo_t)
+        ly_tiempo.addWidget(self.lbl_venc_timer)
+        ly_tiempo.addStretch()
         
-        ly_cards.addWidget(f_doc, stretch=1)
-        ly.addLayout(ly_cards)
+        ly_doc.addLayout(ly_doc_top)
+        ly_doc.addWidget(lbl_fechas)
+        ly_doc.addLayout(ly_tiempo)
+        ly_doc.addStretch()
         
-        # Sección Productos
-        lbl_t_prod = QLabel("Productos")
-        lbl_t_prod.setStyleSheet("font-size: 18px; font-weight: bold; color: #334155;")
-        ly.addWidget(lbl_t_prod)
+        ly_info.addLayout(ly_cli, stretch=1)
         
+        # Divisor
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.VLine)
+        line.setStyleSheet(f"background-color: {COLOR_BORDER};")
+        ly_info.addWidget(line)
+        
+        ly_info.addLayout(ly_doc, stretch=1)
+        ly.addWidget(f_info)
+        
+        # Tabla de Productos
         self.tabla = QTableWidget()
-        self.tabla.setColumnCount(6)
-        self.tabla.setHorizontalHeaderLabels(["Código", "Descripción", "Cantidad", "Unidad", "Precio Unitario", "Subtotal"])
-        self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.tabla.setColumnCount(5)
+        self.tabla.setHorizontalHeaderLabels(["Producto", "Cantidad", "Unidad", "Precio Unitario", "Subtotal"])
+        self.tabla.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self.tabla.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self.tabla.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self.tabla.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         self.tabla.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tabla.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.tabla.verticalHeader().setVisible(False)
@@ -137,33 +143,54 @@ class DialogoDetallePresupuesto(DialogoModalIntegrado):
         detalles = det.get('detalles', [])
         self.tabla.setRowCount(len(detalles))
         for i, item in enumerate(detalles):
-            self.tabla.setItem(i, 0, QTableWidgetItem(str(item['codigo_producto'])))
-            self.tabla.setItem(i, 1, QTableWidgetItem(str(item['descripcion'])))
+            self.tabla.setItem(i, 0, QTableWidgetItem(str(item['descripcion'])))
             
             it_cant = QTableWidgetItem(f"{item['cantidad_unidad_venta']:g}")
             it_cant.setTextAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
-            self.tabla.setItem(i, 2, it_cant)
+            self.tabla.setItem(i, 1, it_cant)
             
             it_uni = QTableWidgetItem(str(item['unidad_venta']))
             it_uni.setTextAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
-            self.tabla.setItem(i, 3, it_uni)
+            self.tabla.setItem(i, 2, it_uni)
             
             it_precio = QTableWidgetItem(f"$ {_fmt_moneda(item['precio_unitario'])}")
             it_precio.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            self.tabla.setItem(i, 4, it_precio)
+            self.tabla.setItem(i, 3, it_precio)
             
             it_sub = QTableWidgetItem(f"$ {_fmt_moneda(item['subtotal'])}")
             it_sub.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            self.tabla.setItem(i, 5, it_sub)
+            self.tabla.setItem(i, 4, it_sub)
             
         ly.addWidget(self.tabla, stretch=1)
         
         # Totales
         ly_totales = QHBoxLayout()
         ly_totales.addStretch()
-        lbl_totales = QLabel(f"<b>Subtotal:</b> $ {_fmt_moneda(det['subtotal_bruto'])}   |   <b>Descuento:</b> $ {_fmt_moneda(det['total_descuento'])}   |   <span style='font-size: 18px; color: {COLOR_PRIMARY};'><b>Total:</b> $ {_fmt_moneda(det['total_final'])}</span>")
-        lbl_totales.setStyleSheet(f"background-color: {COLOR_CARD_BG}; padding: 12px; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
-        ly_totales.addWidget(lbl_totales)
+        
+        f_totales = QFrame()
+        f_totales.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
+        ly_t = QHBoxLayout(f_totales)
+        ly_t.setContentsMargins(16, 12, 16, 12)
+        ly_t.setSpacing(24)
+        
+        lbl_sub = QLabel(f"<span style='color: {COLOR_TEXT_SEC}; font-size: 13px;'>Subtotal:</span><br><b>$ {_fmt_moneda(det['subtotal_bruto'])}</b>")
+        lbl_sub.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        lbl_desc = QLabel(f"<span style='color: {COLOR_TEXT_SEC}; font-size: 13px;'>Descuento:</span><br><b>$ {_fmt_moneda(det['total_descuento'])}</b>")
+        lbl_desc.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        lbl_tot = QLabel(f"<span style='color: {COLOR_TEXT_SEC}; font-size: 13px;'>Total:</span><br><span style='font-size: 20px; color: {COLOR_PRIMARY}; font-weight: 900;'>$ {_fmt_moneda(det['total_final'])}</span>")
+        lbl_tot.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        
+        ly_t.addWidget(lbl_sub)
+        ly_t.addWidget(lbl_desc)
+        
+        lin_t = QFrame()
+        lin_t.setFrameShape(QFrame.Shape.VLine)
+        lin_t.setStyleSheet(f"background-color: {COLOR_BORDER};")
+        ly_t.addWidget(lin_t)
+        
+        ly_t.addWidget(lbl_tot)
+        
+        ly_totales.addWidget(f_totales)
         ly.addLayout(ly_totales)
         
         # Lógica de Timer
@@ -260,9 +287,10 @@ class DialogoDetallePresupuesto(DialogoModalIntegrado):
         ahora = datetime.datetime.now()
         venc_str = self.venc_str
         try:
-            venc_dt = datetime.datetime.strptime(venc_str, "%Y-%m-%d %H:%M:%S")
+            venc_str_clean = venc_str.split(".")[0]
+            venc_dt = datetime.datetime.strptime(venc_str_clean, "%Y-%m-%d %H:%M:%S")
         except ValueError:
-            venc_dt = datetime.datetime.strptime(venc_str, "%Y-%m-%d")
+            venc_dt = datetime.datetime.strptime(venc_str.split(" ")[0], "%Y-%m-%d")
             
         if venc_dt <= ahora:
             self.lbl_venc_timer.setText("Vencido")
@@ -290,21 +318,118 @@ class DialogoDetallePresupuesto(DialogoModalIntegrado):
             self.lbl_venc_timer.setText(texto)
             self.lbl_venc_timer.setStyleSheet(f"color: {color_text}; font-weight: bold;")
 
+    def closeEvent(self, event):
+        if hasattr(self, 'timer_modal') and self.timer_modal.isActive():
+            self.timer_modal.stop()
+        super().closeEvent(event)
+
+class PestanaNuevoPresupuesto(OperacionBaseWidget):
+    def __init__(self, conexion_db, is_edicion=False, id_presupuesto_edicion=None):
+        super().__init__(conexion_db, is_presupuesto=True, is_edicion=is_edicion, id_presupuesto_edicion=id_presupuesto_edicion)
+        self.tipo_documento_seleccionado = 'PRESUPUESTO'
+        self.chk_descontar.setChecked(False)
+        self.chk_descontar.setEnabled(False)
+        self.btn_confirmar.setText('Guardar [F12]' if is_edicion else 'Crear Presupuesto [F12]')
+
+    def init_ui(self):
+        super().init_ui()
+        from PyQt6.QtWidgets import QScrollArea, QFrame, QHBoxLayout
+        
+        # Envolver el contenido en un QScrollArea para pantallas pequeñas
+        main_layout = self.layout()
+        if main_layout and main_layout.count() > 0:
+            scroll_content = main_layout.itemAt(0).widget()
+            if scroll_content:
+                # Ocultar encabezado redundante (ya estamos en un Modal)
+                layout_principal = scroll_content.layout()
+                if layout_principal and layout_principal.count() > 0:
+                    ly_tit_item = layout_principal.itemAt(0)
+                    if ly_tit_item and isinstance(ly_tit_item, QHBoxLayout):
+                        for i in range(ly_tit_item.count()):
+                            w = ly_tit_item.itemAt(i).widget()
+                            if w: w.hide()
+                            
+                main_layout.removeWidget(scroll_content)
+                scroll_area = QScrollArea()
+                scroll_area.setWidgetResizable(True)
+                scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+                scroll_area.setWidget(scroll_content)
+                scroll_area.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+                main_layout.addWidget(scroll_area)
+
+        # Reducir tamaños fijos "excesivos"
+        self.input_buscador.setMinimumHeight(38)
+        self.input_cliente.setMinimumHeight(38)
+        self.btn_nuevo_cliente.setFixedHeight(38)
+        self.btn_agregar.setFixedHeight(38)
+        self.caja_cant_frame.setFixedHeight(38)
+        if hasattr(self, 'combo_unidad'):
+            self.combo_unidad.setMinimumHeight(38)
+
+    def armar_panel_inferior(self, layout):
+        from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QFrame
+        from PyQt6.QtCore import Qt
+        
+        ly_main = QVBoxLayout()
+        ly_main.setSpacing(16)
+        
+        grid = QGridLayout()
+        grid.setSpacing(12)
+        grid.setColumnStretch(1, 1)
+        
+        lbl_validez = QLabel('Validez:')
+        lbl_validez.setStyleSheet('color: #64748B; font-weight: 600; font-size: 13px;')
+        grid.addWidget(lbl_validez, 0, 0)
+        grid.addWidget(self.combo_validez, 0, 1)
+        
+        lbl_sub = QLabel('Subtotal:')
+        lbl_sub.setStyleSheet('color: #64748B; font-weight: 600; font-size: 14px;')
+        grid.addWidget(lbl_sub, 0, 2, Qt.AlignmentFlag.AlignRight)
+        grid.addWidget(self.lbl_subtotal, 0, 3, Qt.AlignmentFlag.AlignRight)
+        
+        lbl_obs = QLabel('Observaciones:')
+        lbl_obs.setStyleSheet('color: #64748B; font-weight: 600; font-size: 13px;')
+        grid.addWidget(lbl_obs, 1, 0)
+        
+        self.input_observaciones.setMaximumWidth(16777215)
+        self.input_observaciones.setMinimumWidth(200)
+        grid.addWidget(self.input_observaciones, 1, 1)
+        
+        lbl_tot = QLabel('TOTAL:')
+        lbl_tot.setStyleSheet('font-weight: 900; color: #334155; font-size: 18px;')
+        grid.addWidget(lbl_tot, 1, 2, Qt.AlignmentFlag.AlignRight)
+        grid.addWidget(self.lbl_total, 1, 3, Qt.AlignmentFlag.AlignRight)
+        
+        ly_main.addLayout(grid)
+        
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet('background-color: #E2E8F0; border: none; height: 1px;')
+        ly_main.addWidget(sep)
+        
+        ly_botones = QHBoxLayout()
+        ly_botones.addWidget(self.btn_vaciar_carrito)
+        ly_botones.addStretch()
+        ly_botones.addWidget(self.btn_confirmar)
+        
+        ly_main.addLayout(ly_botones)
+        
+        layout.addLayout(ly_main)
+
 class DialogoNuevoPresupuesto(DialogoModalIntegrado):
     def __init__(self, conn, parent=None):
         super().__init__(parent)
         self.conn = conn
         self.setWindowTitle("Crear Nuevo Presupuesto")
-        # El widget de venta es ancho, necesitamos un modal grande pero que entre en pantallas 1366x768
-        self.setMinimumWidth(1280)
-        self.setMinimumHeight(800)
-        self.resize(1280, 800)
+        # Layouts dinámicos y adaptables a resoluciones 1366x768
+        self.setMinimumWidth(750)
+        self.setMinimumHeight(450)
+        self.resize(950, 600)
         
         ly = QVBoxLayout(self)
         ly.setContentsMargins(0, 0, 0, 0)
         
-        self.pestana_venta = PestanaNuevaVenta(self.conn, is_presupuesto=True)
-        # Quitar el color de fondo para integrarlo bien al modal
+        self.pestana_venta = PestanaNuevoPresupuesto(self.conn)
         self.pestana_venta.setStyleSheet(self.pestana_venta.styleSheet().replace("#F4F7FB", "transparent"))
         self.pestana_venta.operacion_completada.connect(self.accept)
         
@@ -315,14 +440,14 @@ class DialogoEditarPresupuesto(DialogoModalIntegrado):
         super().__init__(parent)
         self.conn = conn
         self.setWindowTitle(f"Editar Presupuesto #{id_documento}")
-        self.setMinimumWidth(1280)
-        self.setMinimumHeight(800)
-        self.resize(1280, 800)
+        self.setMinimumWidth(750)
+        self.setMinimumHeight(450)
+        self.resize(950, 600)
         
         ly = QVBoxLayout(self)
         ly.setContentsMargins(0, 0, 0, 0)
         
-        self.pestana_venta = PestanaNuevaVenta(self.conn, is_presupuesto=True, is_edicion=True, id_presupuesto_edicion=id_documento)
+        self.pestana_venta = PestanaNuevoPresupuesto(self.conn, is_edicion=True, id_presupuesto_edicion=id_documento)
         self.pestana_venta.setStyleSheet(self.pestana_venta.styleSheet().replace("#F4F7FB", "transparent"))
         self.pestana_venta.operacion_completada.connect(self.accept)
         
@@ -701,13 +826,16 @@ class _PanelDetalle(QScrollArea):
         
         est = det['estado']
         if est == 'ACTIVO':
-            self._lbl_estado_badge.setStyleSheet("background-color: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; text-transform: uppercase;")
+            self._lbl_estado_badge.setProperty("class", "badge-success")
         elif est == 'VENCIDO':
-            self._lbl_estado_badge.setStyleSheet("background-color: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; text-transform: uppercase;")
+            self._lbl_estado_badge.setProperty("class", "badge-danger")
         elif est == 'CONFIRMADO':
-            self._lbl_estado_badge.setStyleSheet(f"background-color: {COLOR_PRIMARY}20; color: {COLOR_PRIMARY}; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; text-transform: uppercase;")
+            self._lbl_estado_badge.setProperty("class", "badge-info")
         else:
-            self._lbl_estado_badge.setStyleSheet("background-color: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; text-transform: uppercase;")
+            self._lbl_estado_badge.setProperty("class", "badge-neutral")
+        
+        self._lbl_estado_badge.style().unpolish(self._lbl_estado_badge)
+        self._lbl_estado_badge.style().polish(self._lbl_estado_badge)
         self._lbl_estado_badge.setText(f"{est}")
         
         self._lbl_cliente.setText(det['cliente']['nombre_completo'])
@@ -1223,13 +1351,15 @@ class PestanaPresupuestos(QWidget):
                     pass
                 
                 # Lanzar modal de éxito usando DialogoVentaExitosa y pasando el origen extra
-                from ui.modules.ventas.tab_ventas import DialogoVentaExitosa
+                from ui.components.operacion_base import DialogoVentaExitosa
                 from datetime import datetime
                 cant_unidades = sum(d['cantidad_unidad_venta'] for d in det['detalles'])
                 
                 cli_origen = f"{det['cliente']['nombre_completo']}\n(Origen: Presupuesto {det['numero_interno']})"
                 
                 exito_dlg = DialogoVentaExitosa(
+                    conn=self.conn,
+                    id_documento=id_documento,
                     num_venta=num_venta,
                     cliente_txt=cli_origen,
                     fecha_hora=datetime.now().strftime("%d/%m/%Y %H:%M"),
@@ -1262,10 +1392,11 @@ class PestanaPresupuestos(QWidget):
             if not venc_str: continue
             
             try:
-                venc_dt = datetime.datetime.strptime(venc_str, "%Y-%m-%d %H:%M:%S")
+                venc_str_clean = venc_str.split(".")[0]
+                venc_dt = datetime.datetime.strptime(venc_str_clean, "%Y-%m-%d %H:%M:%S")
             except ValueError:
                 try:
-                    venc_dt = datetime.datetime.strptime(venc_str, "%Y-%m-%d")
+                    venc_dt = datetime.datetime.strptime(venc_str.split(" ")[0], "%Y-%m-%d")
                 except ValueError:
                     continue
                     
