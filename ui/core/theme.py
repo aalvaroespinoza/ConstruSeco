@@ -1,19 +1,53 @@
 """Tema visual común de la aplicación."""
 
 from PyQt6.QtGui import QColor, QPalette
-from PyQt6.QtCore import Qt, QObject, QEvent
+from PyQt6.QtCore import Qt, QObject, QEvent, QSettings
 from PyQt6.QtWidgets import QPushButton, QTableWidget, QHeaderView, QLabel
 
-# Constantes Visuales Centralizadas (Extraidas de módulos duplicados)
-COLOR_PRIMARY = "#2563eb"
-COLOR_BG = "#f8fafc"
-COLOR_CARD_BG = "#ffffff"
-COLOR_TEXT_MAIN = "#1e293b"
-COLOR_TEXT_SEC = "#64748b"
-COLOR_BORDER = "#e2e8f0"
-COLOR_SUCCESS = "#10b981"
-COLOR_WARNING = "#f59e0b"
-COLOR_DANGER = "#ef4444"
+PALETA_CLARO = {
+    "PRIMARY":   "#2563eb",
+    "BG":        "#f8fafc",
+    "CARD_BG":   "#ffffff",
+    "TEXT_MAIN": "#1e293b",
+    "TEXT_SEC":  "#64748b",
+    "BORDER":    "#e2e8f0",
+    "SUCCESS":   "#10b981",
+    "WARNING":   "#f59e0b",
+    "DANGER":    "#ef4444",
+}
+
+PALETA_OSCURO = {
+    "PRIMARY":   "#3b82f6",
+    "BG":        "#0f172a",
+    "CARD_BG":   "#1e293b",
+    "TEXT_MAIN": "#f1f5f9",
+    "TEXT_SEC":  "#94a3b8",
+    "BORDER":    "#334155",
+    "SUCCESS":   "#22c55e",
+    "WARNING":   "#f59e0b",
+    "DANGER":    "#f87171",
+}
+
+def tema_guardado() -> str:
+    """'claro' u 'oscuro', lee la preferencia persistida (default 'claro')."""
+    settings = QSettings("ConstruSeco", "ERP")
+    return settings.value("tema", "claro", type=str)
+
+def guardar_preferencia_tema(nombre: str):
+    settings = QSettings("ConstruSeco", "ERP")
+    settings.setValue("tema", nombre)
+
+_paleta_activa = PALETA_OSCURO if tema_guardado() == "oscuro" else PALETA_CLARO
+
+COLOR_PRIMARY   = _paleta_activa["PRIMARY"]
+COLOR_BG        = _paleta_activa["BG"]
+COLOR_CARD_BG   = _paleta_activa["CARD_BG"]
+COLOR_TEXT_MAIN = _paleta_activa["TEXT_MAIN"]
+COLOR_TEXT_SEC  = _paleta_activa["TEXT_SEC"]
+COLOR_BORDER    = _paleta_activa["BORDER"]
+COLOR_SUCCESS   = _paleta_activa["SUCCESS"]
+COLOR_WARNING   = _paleta_activa["WARNING"]
+COLOR_DANGER    = _paleta_activa["DANGER"]
 
 class UIGlobalPolisher(QObject):
     """Filtro global de eventos para asegurar uniformidad visual sin modificar todos los archivos."""

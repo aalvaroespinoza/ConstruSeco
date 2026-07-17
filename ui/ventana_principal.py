@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
                              QPushButton, QStackedWidget, QLabel, QFrame,
-                             QGraphicsOpacityEffect)
+                             QGraphicsOpacityEffect, QMessageBox)
 from PyQt6.QtCore import Qt, QTimer, QVariantAnimation, QPropertyAnimation, QEasingCurve, QSettings
 from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont, QPainterPath
 from pathlib import Path
@@ -360,7 +360,34 @@ class VentanaPrincipal(QMainWindow):
         footer_container = QWidget()
         footer_layout = QVBoxLayout(footer_container)
         footer_layout.setContentsMargins(10, 10, 10, 20)
-        footer_layout.setSpacing(2)
+        footer_layout.setSpacing(4)
+        
+        from ui.core.theme import tema_guardado
+        self.btn_tema = QPushButton()
+        self.btn_tema.setCursor(Qt.CursorShape.PointingHandCursor)
+        tema_actual = tema_guardado()
+        if tema_actual == "oscuro":
+            self.btn_tema.setText("☀️ Modo claro")
+        else:
+            self.btn_tema.setText("🌙 Modo nocturno")
+        
+        self.btn_tema.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #94a3b8;
+                border: 1px solid #334155;
+                border-radius: 4px;
+                padding: 6px;
+                font-family: 'Segoe UI', sans-serif;
+                font-size: 11px;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #1e293b;
+                color: #f8fafc;
+            }
+        """)
+        self.btn_tema.clicked.connect(self._toggle_tema)
         
         self.lbl_version = QLabel("Versión")
         self.lbl_version.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -377,6 +404,7 @@ class VentanaPrincipal(QMainWindow):
         self.lbl_version.setStyleSheet(footer_style)
         self.lbl_db.setStyleSheet(footer_style)
         
+        footer_layout.addWidget(self.btn_tema)
         footer_layout.addWidget(self.lbl_version)
         footer_layout.addWidget(self.lbl_db)
         
@@ -432,11 +460,12 @@ class VentanaPrincipal(QMainWindow):
     def actualizar_estado_sidebar(self, animar=False):
         ancho_objetivo = 65 if self.sidebar_colapsada else 230
         
-        # Visibilidad de textos
+        # Visibilidad de textos y botones
         self.lbl_marca.setVisible(not self.sidebar_colapsada)
         self.lbl_sub.setVisible(not self.sidebar_colapsada)
         self.lbl_version.setVisible(not self.sidebar_colapsada)
         self.lbl_db.setVisible(not self.sidebar_colapsada)
+        self.btn_tema.setVisible(not self.sidebar_colapsada)
         
         # Tamaño del logo
         size_logo = 40 if self.sidebar_colapsada else 90
@@ -524,3 +553,15 @@ class VentanaPrincipal(QMainWindow):
         
         self.fade_anim.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
         self.fade_anim.finished.connect(lambda: self.contenedor_vistas.setGraphicsEffect(None))
+
+    def _toggle_tema(self):
+        from ui.core.theme import tema_guardado, guardar_preferencia_tema
+        tema_actual = tema_guardado()
+        nuevo_tema = "claro" if tema_actual == "oscuro" else "oscuro"
+        guardar_preferencia_tema(nuevo_tema)
+        
+        QMessageBox.information(
+            self,
+            "Reinicio necesario",
+            "El cambio de tema se aplica al reiniciar la aplicación. Cerrá y volvé a abrir ConstruSeco Pereyra para verlo."
+        )
