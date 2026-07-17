@@ -167,7 +167,7 @@ def obtener_detalle_presupuesto(conn, id_documento: int) -> dict | None:
             c.condicion_iva
         FROM documentos d
         LEFT JOIN clientes c ON d.id_cliente = c.id_cliente
-        WHERE d.id_documento = ? AND d.tipo = 'PRESUPUESTO'
+        WHERE d.id_documento = ?
     """, (id_documento,))
     row = c.fetchone()
     if not row:

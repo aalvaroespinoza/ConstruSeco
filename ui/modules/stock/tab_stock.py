@@ -2,7 +2,8 @@ import sqlite3
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QComboBox, QFrame, QDialog, QFormLayout, QMessageBox, QMenu
+    QComboBox, QFrame, QDialog, QFormLayout, QMessageBox, QMenu,
+    QSplitter
 )
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QColor, QFont, QCursor, QAction, QBrush, QPixmap
@@ -469,9 +470,46 @@ class PestanaStock(QWidget):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)    # Img
         header.setSectionResizeMode(10, QHeaderView.ResizeMode.Fixed)   # Acciones
         self.tabla.setColumnWidth(1, 52)
-        self.tabla.setColumnWidth(10, 110)
+        self.tabla.setColumnWidth(10, 120)
         
-        main_layout.addWidget(self.tabla, stretch=1)
+        # Panel Lateral Derecho (Restauración)
+        self.splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.splitter.addWidget(self.tabla)
+        
+        from PyQt6.QtWidgets import QScrollArea
+        self.panel_lateral = QScrollArea()
+        self.panel_lateral.setWidgetResizable(True)
+        self.panel_lateral.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.panel_lateral.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.panel_lateral.setStyleSheet(f"""
+            QScrollArea {{
+                background-color: {COLOR_CARD_BG};
+                border: 1px solid {COLOR_BORDER};
+                border-radius: 6px;
+            }}
+        """)
+        self.panel_lateral.setMinimumWidth(280)
+        self.panel_lateral.setMaximumWidth(350)
+        
+        self.panel_contenido = QWidget()
+        self.panel_contenido.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: none;")
+        self.layout_panel = QVBoxLayout(self.panel_contenido)
+        self.layout_panel.setContentsMargins(16, 16, 16, 16)
+        
+        lbl_vacio = QLabel("Seleccione un producto para ver los detalles")
+        lbl_vacio.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_vacio.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-style: italic;")
+        lbl_vacio.setWordWrap(True)
+        self.layout_panel.addWidget(lbl_vacio)
+        
+        self.panel_lateral.setWidget(self.panel_contenido)
+        self.splitter.addWidget(self.panel_lateral)
+        self.splitter.setSizes([800, 300])
+        
+        main_layout.addWidget(self.splitter, stretch=1)
+        
+        # Conexiones
+        self.tabla.itemSelectionChanged.connect(self.actualizar_panel_lateral)
         
         # Conexiones de filtros
         self.input_buscar.textChanged.connect(self.aplicar_filtros)
@@ -484,6 +522,176 @@ class PestanaStock(QWidget):
         self.tarjeta_bajo.setCursor(Qt.CursorShape.PointingHandCursor)
         self.tarjeta_sin.setCursor(Qt.CursorShape.PointingHandCursor)
 
+    def actualizar_panel_lateral(self):
+        # Limpiar panel actual
+        while self.layout_panel.count():
+            item = self.layout_panel.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+                
+        selected = self.tabla.selectedItems()
+        if not selected:
+            # Placeholder vacío
+            ly_vacio = QVBoxLayout()
+            ly_vacio.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            icono = QLabel("📦")
+            icono.setStyleSheet("font-size: 48px; color: #cbd5e1; border: none;")
+            icono.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            titulo = QLabel("Seleccione un producto")
+            titulo.setStyleSheet(f"font-size: 15px; font-weight: 700; color: {COLOR_TEXT_MAIN}; border: none;")
+            titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            sub = QLabel("Haga clic en una fila de la tabla\npara ver los detalles y acciones.")
+            sub.setStyleSheet(f"font-size: 12px; color: {COLOR_TEXT_SEC}; border: none;")
+            sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            self.layout_panel.addStretch()
+            self.layout_panel.addLayout(ly_vacio)
+            ly_vacio.addWidget(icono)
+            ly_vacio.addSpacing(8)
+            ly_vacio.addWidget(titulo)
+            ly_vacio.addSpacing(4)
+            ly_vacio.addWidget(sub)
+            self.layout_panel.addStretch()
+            return
+            
+        row = selected[0].row()
+        item_cod = self.tabla.item(row, 0)
+        if not item_cod:
+            return
+            
+        codigo = item_cod.text()
+        producto = None
+        for p in self.datos_catalogo:
+            if p['codigo'] == codigo:
+                producto = p
+                break
+                
+        if not producto:
+            return
+            
+        # Encabezado
+        lbl_codigo = QLabel(f"CÓD: {producto['codigo']}")
+        lbl_codigo.setStyleSheet(f"font-size: 12px; font-weight: bold; color: {COLOR_PRIMARY};")
+        
+        lbl_titulo = QLabel(producto['descripcion'])
+        lbl_titulo.setStyleSheet(f"font-size: 16px; font-weight: 900; color: {COLOR_TEXT_MAIN};")
+        lbl_titulo.setWordWrap(True)
+        
+        # Imagen
+        img_label = QLabel()
+        img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        img_label.setFixedSize(160, 160)
+        img_label.setStyleSheet("background-color: #F8FAFC; border-radius: 8px; border: 1px solid #CBD5E1;")
+        
+        has_image = False
+        img_path = producto.get('imagen_path')
+        if img_path:
+            from ui.components.image_selector import resolver_ruta_imagen
+            p_res = resolver_ruta_imagen(img_path)
+            if p_res:
+                pix = QPixmap(str(p_res))
+                if not pix.isNull():
+                    img_label.setPixmap(pix.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                    img_label.setStyleSheet("background-color: transparent; border: 1px solid #CBD5E1; border-radius: 8px;")
+                    has_image = True
+                    
+        if not has_image:
+            img_label.setText("📦\nSin imagen")
+            img_label.setStyleSheet("background-color: #F8FAFC; border-radius: 8px; border: 1px dashed #CBD5E1; color: #94A3B8; font-size: 16px;")
+            
+        img_layout = QHBoxLayout()
+        img_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        img_layout.addWidget(img_label)
+        
+        # Detalles en recuadro
+        from PyQt6.QtWidgets import QGridLayout
+        frame_det = QFrame()
+        frame_det.setStyleSheet(f"background-color: {COLOR_BG}; border-radius: 8px; border: 1px solid {COLOR_BORDER};")
+        ly_det = QFormLayout(frame_det)
+        ly_det.setContentsMargins(12, 12, 12, 12)
+        ly_det.setSpacing(10)
+        
+        def add_row(label, value, bold=False, color=COLOR_TEXT_MAIN):
+            lbl_key = QLabel(label)
+            lbl_key.setStyleSheet("color: #64748B; font-size: 12px; font-weight: 500;")
+            lbl_val = QLabel(str(value))
+            weight = "900" if bold else "normal"
+            lbl_val.setStyleSheet(f"color: {color}; font-size: 13px; font-weight: {weight};")
+            lbl_val.setWordWrap(True)
+            ly_det.addRow(lbl_key, lbl_val)
+            
+        add_row("Unidad:", producto['unidad_base'])
+        add_row("Precio Venta:", f"$ {producto['precio_venta']:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), True, COLOR_PRIMARY)
+        
+        atp = producto.get('atp', 0.0)
+        min_stk = producto.get('stock_minimo', 0.0)
+        stk_color = COLOR_SUCCESS
+        estado = "Disponible"
+        if atp <= 0:
+            stk_color = COLOR_DANGER
+            estado = "Sin Stock"
+        elif min_stk > 0 and atp <= min_stk:
+            stk_color = "#D97706"
+            estado = "Stock Bajo"
+            
+        add_row("Físico:", f"{producto.get('stock_fisico', 0):g}")
+        add_row("Comprometido:", f"{producto.get('comprometido', 0):g}")
+        add_row("Disponible:", f"{atp:g}", True, stk_color)
+        add_row("Mínimo:", f"{min_stk:g}")
+        add_row("Estado:", estado, True, stk_color)
+        
+        # Acciones Completas
+        ly_btns = QGridLayout()
+        ly_btns.setSpacing(8)
+        
+        activo = producto.get("activo", 1)
+        
+        btn_style = f"background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; padding: 10px; border-radius: 6px; font-weight: bold; color: {COLOR_TEXT_MAIN};"
+        btn_style_prim = f"background-color: {COLOR_PRIMARY}; border: 1px solid {COLOR_PRIMARY}; padding: 10px; border-radius: 6px; font-weight: bold; color: white;"
+        
+        if activo == 0:
+            btn_reactivar = QPushButton("♻️ Reactivar")
+            btn_reactivar.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_reactivar.setStyleSheet(btn_style_prim)
+            btn_reactivar.clicked.connect(lambda checked, p=producto: self.reactivar_producto(p))
+            ly_btns.addWidget(btn_reactivar, 0, 0, 1, 2)
+        else:
+            btn_editar = QPushButton("✏️ Editar")
+            btn_editar.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_editar.setStyleSheet(btn_style)
+            btn_editar.clicked.connect(lambda checked, p=producto: self.abrir_editar(p))
+            
+            btn_entrada = QPushButton("📥 Entrada")
+            btn_entrada.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_entrada.setStyleSheet(btn_style_prim)
+            btn_entrada.clicked.connect(lambda checked, p=producto: self.abrir_entrada(p))
+            
+            btn_ajuste = QPushButton("⚖️ Ajuste")
+            btn_ajuste.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_ajuste.setStyleSheet(btn_style)
+            btn_ajuste.clicked.connect(lambda checked, p=producto: self.abrir_ajuste(p))
+            
+            btn_min = QPushButton("⚠️ Mínimo")
+            btn_min.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_min.setStyleSheet(btn_style)
+            btn_min.clicked.connect(lambda checked, p=producto: self.abrir_stock_min(p))
+            
+            ly_btns.addWidget(btn_entrada, 0, 0, 1, 2)
+            ly_btns.addWidget(btn_editar, 1, 0)
+            ly_btns.addWidget(btn_ajuste, 1, 1)
+            ly_btns.addWidget(btn_min, 2, 0, 1, 2)
+            
+        self.layout_panel.addWidget(lbl_codigo)
+        self.layout_panel.addWidget(lbl_titulo)
+        self.layout_panel.addSpacing(4)
+        self.layout_panel.addLayout(img_layout)
+        self.layout_panel.addSpacing(8)
+        self.layout_panel.addWidget(frame_det)
+        self.layout_panel.addSpacing(8)
+        self.layout_panel.addLayout(ly_btns)
+        self.layout_panel.addStretch()
 
     def actualizar_vista(self):
         """Coordina la recarga manual de toda la vista de stock, reutilizando la lógica principal."""
@@ -686,65 +894,76 @@ class PestanaStock(QWidget):
             self.tabla.setItem(i, 8, item_precio)
             self.tabla.setItem(i, 9, item_est)
             
-            # Boton Acciones con Menu
-            btn_acc = QPushButton("⚩️ Acciones")
-            btn_acc.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn_acc.setStyleSheet(f"""
-                QPushButton {{
-                    background: transparent;
-                    color: {COLOR_TEXT_MAIN};
-                    font-weight: bold;
-                    border: 1px solid {COLOR_BORDER};
-                    border-radius: 4px;
-                    padding: 4px 8px;
-                    font-size: 11px;
-                }}
-                QPushButton:hover {{ background: {COLOR_BG}; border-color: {COLOR_PRIMARY}; color: {COLOR_PRIMARY}; }}
-                QPushButton::menu-indicator {{ image: none; }}
-            """)
+            # Botones de Acciones Rápidas
+            w_acc = QWidget()
+            l_acc = QHBoxLayout(w_acc)
+            l_acc.setContentsMargins(4, 4, 4, 4)
+            l_acc.setSpacing(4)
+            l_acc.setAlignment(Qt.AlignmentFlag.AlignCenter)
             
-            menu = QMenu(btn_acc)
+            btn_style_icon = f"""
+                QPushButton {{
+                    background-color: transparent;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 16px;
+                }}
+                QPushButton:hover {{
+                    background-color: {COLOR_BG};
+                }}
+            """
             
             if activo == 0:
-                act_ver = QAction("👁 Ver Detalles", self)
-                act_ver.triggered.connect(lambda checked, prod=p: self.abrir_vista_detalle(prod))
-                act_reactivar = QAction("♻️ Reactivar Producto", self)
-                act_reactivar.triggered.connect(lambda checked, prod=p: self.reactivar_producto(prod))
-                
-                menu.addAction(act_ver)
-                menu.addSeparator()
-                menu.addAction(act_reactivar)
+                btn_reactivar = QPushButton("♻️")
+                btn_reactivar.setToolTip("Reactivar Producto")
+                btn_reactivar.setFixedSize(32, 32)
+                btn_reactivar.setCursor(Qt.CursorShape.PointingHandCursor)
+                btn_reactivar.setStyleSheet(btn_style_icon)
+                btn_reactivar.clicked.connect(lambda checked, prod=p: self.reactivar_producto(prod))
+                l_acc.addWidget(btn_reactivar)
             else:
+                btn_ent = QPushButton("📥")
+                btn_ent.setToolTip("Entrada rápida de stock")
+                btn_ent.setFixedSize(32, 32)
+                btn_ent.setCursor(Qt.CursorShape.PointingHandCursor)
+                btn_ent.setStyleSheet(btn_style_icon)
+                btn_ent.clicked.connect(lambda checked, prod=p: self.abrir_entrada(prod))
+                
+                btn_edit = QPushButton("✏️")
+                btn_edit.setToolTip("Editar Producto")
+                btn_edit.setFixedSize(32, 32)
+                btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
+                btn_edit.setStyleSheet(btn_style_icon)
+                btn_edit.clicked.connect(lambda checked, prod=p: self.abrir_editar(prod))
+                
+                btn_more = QPushButton("⋮")
+                btn_more.setToolTip("Más opciones")
+                btn_more.setFixedSize(32, 32)
+                btn_more.setCursor(Qt.CursorShape.PointingHandCursor)
+                btn_more.setStyleSheet(btn_style_icon)
+                
+                menu = QMenu(btn_more)
                 act_ver = QAction("👁 Ver Detalles", self)
                 act_ver.triggered.connect(lambda checked, prod=p: self.abrir_vista_detalle(prod))
-                act_edit = QAction("✏️ Editar", self)
-                act_edit.triggered.connect(lambda checked, prod=p: self.abrir_editar(prod))
-                act_ent = QAction("📥 Entrada Stock", self)
-                act_ent.triggered.connect(lambda checked, prod=p: self.abrir_entrada(prod))
                 act_aju = QAction("⚖️ Ajuste Inventario", self)
                 act_aju.triggered.connect(lambda checked, prod=p: self.abrir_ajuste(prod))
                 act_min = QAction("⚠️ Configurar Mínimo", self)
                 act_min.triggered.connect(lambda checked, prod=p: self.abrir_stock_min(prod))
                 
                 menu.addAction(act_ver)
-                menu.addAction(act_edit)
                 menu.addSeparator()
-                menu.addAction(act_ent)
                 menu.addAction(act_aju)
-                menu.addSeparator()
                 menu.addAction(act_min)
-            
-            btn_acc.setMenu(menu)
-            
-            w_acc = QWidget()
-            l_acc = QHBoxLayout(w_acc)
-            l_acc.setContentsMargins(4,4,4,4)
-            l_acc.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            l_acc.addWidget(btn_acc)
+                btn_more.setMenu(menu)
+                
+                l_acc.addWidget(btn_ent)
+                l_acc.addWidget(btn_edit)
+                l_acc.addWidget(btn_more)
+                
             self.tabla.setCellWidget(i, 10, w_acc)
             
 
-            self.tabla.setRowHeight(i, 46)
+            self.tabla.setRowHeight(i, 56)
 
     def reactivar_producto(self, prod):
         try:

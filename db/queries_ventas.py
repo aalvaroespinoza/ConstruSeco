@@ -140,7 +140,7 @@ def registrar_operacion_venta(conn, tipo, descontar_stock, carrito, descuento_ge
         else:
             msg = f"Venta #{numero_interno} confirmada con éxito."
             
-        return numero_interno, msg
+        return id_doc, numero_interno, msg
     except Exception as e:
         conn.rollback()
         raise e

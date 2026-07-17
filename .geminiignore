@@ -1,0 +1,17 @@
+.git/
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+build/
+dist/
+logs/
+*.log
+*.db-journal
+*.db-wal
+*.db-shm
+auditoria_*.md
+test_*.py
+tests/
+backups/

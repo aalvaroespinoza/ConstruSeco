@@ -55,14 +55,8 @@ class DialogoModalIntegrado(QFrame):
             lbl_title = QLabel(self.windowTitle())
             lbl_title.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {COLOR_TEXT_MAIN};")
             
-            btn_close = QPushButton("✕")
-            btn_close.setFixedSize(24, 24)
-            btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn_close.setStyleSheet("""
-                QPushButton { border: none; font-size: 16px; font-weight: bold; color: #94a3b8; background: transparent; border-radius: 4px; }
-                QPushButton:hover { background-color: #ef4444; color: white; }
-                QPushButton:pressed { background-color: #b91c1c; color: white; }
-            """)
+            from ui.components.boton_x import BotonCerrarX
+            btn_close = BotonCerrarX()
             btn_close.clicked.connect(self.reject)
             
             header_layout.addWidget(lbl_title)

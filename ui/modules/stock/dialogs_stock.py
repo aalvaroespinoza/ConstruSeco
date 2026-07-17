@@ -710,23 +710,8 @@ class VistaDetalleProducto(QFrame):
         header_layout.addWidget(lbl_titulo)
         header_layout.addStretch()
         
-        btn_close = QPushButton("✕")
-        btn_close.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        btn_close.setFixedSize(28, 28)
-        btn_close.setStyleSheet(f"""
-            QPushButton {{
-                background-color: transparent;
-                border: none;
-                font-size: 16px;
-                font-weight: bold;
-                color: #64748B;
-            }}
-            QPushButton:hover {{
-                color: {COLOR_DANGER};
-                background-color: #FEE2E2;
-                border-radius: 4px;
-            }}
-        """)
+        from ui.components.boton_x import BotonCerrarX
+        btn_close = BotonCerrarX()
         btn_close.clicked.connect(self.cerrar)
         header_layout.addWidget(btn_close)
         
