@@ -37,17 +37,23 @@ def guardar_preferencia_tema(nombre: str):
     settings = QSettings("ConstruSeco", "ERP")
     settings.setValue("tema", nombre)
 
-_paleta_activa = PALETA_OSCURO if tema_guardado() == "oscuro" else PALETA_CLARO
+def _refrescar_constantes():
+    global COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG, COLOR_TEXT_MAIN, \
+           COLOR_TEXT_SEC, COLOR_BORDER, COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER
+    p = PALETA_OSCURO if tema_guardado() == "oscuro" else PALETA_CLARO
+    COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG = p["PRIMARY"], p["BG"], p["CARD_BG"]
+    COLOR_TEXT_MAIN, COLOR_TEXT_SEC, COLOR_BORDER = p["TEXT_MAIN"], p["TEXT_SEC"], p["BORDER"]
+    COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER = p["SUCCESS"], p["WARNING"], p["DANGER"]
 
-COLOR_PRIMARY   = _paleta_activa["PRIMARY"]
-COLOR_BG        = _paleta_activa["BG"]
-COLOR_CARD_BG   = _paleta_activa["CARD_BG"]
-COLOR_TEXT_MAIN = _paleta_activa["TEXT_MAIN"]
-COLOR_TEXT_SEC  = _paleta_activa["TEXT_SEC"]
-COLOR_BORDER    = _paleta_activa["BORDER"]
-COLOR_SUCCESS   = _paleta_activa["SUCCESS"]
-COLOR_WARNING   = _paleta_activa["WARNING"]
-COLOR_DANGER    = _paleta_activa["DANGER"]
+_refrescar_constantes()
+
+def cambiar_tema(nombre: str, app):
+    """Guarda la preferencia, recalcula las constantes globales de este módulo,
+    y re-aplica el QSS global. NO reconstruye las pestañas — eso lo hace
+    VentanaPrincipal, que es quien sabe cuáles existen."""
+    guardar_preferencia_tema(nombre)
+    _refrescar_constantes()
+    aplicar_tema_claro(app)
 
 class UIGlobalPolisher(QObject):
     """Filtro global de eventos para asegurar uniformidad visual sin modificar todos los archivos."""
@@ -79,18 +85,18 @@ class UIGlobalPolisher(QObject):
 def aplicar_tema_claro(app):
     """Evita que popups y diálogos dependan de la paleta del sistema."""
     paleta = QPalette()
-    paleta.setColor(QPalette.ColorRole.Window, QColor("#F4F7FB"))
-    paleta.setColor(QPalette.ColorRole.WindowText, QColor("#172033"))
-    paleta.setColor(QPalette.ColorRole.Base, QColor("#FFFFFF"))
-    paleta.setColor(QPalette.ColorRole.AlternateBase, QColor("#F8FAFC"))
-    paleta.setColor(QPalette.ColorRole.Text, QColor("#172033"))
-    paleta.setColor(QPalette.ColorRole.Button, QColor("#FFFFFF"))
-    paleta.setColor(QPalette.ColorRole.ButtonText, QColor("#172033"))
-    paleta.setColor(QPalette.ColorRole.ToolTipBase, QColor("#172033"))
-    paleta.setColor(QPalette.ColorRole.ToolTipText, QColor("#FFFFFF"))
-    paleta.setColor(QPalette.ColorRole.Highlight, QColor("#2563EB"))
-    paleta.setColor(QPalette.ColorRole.HighlightedText, QColor("#FFFFFF"))
-    paleta.setColor(QPalette.ColorRole.PlaceholderText, QColor("#667085"))
+    paleta.setColor(QPalette.ColorRole.Window, QColor(COLOR_BG))
+    paleta.setColor(QPalette.ColorRole.WindowText, QColor(COLOR_TEXT_MAIN))
+    paleta.setColor(QPalette.ColorRole.Base, QColor(COLOR_CARD_BG))
+    paleta.setColor(QPalette.ColorRole.AlternateBase, QColor(COLOR_BG))
+    paleta.setColor(QPalette.ColorRole.Text, QColor(COLOR_TEXT_MAIN))
+    paleta.setColor(QPalette.ColorRole.Button, QColor(COLOR_CARD_BG))
+    paleta.setColor(QPalette.ColorRole.ButtonText, QColor(COLOR_TEXT_MAIN))
+    paleta.setColor(QPalette.ColorRole.ToolTipBase, QColor(COLOR_TEXT_MAIN))
+    paleta.setColor(QPalette.ColorRole.ToolTipText, QColor(COLOR_CARD_BG))
+    paleta.setColor(QPalette.ColorRole.Highlight, QColor(COLOR_PRIMARY))
+    paleta.setColor(QPalette.ColorRole.HighlightedText, QColor(COLOR_CARD_BG))
+    paleta.setColor(QPalette.ColorRole.PlaceholderText, QColor(COLOR_TEXT_SEC))
     app.setPalette(paleta)
 
     # Instalamos el pulidor visual global
@@ -98,128 +104,128 @@ def aplicar_tema_claro(app):
     app.installEventFilter(polisher)
 
     # Estas reglas no afectan la sidebar, que conserva sus estilos locales.
-    app.setStyleSheet("""
-        QDialog, QMessageBox { background-color: #FFFFFF; color: #172033; }
-        QDialog QLabel, QMessageBox QLabel { background: transparent; color: #172033; }
+    app.setStyleSheet(f"""
+        QDialog, QMessageBox {{ background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; }}
+        QDialog QLabel, QMessageBox QLabel {{ background: transparent; color: {COLOR_TEXT_MAIN}; }}
         QDialog QLineEdit, QDialog QTextEdit, QDialog QPlainTextEdit,
         QMessageBox QLineEdit, QMessageBox QTextEdit, QMessageBox QPlainTextEdit,
-        QComboBox {
-            background-color: #FFFFFF; color: #172033; border: 1px solid #E4E7EC;
-            border-radius: 6px; padding: 6px 8px; selection-background-color: #2563EB;
-            selection-color: #FFFFFF;
-        }
+        QComboBox {{
+            background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; border: 1px solid {COLOR_BORDER};
+            border-radius: 6px; padding: 6px 8px; selection-background-color: {COLOR_PRIMARY};
+            selection-color: {COLOR_CARD_BG};
+        }}
         QDialog QLineEdit:focus, QDialog QTextEdit:focus,
-        QDialog QPlainTextEdit:focus, QComboBox:focus { border-color: #2563EB; }
+        QDialog QPlainTextEdit:focus, QComboBox:focus {{ border-color: {COLOR_PRIMARY}; }}
         
         /* Botones Generales */
-        QPushButton {
-            min-height: 30px; background-color: #FFFFFF; color: #172033;
-            border: 1px solid #E4E7EC; border-radius: 6px; padding: 6px 14px;
+        QPushButton {{
+            min-height: 30px; background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN};
+            border: 1px solid {COLOR_BORDER}; border-radius: 6px; padding: 6px 14px;
             font-weight: 500;
-        }
-        QPushButton:hover {
-            background-color: #F8FAFC; border-color: #CBD5E1;
-        }
-        QPushButton:pressed {
-            background-color: #F1F5F9;
-        }
+        }}
+        QPushButton:hover {{
+            background-color: {COLOR_BG}; border-color: {COLOR_BORDER};
+        }}
+        QPushButton:pressed {{
+            background-color: {COLOR_BORDER};
+        }}
         
-        QDialog QPushButton:default, QMessageBox QPushButton:default {
-            background-color: #2563EB; color: #FFFFFF; border-color: #2563EB;
-        }
-        QDialog QPushButton:default:hover, QMessageBox QPushButton:default:hover {
-            background-color: #1D4ED8; border-color: #1D4ED8;
-        }
+        QDialog QPushButton:default, QMessageBox QPushButton:default {{
+            background-color: {COLOR_PRIMARY}; color: {COLOR_CARD_BG}; border-color: {COLOR_PRIMARY};
+        }}
+        QDialog QPushButton:default:hover, QMessageBox QPushButton:default:hover {{
+            background-color: {COLOR_PRIMARY}; border-color: {COLOR_PRIMARY};
+        }}
         
         /* Botones Danger (Cerrar, Cancelar, Eliminar) */
-        QPushButton[class="danger"] {
-            color: #EF4444; border: 1px solid #FECACA; background-color: #FEF2F2;
-        }
-        QPushButton[class="danger"]:hover {
-            background-color: #EF4444; color: #FFFFFF; border-color: #EF4444;
-        }
+        QPushButton[class="danger"] {{
+            color: {COLOR_DANGER}; border: 1px solid {COLOR_DANGER}; background-color: {COLOR_CARD_BG};
+        }}
+        QPushButton[class="danger"]:hover {{
+            background-color: {COLOR_DANGER}; color: {COLOR_CARD_BG}; border-color: {COLOR_DANGER};
+        }}
         
-        QComboBox::drop-down { border: none; width: 24px; }
-        QComboBox QAbstractItemView, QListView, QListWidget {
-            background-color: #FFFFFF; color: #172033; border: 1px solid #E4E7EC;
-            outline: none; selection-background-color: #DBEAFE; selection-color: #172033;
-        }
-        QComboBox QAbstractItemView::item, QListView::item, QListWidget::item {
+        QComboBox::drop-down {{ border: none; width: 24px; }}
+        QComboBox QAbstractItemView, QListView, QListWidget {{
+            background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; border: 1px solid {COLOR_BORDER};
+            outline: none; selection-background-color: {COLOR_PRIMARY}; selection-color: {COLOR_CARD_BG};
+        }}
+        QComboBox QAbstractItemView::item, QListView::item, QListWidget::item {{
             min-height: 24px; padding: 5px 8px;
-        }
+        }}
         QComboBox QAbstractItemView::item:hover, QListView::item:hover,
-        QListWidget::item:hover { background-color: #EFF6FF; }
+        QListWidget::item:hover {{ background-color: {COLOR_BG}; color: {COLOR_TEXT_MAIN}; }}
         
-        QMenu { background-color: #FFFFFF; color: #172033; border: 1px solid #E4E7EC; padding: 4px; border-radius: 6px; }
-        QMenu::item { padding: 7px 26px 7px 18px; border-radius: 4px; }
-        QMenu::item:selected { background-color: #EFF6FF; color: #172033; }
+        QMenu {{ background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; border: 1px solid {COLOR_BORDER}; padding: 4px; border-radius: 6px; }}
+        QMenu::item {{ padding: 7px 26px 7px 18px; border-radius: 4px; }}
+        QMenu::item:selected {{ background-color: {COLOR_BG}; color: {COLOR_TEXT_MAIN}; }}
         
-        QToolTip { 
-            background-color: #1E293B; color: #FFFFFF; 
-            border: 1px solid #0F172A; padding: 6px 10px; 
+        QToolTip {{ 
+            background-color: {COLOR_TEXT_MAIN}; color: {COLOR_CARD_BG}; 
+            border: 1px solid {COLOR_BORDER}; padding: 6px 10px; 
             border-radius: 4px; font-size: 12px;
-        }
+        }}
         
         /* Tablas Consistentes */
-        QTableWidget {
-            background-color: #FFFFFF;
-            border: 1px solid #E2E8F0;
+        QTableWidget {{
+            background-color: {COLOR_CARD_BG};
+            border: 1px solid {COLOR_BORDER};
             border-radius: 6px;
-            gridline-color: #F1F5F9;
-            selection-background-color: #F8FAFC;
-            selection-color: #0F172A;
-            alternate-background-color: #FAFAF9;
-        }
-        QTableWidget::item {
+            gridline-color: {COLOR_BORDER};
+            selection-background-color: {COLOR_BG};
+            selection-color: {COLOR_TEXT_MAIN};
+            alternate-background-color: {COLOR_BG};
+        }}
+        QTableWidget::item {{
             padding: 4px 8px;
-            border-bottom: 1px solid #F1F5F9;
-        }
-        QTableWidget::item:selected {
-            background-color: #EFF6FF;
-            color: #1D4ED8;
-        }
-        QHeaderView::section {
-            background-color: #F8FAFC;
-            color: #475569;
+            border-bottom: 1px solid {COLOR_BORDER};
+        }}
+        QTableWidget::item:selected {{
+            background-color: {COLOR_BG};
+            color: {COLOR_PRIMARY};
+        }}
+        QHeaderView::section {{
+            background-color: {COLOR_BG};
+            color: {COLOR_TEXT_SEC};
             padding: 8px;
             border: none;
-            border-bottom: 1px solid #E2E8F0;
-            border-right: 1px solid #F1F5F9;
+            border-bottom: 1px solid {COLOR_BORDER};
+            border-right: 1px solid {COLOR_BORDER};
             font-weight: 600;
             font-size: 12px;
-        }
+        }}
         
         /* Scrollbars Modernos */
-        QScrollBar:vertical {
-            border: none; background: #F8FAFC; width: 8px; border-radius: 4px; margin: 0px;
-        }
-        QScrollBar::handle:vertical {
-            background: #CBD5E1; min-height: 20px; border-radius: 4px;
-        }
-        QScrollBar::handle:vertical:hover { background: #94A3B8; }
-        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { border: none; background: none; }
+        QScrollBar:vertical {{
+            border: none; background: {COLOR_BG}; width: 8px; border-radius: 4px; margin: 0px;
+        }}
+        QScrollBar::handle:vertical {{
+            background: {COLOR_BORDER}; min-height: 20px; border-radius: 4px;
+        }}
+        QScrollBar::handle:vertical:hover {{ background: {COLOR_TEXT_SEC}; }}
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ border: none; background: none; }}
         
-        QScrollBar:horizontal {
-            border: none; background: #F8FAFC; height: 8px; border-radius: 4px; margin: 0px;
-        }
-        QScrollBar::handle:horizontal {
-            background: #CBD5E1; min-width: 20px; border-radius: 4px;
-        }
-        QScrollBar::handle:horizontal:hover { background: #94A3B8; }
-        QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { border: none; background: none; }
+        QScrollBar:horizontal {{
+            border: none; background: {COLOR_BG}; height: 8px; border-radius: 4px; margin: 0px;
+        }}
+        QScrollBar::handle:horizontal {{
+            background: {COLOR_BORDER}; min-width: 20px; border-radius: 4px;
+        }}
+        QScrollBar::handle:horizontal:hover {{ background: {COLOR_TEXT_SEC}; }}
+        QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ border: none; background: none; }}
         
         /* Badges Uniformes */
-        QLabel[class="badge-success"] {
-            background-color: #DCFCE7; color: #166534; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;
-        }
-        QLabel[class="badge-danger"] {
-            background-color: #FEE2E2; color: #991B1B; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;
-        }
-        QLabel[class="badge-info"] {
-            background-color: #EFF6FF; color: #1D4ED8; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;
-        }
-        QLabel[class="badge-neutral"] {
-            background-color: #F1F5F9; color: #475569; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;
-        }
+        QLabel[class="badge-success"] {{
+            background-color: {COLOR_SUCCESS}; color: {COLOR_CARD_BG}; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;
+        }}
+        QLabel[class="badge-danger"] {{
+            background-color: {COLOR_DANGER}; color: {COLOR_CARD_BG}; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;
+        }}
+        QLabel[class="badge-info"] {{
+            background-color: {COLOR_PRIMARY}; color: {COLOR_CARD_BG}; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;
+        }}
+        QLabel[class="badge-neutral"] {{
+            background-color: {COLOR_BG}; color: {COLOR_TEXT_MAIN}; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;
+        }}
     """)
 
