@@ -8,6 +8,7 @@ from ui.modules.stock.tab_stock import PestanaStock
 from ui.modules.ventas.tab_ventas import PestanaNuevaVenta
 from ui.modules.clientes.tab_clientes import PestanaClientes
 from ui.modules.presupuestos.tab_presupuestos import PestanaPresupuestos, PestanaNuevoPresupuesto
+from ui.modules.inicio.tab_inicio import PestanaInicio
 
 class TarjetaOperacionSidebar(QFrame):
     clicked = pyqtSignal()
@@ -243,7 +244,20 @@ class SidebarButton(QPushButton):
         painter.setPen(pen)
         painter.setBrush(Qt.BrushStyle.NoBrush)
         
-        if tipo == "ventas":
+        if tipo == "inicio":
+            path = QPainterPath()
+            path.moveTo(12, 4)
+            path.lineTo(3, 11)
+            path.lineTo(3, 20)
+            path.lineTo(9, 20)
+            path.lineTo(9, 13)
+            path.lineTo(15, 13)
+            path.lineTo(15, 20)
+            path.lineTo(21, 20)
+            path.lineTo(21, 11)
+            path.closeSubpath()
+            painter.drawPath(path)
+        elif tipo == "ventas":
             painter.drawRoundedRect(3, 6, 18, 12, 2, 2)
             painter.drawLine(3, 11, 21, 11)
         elif tipo == "stock":
@@ -454,13 +468,14 @@ class VentanaPrincipal(QMainWindow):
         layout_sidebar.addWidget(header_container)
 
         # Creamos los botones del menú usando la nueva clase custom
+        self.btn_inicio = SidebarButton("inicio", "Inicio")
         self.btn_ventas = SidebarButton("ventas", "Venta")
         self.btn_stock = SidebarButton("stock", "Control de Stock")
         self.btn_clientes = SidebarButton("clientes", "Clientes")
         self.btn_presupuestos = SidebarButton("presupuestos", "Presupuestos")
 
         # Agrupamos los botones para que actúen en conjunto
-        self.botones_menu = [self.btn_ventas, self.btn_stock, self.btn_clientes, self.btn_presupuestos]
+        self.botones_menu = [self.btn_inicio, self.btn_ventas, self.btn_stock, self.btn_clientes, self.btn_presupuestos]
         for btn in self.botones_menu:
             layout_sidebar.addWidget(btn)
 
@@ -559,20 +574,29 @@ class VentanaPrincipal(QMainWindow):
         self.contenedor_vistas = QStackedWidget()
 
         # Instanciamos las pestañas fijas
+        self.pestana_inicio = PestanaInicio(self.conn)
         self.pestana_stock     = PestanaStock(self.conn)
         self.pestana_clientes  = PestanaClientes(self.conn)
         self.pestana_historial_presupuestos = PestanaPresupuestos(self.conn)
 
         # Agregamos las vistas fijas al mazo de cartas (QStackedWidget)
+        self.contenedor_vistas.addWidget(self.pestana_inicio)
         self.contenedor_vistas.addWidget(self.pestana_stock)             
         self.contenedor_vistas.addWidget(self.pestana_clientes)          
         self.contenedor_vistas.addWidget(self.pestana_historial_presupuestos)   
 
         # Enlazamos los clics de los botones de navegación principal
+        self.btn_inicio.clicked.connect(lambda: self.cambiar_pestana_fija(self.pestana_inicio, self.btn_inicio))
         self.btn_ventas.clicked.connect(self._navegar_ventas)
         self.btn_stock.clicked.connect(lambda: self.cambiar_pestana_fija(self.pestana_stock, self.btn_stock))
         self.btn_clientes.clicked.connect(lambda: self.cambiar_pestana_fija(self.pestana_clientes, self.btn_clientes))
         self.btn_presupuestos.clicked.connect(lambda: self.cambiar_pestana_fija(self.pestana_historial_presupuestos, self.btn_presupuestos))
+        
+        # Conectamos señales de la pestaña de inicio
+        self.pestana_inicio.nueva_venta_solicitada.connect(lambda: self.crear_operacion("VENTA"))
+        self.pestana_inicio.nuevo_presupuesto_solicitado.connect(lambda: self.crear_operacion("PRESUPUESTO"))
+        self.pestana_inicio.ver_stock_solicitado.connect(lambda: self.cambiar_pestana_fija(self.pestana_stock, self.btn_stock))
+        self.pestana_inicio.ver_clientes_solicitado.connect(lambda: self.cambiar_pestana_fija(self.pestana_clientes, self.btn_clientes))
 
         # Ensamblamos todo en la ventana central
         layout_principal.addWidget(self.sidebar)
@@ -580,7 +604,8 @@ class VentanaPrincipal(QMainWindow):
 
         self.setCentralWidget(widget_central)
         
-        # Aplicar estado inicial de la sidebar sin animar
+        # Aplicar estado inicial de la sidebar sin animar (Forzamos colapsado para la vista Inicio)
+        self.sidebar_colapsada = True
         self.actualizar_estado_sidebar(animar=False)
         
         # Iniciar timer operativo global y limpiar vencidos
@@ -589,8 +614,8 @@ class VentanaPrincipal(QMainWindow):
         self._timer_limpieza.start(300_000)
         QTimer.singleShot(1000, self._verificar_y_limpiar_vencidos)
         
-        # Abrimos la primera venta por defecto
-        QTimer.singleShot(0, lambda: self.crear_operacion("VENTA"))
+        # Abrimos la pestaña inicio por defecto
+        QTimer.singleShot(0, lambda: self.cambiar_pestana_fija(self.pestana_inicio, self.btn_inicio))
 
     def toggle_sidebar(self):
         self.sidebar_colapsada = not self.sidebar_colapsada
@@ -768,8 +793,18 @@ class VentanaPrincipal(QMainWindow):
         self._transicion_vista(widget)
 
     def _transicion_vista(self, widget):
+        estado_previo = self.sidebar_colapsada
+        if widget == getattr(self, 'pestana_inicio', None):
+            self.sidebar_colapsada = True
+        else:
+            self.sidebar_colapsada = False
+            
+        if estado_previo != self.sidebar_colapsada:
+            self.actualizar_estado_sidebar(animar=True)
+            
         if self.contenedor_vistas.currentWidget() == widget:
             return
+            
         self.fade_effect = QGraphicsOpacityEffect(self.contenedor_vistas)
         self.contenedor_vistas.setGraphicsEffect(self.fade_effect)
         self.fade_anim = QPropertyAnimation(self.fade_effect, b"opacity")
