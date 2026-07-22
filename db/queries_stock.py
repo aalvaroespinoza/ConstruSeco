@@ -99,12 +99,6 @@ def actualizar_producto_y_registrar(conn, cod, desc, uni, precio, stk_min, final
                 stock_minimo = ?, imagen_path = ?
             WHERE codigo = ?
         """, (desc, uni, precio, stk_min, final_img, cod))
-        
-        # Guardar historial de cambios en movimientos_stock como ACTUALIZACION
-        c.execute("""
-            INSERT INTO movimientos_stock (codigo_producto, tipo_movimiento, cantidad, fecha_hora, notas)
-            VALUES (?, 'ACTUALIZACION', 0, ?, 'Actualización de datos del producto')
-        """, (cod, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
 
         conn.commit()
     except Exception as e:
@@ -346,12 +340,6 @@ def actualizar_producto_y_registrar(conn, cod, desc, uni, precio, stk_min, final
                 stock_minimo = ?, imagen_path = ?
             WHERE codigo = ?
         """, (desc, uni, precio, stk_min, final_img, cod))
-        
-        # Guardar historial de cambios en movimientos_stock como ACTUALIZACION
-        c.execute("""
-            INSERT INTO movimientos_stock (codigo_producto, tipo_movimiento, cantidad, fecha_hora, notas)
-            VALUES (?, 'ACTUALIZACION', 0, ?, 'Actualización de datos del producto')
-        """, (cod, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
 
         conn.commit()
     except Exception as e:

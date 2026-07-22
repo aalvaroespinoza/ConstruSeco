@@ -1,6 +1,4 @@
-from ui.components.operacion_base import OperacionBaseWidget, DialogoVentaExitosa
-from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QFrame
-from PyQt6.QtCore import Qt
+from ui.components.operacion_base import OperacionBaseWidget
 
 class PestanaNuevaVenta(OperacionBaseWidget):
     def __init__(self, conexion_db, is_edicion=False, id_presupuesto_edicion=None):

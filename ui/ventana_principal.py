@@ -647,7 +647,7 @@ class VentanaPrincipal(QMainWindow):
             self.lbl_logo.setPixmap(pixmap)
             margen_top = 10 if self.sidebar_colapsada else 20
             self.lbl_logo.setContentsMargins(0, margen_top, 0, 0)
-        except:
+        except Exception:
             pass
 
         # Tooltips de los botones
@@ -695,9 +695,7 @@ class VentanaPrincipal(QMainWindow):
         from db.conexion import limpiar_presupuestos_vencidos
         afectados = limpiar_presupuestos_vencidos(self.conn)
         if afectados and afectados > 0:
-            self.pestana_historial_presupuestos.recargar()
-            self.pestana_stock.cargar_datos()
-            self.actualizar_catalogos_operaciones()
+            self.notificar_cambios(["PRESUPUESTOS", "STOCK"])
 
     def _navegar_ventas(self):
         # Buscar la última venta activa si la hay, si no crear una.
@@ -727,7 +725,7 @@ class VentanaPrincipal(QMainWindow):
         tarjeta.cerrar_solicitado.connect(lambda: self.cerrar_operacion(id_op))
         
         widget.estado_cambiado.connect(tarjeta.actualizar_datos)
-        widget.operacion_completada.connect(lambda _: self.cerrar_operacion(id_op, forzar=True))
+        widget.operacion_completada.connect(lambda _: self._on_operacion_completada(id_op))
         
         self.operaciones_abiertas[id_op] = (widget, tarjeta)
         
@@ -781,10 +779,37 @@ class VentanaPrincipal(QMainWindow):
             else:
                 self.cambiar_pestana_fija(self.pestana_stock, self.btn_stock)
 
+    def _on_operacion_completada(self, id_op):
+        self.cerrar_operacion(id_op, forzar=True)
+        self.notificar_cambios(["STOCK", "CLIENTES", "PRESUPUESTOS"])
+
     def actualizar_catalogos_operaciones(self):
         for id_op, (widget, tarjeta) in self.operaciones_abiertas.items():
             if hasattr(widget, 'cargar_catalogo_memoria'):
                 widget.cargar_catalogo_memoria()
+
+    def notificar_cambios(self, modulos):
+        """
+        Sistema centralizado de eventos para refrescar la UI.
+        Recibe una lista de módulos afectados, ej: ['STOCK', 'CLIENTES']
+        """
+        if "STOCK" in modulos:
+            if hasattr(self, 'pestana_stock'):
+                self.pestana_stock.cargar_datos()
+        if "CLIENTES" in modulos:
+            if hasattr(self, 'pestana_clientes'):
+                self.pestana_clientes.recargar()
+        if "PRESUPUESTOS" in modulos:
+            if hasattr(self, 'pestana_historial_presupuestos'):
+                self.pestana_historial_presupuestos.recargar()
+        
+        # Inicio actualiza sus tarjetas siempre
+        if hasattr(self, 'pestana_inicio'):
+            self.pestana_inicio.cargar_datos()
+            
+        # Recargar operaciones (Ventas/Presupuestos nuevos)
+        self.actualizar_catalogos_operaciones()
+
 
     def cambiar_pestana_fija(self, widget, boton_presionado):
         for op, (w, t) in self.operaciones_abiertas.items():

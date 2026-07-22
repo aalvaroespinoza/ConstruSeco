@@ -309,7 +309,6 @@ class DialogoImportarExcel(DialogoModalIntegrado):
                 continue
                 
             self.stats['total'] += 1
-            es_error = False
             estado = ""
             mensaje = ""
             

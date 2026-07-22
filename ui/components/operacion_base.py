@@ -924,15 +924,15 @@ class OperacionBaseWidget(QWidget):
         self.tabla.setItemDelegateForColumn(3, self.auto_select_delegate)
         self.tabla.setItemDelegateForColumn(6, self.auto_select_delegate)
         
-        # Ajustes de ancho priorizando la descripcion
-        self.tabla.setColumnWidth(0, 80)
-        self.tabla.setColumnWidth(2, 70)
-        self.tabla.setColumnWidth(3, 85)
-        self.tabla.setColumnWidth(4, 90)
-        self.tabla.setColumnWidth(5, 110)
-        self.tabla.setColumnWidth(6, 75)
-        self.tabla.setColumnWidth(7, 120)
-        self.tabla.setColumnWidth(8, 36) # Eliminación moderna sin ocupar columnas enormes
+        # Ajustes de ancho priorizando la descripcion (adaptado HD 125-150%)
+        self.tabla.setColumnWidth(0, 100)
+        self.tabla.setColumnWidth(2, 85)
+        self.tabla.setColumnWidth(3, 95)
+        self.tabla.setColumnWidth(4, 100)
+        self.tabla.setColumnWidth(5, 130)
+        self.tabla.setColumnWidth(6, 85)
+        self.tabla.setColumnWidth(7, 140)
+        self.tabla.setColumnWidth(8, 48) # Eliminación moderna sin ocupar columnas enormes
         
         self.tabla.itemChanged.connect(self.celda_editada)
         self.stack_tabla.addWidget(self.tabla)
@@ -1925,11 +1925,6 @@ class OperacionBaseWidget(QWidget):
         descontar_stock = not self.is_presupuesto
         if tipo == 'PRESUPUESTO':
             descontar_stock = False
-            estado_doc = 'ACTIVO'
-        else:
-            estado_doc = 'CONFIRMADO'
-            
-        fecha_actual = datetime.now()
         
         try:
             id_cliente_final = self.cliente_seleccionado['id'] if self.cliente_seleccionado else None

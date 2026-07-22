@@ -148,8 +148,8 @@ def aplicar_tema_claro(app):
             border-bottom: 1px solid {COLOR_BORDER};
         }}
         QTableWidget::item:selected {{
-            background-color: #eff6ff;
-            color: {COLOR_PRIMARY};
+            background-color: {COLOR_PRIMARY};
+            color: white;
         }}
         QHeaderView::section {{
             background-color: {COLOR_BG};

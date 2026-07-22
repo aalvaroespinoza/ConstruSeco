@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
     QComboBox, QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView,
     QFormLayout, QCheckBox, QGroupBox
 )
-from PyQt6.QtCore import Qt, QSettings
+from PyQt6.QtCore import Qt, QSettings, QTimer
 from PyQt6.QtGui import QColor, QFont
 
 
@@ -85,7 +85,7 @@ class DialogoConfiguracionGeneral(DialogoModalIntegrado):
         try:
             val_min = float(self.inp_min.text().replace(',', '.'))
             if val_min < 0: raise ValueError
-        except:
+        except ValueError:
             QMessageBox.warning(self, "Error", "Stock mínimo debe ser un número válido >= 0.")
             return
             
@@ -116,7 +116,13 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
         ly_busq.setSpacing(12)
         self.inp_buscar = QLineEdit()
         self.inp_buscar.setPlaceholderText("Buscar por código, producto o doc...")
-        self.inp_buscar.textChanged.connect(self.cargar_datos)
+        
+        self.timer_busqueda = QTimer()
+        self.timer_busqueda.setSingleShot(True)
+        self.timer_busqueda.setInterval(300)
+        self.timer_busqueda.timeout.connect(self.cargar_datos)
+        self.inp_buscar.textChanged.connect(self.timer_busqueda.start)
+        
         ly_busq.addWidget(QLabel("🔍 Buscar:"))
         ly_busq.addWidget(self.inp_buscar)
         
@@ -205,7 +211,7 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
         
         from db.queries_stock import ejecutar_consulta_historial
         filas = ejecutar_consulta_historial(self.conn, sql, params)
-        
+        self.tabla.setUpdatesEnabled(False)
         self.tabla.setRowCount(len(filas))
         for i, (fecha, cod, desc, tm, cant, stk_post, doc, doc_tipo, notas) in enumerate(filas):
             self.tabla.setItem(i, 0, QTableWidgetItem(str(fecha)[:16]))
@@ -243,14 +249,15 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
             else:
                 info_doc = "Entrada manual / Ajuste directo"
                 
-            if notas: info_doc += f" ({notas})"
-            self.tabla.setItem(i, 7, QTableWidgetItem(info_doc))
+            if notas:
+                info_doc += f" | {notas}"
+                
             # Save hidden data for double click
             item_hidden = QTableWidgetItem(info_doc)
             item_hidden.setData(Qt.ItemDataRole.UserRole, (doc, doc_tipo, notas, tm, cant, fecha, cod, desc))
             self.tabla.setItem(i, 7, item_hidden)
-
-
+            
+        self.tabla.setUpdatesEnabled(True)
 
     def abrir_documento_asociado(self, item):
         row = item.row()

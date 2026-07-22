@@ -222,7 +222,7 @@ class PestanaStock(QWidget):
                 padding: 4px 8px;
             }}
             QTableWidget::item:selected {{
-                background-color: #ebf5ff;
+                background-color: {COLOR_PRIMARY}; color: white;
             }}
         """)
         
@@ -452,11 +452,12 @@ class PestanaStock(QWidget):
         self.tabla.setStyleSheet(self.tabla.styleSheet() + """
             QTableWidget { alternate-background-color: #fafbfd; }
             QTableWidget::item:selected {
-                background-color: #dbeafe;
-                color: #0f172a;
-            }
+                  background-color: #2563eb;
+                  color: white;
+              }
         """)
         self.tabla.cellDoubleClicked.connect(self.on_tabla_double_click)
+        self.tabla.itemSelectionChanged.connect(self._actualizar_colores_seleccion)
         
         # Implementar toggle de selección limpio y seguro
         _original_mouse_press = self.tabla.mousePressEvent
@@ -504,7 +505,14 @@ class PestanaStock(QWidget):
 
     def actualizar_vista(self):
         """Coordina la recarga manual de toda la vista de stock, reutilizando la lógica principal."""
-        self.cargar_datos()
+        self._notificar_cambios_globales()
+
+    def _notificar_cambios_globales(self):
+        vp = self.window()
+        if hasattr(vp, 'notificar_cambios'):
+            vp.notificar_cambios(["STOCK"])
+        else:
+            self.cargar_datos()
 
     def _mostrar_ayuda(self):
         from ui.modules.stock.dialogs_stock import DialogoAyudaStock
@@ -657,6 +665,7 @@ class PestanaStock(QWidget):
 
     def renderizar_tabla(self, datos):
         print(f"[TRACE] renderizar_tabla llamado con {len(datos)} elementos")
+        self.tabla.setUpdatesEnabled(False)
         self.tabla.setRowCount(0)
         settings = QSettings("ConstrusecoPereyra", "StockConfig")
         mostrar_precio = settings.value("col_precio_visible", True, type=bool)
@@ -846,60 +855,81 @@ class PestanaStock(QWidget):
                 
                 act_ver = QAction("👁 Ver detalle", self)
                 act_ver.triggered.connect(lambda checked, prod=p: self.abrir_vista_detalle(prod))
-                act_edit = QAction("✏️ Editar", self)
+                
+                act_edit = QAction("✏️ Editar producto", self)
                 act_edit.triggered.connect(lambda checked, prod=p: self.abrir_editar(prod))
-                act_modificar = QAction("📦 Modificar stock", self)
-                act_modificar.triggered.connect(lambda checked, prod=p: self.abrir_modificar_stock(prod))
-                act_eliminar = QAction("🗑️ Eliminar/Desactivar", self)
+                
+                act_mod_precio = QAction("💲 Modificar precio", self)
+                act_mod_precio.triggered.connect(lambda checked, prod=p: self.abrir_modificar_precio(prod))
+                
+                act_entrada = QAction("📥 Entrada de stock", self)
+                act_entrada.triggered.connect(lambda checked, prod=p: self.abrir_modificar_stock(prod, modo='ENTRADA'))
+                
+                act_ajuste = QAction("📦 Ajuste de stock", self)
+                act_ajuste.triggered.connect(lambda checked, prod=p: self.abrir_modificar_stock(prod, modo='AJUSTE'))
+                
+                act_eliminar = QAction("🗑️ Desactivar / Eliminar", self)
                 act_eliminar.triggered.connect(lambda checked, prod=p: self.eliminar_desactivar_producto(prod))
                 
                 menu.addAction(act_ver)
                 menu.addAction(act_edit)
-                menu.addAction(act_modificar)
+                menu.addAction(act_mod_precio)
+                menu.addSeparator()
+                menu.addAction(act_entrada)
+                menu.addAction(act_ajuste)
                 menu.addSeparator()
                 menu.addAction(act_eliminar)
+                
                 btn_more.setMenu(menu)
                 
                 l_acc.addWidget(btn_more, 0, Qt.AlignmentFlag.AlignCenter)
                 
             self.tabla.setCellWidget(i, 10, w_acc)
             
-
             self.tabla.setRowHeight(i, 56)
+
+        self.tabla.setUpdatesEnabled(True)
+        self._actualizar_colores_seleccion()
 
     def reactivar_producto(self, prod):
         try:
             from db.queries_stock import reactivar_producto
             reactivar_producto(self.conn, prod['codigo'])
             QMessageBox.information(self, "Reactivado", f"El producto {prod['codigo']} ha sido reactivado.")
-            self.cargar_datos()
+            self._notificar_cambios_globales()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error al reactivar producto: {e}")
 
     def abrir_formulario_alta(self):
         dialogo = DialogoAgregarProducto(self.conn, self)
         if dialogo.exec() == QDialog.DialogCode.Accepted:
-            self.cargar_datos()
+            self._notificar_cambios_globales()
 
     def abrir_editar(self, producto_data):
         dialogo = DialogoEditarProducto(self.conn, producto_data, self)
         if dialogo.exec() == QDialog.DialogCode.Accepted:
-            self.cargar_datos()
-
-    def abrir_modificar_stock(self, producto_data):
-        dialogo = DialogoModificarStock(self.conn, producto_data, self)
+            self._notificar_cambios_globales()
+            
+    def abrir_modificar_precio(self, producto_data):
+        from ui.modules.stock.dialogs_stock import DialogoModificarPrecio
+        dialogo = DialogoModificarPrecio(self.conn, producto_data, self)
         if dialogo.exec() == QDialog.DialogCode.Accepted:
-            self.cargar_datos()
+            self._notificar_cambios_globales()
+
+    def abrir_modificar_stock(self, producto_data, modo='ENTRADA'):
+        dialogo = DialogoModificarStock(self.conn, producto_data, modo, self)
+        if dialogo.exec() == QDialog.DialogCode.Accepted:
+            self._notificar_cambios_globales()
 
     def abrir_stock_min(self, producto_data):
         dialogo = DialogoStockMinimo(self.conn, producto_data, self)
         if dialogo.exec() == QDialog.DialogCode.Accepted:
-            self.cargar_datos()
+            self._notificar_cambios_globales()
 
     def abrir_importar_excel(self):
         dialogo = DialogoImportarExcel(self.conn, self)
         if dialogo.exec() == QDialog.DialogCode.Accepted:
-            self.cargar_datos()
+            self._notificar_cambios_globales()
 
     
     def abrir_frecuentes(self):
@@ -909,7 +939,7 @@ class PestanaStock(QWidget):
 
     def abrir_configuracion_general(self):
         if DialogoConfiguracionGeneral(self).exec() == QDialog.DialogCode.Accepted:
-            self.cargar_datos()
+            self._notificar_cambios_globales()
             
 
             
@@ -936,6 +966,41 @@ class PestanaStock(QWidget):
                 self.tabla.scrollToItem(item_cod, QAbstractItemView.ScrollHint.PositionAtCenter)
                 break
                 
+    def _actualizar_colores_seleccion(self):
+        sel_rows = {item.row() for item in self.tabla.selectedItems()}
+        for r in range(self.tabla.rowCount()):
+            is_sel = r in sel_rows
+            
+            # Columna Imagen (1)
+            w_img = self.tabla.cellWidget(r, 1)
+            if w_img and hasattr(w_img, "setStyleSheet"):
+                color_img = "white" if is_sel else COLOR_TEXT_SEC
+                w_img.setStyleSheet(f"color: {color_img}; font-size: 18px;")
+            
+            # Columna Acciones (10)
+            w_acc = self.tabla.cellWidget(r, 10)
+            if w_acc:
+                from PyQt6.QtWidgets import QPushButton
+                btns = w_acc.findChildren(QPushButton)
+                if btns:
+                    btn = btns[0]
+                    color_btn = "white" if is_sel else COLOR_TEXT_MAIN
+                    btn.setStyleSheet(f"""
+                        QPushButton {{
+                            background-color: transparent;
+                            border: 1px solid transparent;
+                            border-radius: 4px;
+                            font-size: 18px;
+                            font-weight: bold;
+                            color: {color_btn};
+                        }}
+                        QPushButton:hover {{
+                            background-color: {COLOR_BG};
+                            border: 1px solid {COLOR_BORDER};
+                        }}
+                        QPushButton::menu-indicator {{ image: none; width: 0px; }}
+                    """)
+
     def on_tabla_double_click(self, row, col):
         if col == 10:  # Columna de acciones
             return
@@ -965,7 +1030,7 @@ class PestanaStock(QWidget):
         liberados = limpiar_presupuestos_vencidos(self.conn)
         if liberados > 0:
             QMessageBox.information(self, "Limpieza completada", f"Se han liberado {liberados} presupuestos vencidos. El stock comprometido ha vuelto a estar disponible.")
-            self.cargar_datos()
+            self._notificar_cambios_globales()
         elif liberados == 0:
             QMessageBox.information(self, "Limpieza", "No hay presupuestos vencidos que liberar.")
         else:
@@ -973,22 +1038,13 @@ class PestanaStock(QWidget):
 
     def abrir_visualizacion_inventario(self):
         if DialogoVisualizacionInventario(self).exec() == QDialog.DialogCode.Accepted:
-            self.cargar_datos()
+            self._notificar_cambios_globales()
 
 
 
 
     def eliminar_desactivar_producto(self, prod):
-        codigo = prod['codigo']
-        reply = QMessageBox.question(self, 'Confirmar', f'¿Desea eliminar o desactivar el producto {codigo}?', QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        if reply == QMessageBox.StandardButton.Yes:
-            try:
-                from db.queries_stock import intentar_eliminar_producto
-                res = intentar_eliminar_producto(self.conn, codigo)
-                if res == "DESACTIVADO":
-                    QMessageBox.information(self, "Desactivado", f"El producto {codigo} tiene dependencias y ha sido desactivado.")
-                else:
-                    QMessageBox.information(self, "Eliminado", f"El producto {codigo} fue eliminado.")
-                self.cargar_datos()
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"No se pudo eliminar/desactivar: {str(e)}")
+        from ui.modules.stock.dialogs_stock import DialogoDesactivarEliminar
+        dialogo = DialogoDesactivarEliminar(self.conn, prod, self)
+        if dialogo.exec() == QDialog.DialogCode.Accepted:
+            self._notificar_cambios_globales()

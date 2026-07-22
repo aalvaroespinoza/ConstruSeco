@@ -167,7 +167,7 @@ class _PanelVacio(QFrame):
 class _FilaDetalle(QFrame):
     def __init__(self, etiqueta: str, valor: str = "—"):
         super().__init__()
-        self.setStyleSheet("border: none;")
+        self.setStyleSheet("QFrame { border: none; }")
         ly = QHBoxLayout(self)
         ly.setContentsMargins(0, 2, 0, 2)
         ly.setSpacing(8)
@@ -177,7 +177,7 @@ class _FilaDetalle(QFrame):
         lbl_e.setFixedWidth(100)
         lbl_e.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
-        self._lbl_v = QLabel(valor)
+        self._lbl_v = QLabel(str(valor) if valor is not None and valor != "" else "—")
         self._lbl_v.setStyleSheet(
             f"color: {COLOR_TEXT_MAIN}; font-size: 12px; font-weight: 600; border: none;"
         )
@@ -186,14 +186,14 @@ class _FilaDetalle(QFrame):
         ly.addWidget(lbl_e)
         ly.addWidget(self._lbl_v, stretch=1)
 
-    def set_valor(self, valor: str):
-        self._lbl_v.setText(valor or "—")
+    def set_valor(self, valor):
+        self._lbl_v.setText(str(valor) if valor is not None and valor != "" else "—")
 
 
 class _SeccionPanel(QFrame):
     def __init__(self, titulo: str):
         super().__init__()
-        self.setStyleSheet("border: none;")
+        self.setStyleSheet("QFrame { border: none; }")
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 8, 0, 4)
         self._layout.setSpacing(0)
@@ -298,12 +298,12 @@ class _PanelDetalle(QScrollArea):
         info_av.addWidget(self._lbl_codigo)
 
         # Botón de menú de acciones (⋯)
-        self._btn_menu = QPushButton("⋯")
+        self._btn_menu = QPushButton("⋮")
         self._btn_menu.setFixedSize(30, 30)
         self._btn_menu.setStyleSheet(
             f"QPushButton {{ background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_SEC}; "
             f"border: 1px solid {COLOR_BORDER}; border-radius: 15px; "
-            f"font-size: 16px; font-weight: 900; }}"
+            f"font-size: 18px; font-weight: bold; padding: 0px; padding-bottom: 2px; }}"
             f"QPushButton:hover {{ background-color: {COLOR_BG}; color: {COLOR_TEXT_MAIN}; }}"
         )
         self._btn_menu.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -318,7 +318,9 @@ class _PanelDetalle(QScrollArea):
         self._badge_estado = QLabel("ACTIVO")
         self._badge_estado.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._badge_estado.setFixedHeight(22)
-        self._badge_estado.setProperty("class", "badge-success")
+        self._badge_estado.setStyleSheet(
+            f"background-color: {COLOR_SUCCESS}; color: white; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; border: none;"
+        )
 
         # Mini métricas
         fila_mk = QHBoxLayout()
@@ -403,8 +405,9 @@ class _PanelDetalle(QScrollArea):
         self._layout.addSpacing(14)
         self._btn_editar = QPushButton("✏  Editar cliente")
         self._btn_editar.setStyleSheet(
-            f"background-color: {COLOR_PRIMARY}; color: white; border-radius: 6px; "
-            f"font-weight: bold; font-size: 13px; padding: 8px 16px; border: none;"
+            f"QPushButton {{ background-color: {COLOR_PRIMARY}; color: white; border-radius: 6px; "
+            f"font-weight: bold; font-size: 13px; padding: 8px 16px; border: none; }}"
+            f"QPushButton:hover {{ background-color: #1d4ed8; }}"
         )
         self._btn_editar.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_editar.setEnabled(False)
@@ -415,9 +418,10 @@ class _PanelDetalle(QScrollArea):
 
         self._btn_historial = QPushButton("📋  Ver historial completo")
         self._btn_historial.setStyleSheet(
-            f"background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; "
+            f"QPushButton {{ background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; "
             f"border: 1px solid {COLOR_BORDER}; border-radius: 6px; "
-            f"font-weight: 600; font-size: 13px; padding: 8px 16px;"
+            f"font-weight: 600; font-size: 13px; padding: 8px 16px; }}"
+            f"QPushButton:hover {{ background-color: {COLOR_BG}; }}"
         )
         self._btn_historial.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_historial.setEnabled(False)
@@ -431,7 +435,7 @@ class _PanelDetalle(QScrollArea):
     def _mini_metrica(self, label: str, valor: str) -> QFrame:
         f = QFrame()
         f.setStyleSheet(
-            f"background-color: {COLOR_BG}; border-radius: 6px; border: 1px solid {COLOR_BORDER};"
+            f"QFrame {{ background-color: {COLOR_BG}; border-radius: 6px; border: 1px solid {COLOR_BORDER}; }}"
         )
         ly = QVBoxLayout(f)
         ly.setContentsMargins(8, 6, 8, 6)
@@ -469,13 +473,13 @@ class _PanelDetalle(QScrollArea):
             f"QMenu::separator {{ height: 1px; background-color: {COLOR_BORDER}; margin: 3px 8px; }}"
         )
 
-        act_editar = QAction("✏   Editar cliente", self)
-        act_editar.triggered.connect(
-            lambda: self.editar_solicitado.emit(self._id_actual)
-        )
-
-        menu.addAction(act_editar)
-        menu.addSeparator()
+        if self._activo_actual:
+            act_editar = QAction("✏️  Editar cliente", self)
+            act_editar.triggered.connect(
+                lambda: self.editar_solicitado.emit(self._id_actual)
+            )
+            menu.addAction(act_editar)
+            menu.addSeparator()
 
         if self._activo_actual:
             act_estado = QAction("⊘   Desactivar cliente", self)
@@ -528,13 +532,14 @@ class _PanelDetalle(QScrollArea):
 
         if det["activo"]:
             self._badge_estado.setText("ACTIVO")
-            self._badge_estado.setProperty("class", "badge-success")
+            self._badge_estado.setStyleSheet(
+                f"background-color: {COLOR_SUCCESS}; color: white; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; border: none;"
+            )
         else:
             self._badge_estado.setText("INACTIVO")
-            self._badge_estado.setProperty("class", "badge-danger")
-        
-        self._badge_estado.style().unpolish(self._badge_estado)
-        self._badge_estado.style().polish(self._badge_estado)
+            self._badge_estado.setStyleSheet(
+                f"background-color: {COLOR_DANGER}; color: white; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; border: none;"
+            )
 
         # Mini métricas
         self._set_mini(self._mk_compras, str(det["total_compras"]))
@@ -565,7 +570,7 @@ class _PanelDetalle(QScrollArea):
         self._poblar_notas(conn, id_cliente)
 
         # Habilitar botones
-        self._btn_editar.setEnabled(True)
+        self._btn_editar.setEnabled(bool(det.get("activo", False)))
         self._btn_historial.setEnabled(True)
         self._btn_menu.setEnabled(True)
 
@@ -817,9 +822,7 @@ class PestanaClientes(QWidget):
                 border-bottom: 1px solid #f1f5f9;
                 padding: 4px 8px; color: {COLOR_TEXT_MAIN};
             }}
-            QTableWidget::item:selected {{
-                background-color: #ebf5ff; color: {COLOR_TEXT_MAIN};
-            }}
+            QTableWidget::item:selected {{ background-color: {COLOR_PRIMARY}; color: white; }}
             QComboBox {{
                 padding: 5px 8px; font-size: 12px;
                 border: 1px solid {COLOR_BORDER}; border-radius: 5px;
@@ -1198,6 +1201,13 @@ class PestanaClientes(QWidget):
         self._cargar_metricas()
         self._cargar_tabla()
 
+    def _notificar_cambios_globales(self):
+        vp = self.window()
+        if hasattr(vp, 'notificar_cambios'):
+            vp.notificar_cambios(["CLIENTES", "PRESUPUESTOS"])
+        else:
+            self.recargar()
+
     def _cargar_metricas(self):
         try:
             m = qc.obtener_metricas_clientes(self.conn)
@@ -1230,6 +1240,7 @@ class PestanaClientes(QWidget):
         self._total_paginas = resultado["total_paginas"]
 
         self._actualizando_tabla = True
+        self._tabla.setUpdatesEnabled(False)
         self._tabla.setRowCount(0)
         
         for datos in filas:
@@ -1259,6 +1270,7 @@ class PestanaClientes(QWidget):
                     item.setForeground(QColor(COLOR_TEXT_SEC))
                 self._tabla.setItem(row, col, item)
 
+        self._tabla.setUpdatesEnabled(True)
         self._actualizando_tabla = False
         self._actualizar_controles_paginacion(total_filas)
 
@@ -1267,6 +1279,10 @@ class PestanaClientes(QWidget):
             encontrado = self._seleccionar_por_id(self._id_cliente_seleccionado)
             if not encontrado:
                 self._stack_panel.setCurrentIndex(0)
+                self._id_cliente_seleccionado = None
+            else:
+                # Forzar recarga del panel ya que _seleccionar_por_id bloquea señales
+                self._panel_detalle.cargar(self.conn, self._id_cliente_seleccionado)
 
     def _actualizar_controles_paginacion(self, total_filas: int):
         inicio = (self._pagina_actual - 1) * self._por_pagina + 1 if total_filas > 0 else 0
@@ -1392,7 +1408,7 @@ class PestanaClientes(QWidget):
         formulario = DialogoFormularioCliente(self.conn, id_cliente=id_cliente, parent=self)
         if formulario.exec() == QDialog.DialogCode.Accepted and formulario.id_guardado is not None:
             self._id_cliente_seleccionado = id_cliente
-            self.recargar()
+            self._notificar_cambios_globales()
             # Actualizar panel lateral con nuevos datos
             self._panel_detalle.cargar(self.conn, id_cliente)
             self._stack_panel.setCurrentIndex(1)
@@ -1419,7 +1435,7 @@ class PestanaClientes(QWidget):
             if resp == QMessageBox.StandardButton.Yes:
                 qc.desactivar_cliente(self.conn, id_cliente)
                 self._id_cliente_seleccionado = id_cliente
-                self.recargar()
+                self._notificar_cambios_globales()
                 self._panel_detalle.cargar(self.conn, id_cliente)
                 self._stack_panel.setCurrentIndex(1)
         else:
@@ -1433,7 +1449,7 @@ class PestanaClientes(QWidget):
             if resp == QMessageBox.StandardButton.Yes:
                 qc.reactivar_cliente(self.conn, id_cliente)
                 self._id_cliente_seleccionado = id_cliente
-                self.recargar()
+                self._notificar_cambios_globales()
                 self._panel_detalle.cargar(self.conn, id_cliente)
                 self._stack_panel.setCurrentIndex(1)
 
@@ -1463,7 +1479,7 @@ class PestanaClientes(QWidget):
             if resp == QMessageBox.StandardButton.Yes:
                 qc.desactivar_cliente(self.conn, id_cliente)
                 self._id_cliente_seleccionado = id_cliente
-                self.recargar()
+                self._notificar_cambios_globales()
                 self._panel_detalle.cargar(self.conn, id_cliente)
                 self._stack_panel.setCurrentIndex(1)
         else:

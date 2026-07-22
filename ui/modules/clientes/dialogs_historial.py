@@ -118,7 +118,10 @@ class DialogoHistorialCliente(QDialog):
             i_est   = QTableWidgetItem(doc["estado"])
             
             for col, item in enumerate([i_fecha, i_tipo, i_num, i_tot, i_est]):
-                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                if col == 3: # i_tot
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                else:
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.tabla.setItem(row, col, item)
 
             if doc["estado"] == "CONFIRMADO" and doc["tipo"] == "VENTA":

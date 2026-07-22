@@ -968,7 +968,7 @@ class PestanaPresupuestos(QWidget):
                 border: none; border-bottom: 1px solid {COLOR_BORDER}; padding: 10px 8px;
             }}
             QTableWidget::item {{ border-bottom: 1px solid #f1f5f9; padding: 4px 8px; color: {COLOR_TEXT_MAIN}; }}
-            QTableWidget::item:selected {{ background-color: #ebf5ff; color: {COLOR_TEXT_MAIN}; }}
+            QTableWidget::item:selected {{ background-color: {COLOR_PRIMARY}; color: white; }}
         """
 
     def _construir_encabezado(self) -> QHBoxLayout:
@@ -1075,19 +1075,19 @@ class PestanaPresupuestos(QWidget):
         self._tabla.verticalHeader().setDefaultSectionSize(56)
         
         hdr = self._tabla.horizontalHeader()
-        hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-        self._tabla.setColumnWidth(0, 70)
+        hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        self._tabla.setColumnWidth(0, 90)
         hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
-        self._tabla.setColumnWidth(2, 120)
-        hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
-        self._tabla.setColumnWidth(3, 150)
-        hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
-        self._tabla.setColumnWidth(4, 130)
-        hdr.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
-        self._tabla.setColumnWidth(5, 130)
+        hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+        self._tabla.setColumnWidth(2, 130)
+        hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)
+        self._tabla.setColumnWidth(3, 160)
+        hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.Interactive)
+        self._tabla.setColumnWidth(4, 150)
+        hdr.setSectionResizeMode(5, QHeaderView.ResizeMode.Interactive)
+        self._tabla.setColumnWidth(5, 140)
         hdr.setSectionResizeMode(6, QHeaderView.ResizeMode.Fixed)
-        self._tabla.setColumnWidth(6, 90)
+        self._tabla.setColumnWidth(6, 110)
         item_acc = self._tabla.horizontalHeaderItem(6)
         if item_acc:
             item_acc.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1202,7 +1202,52 @@ class PestanaPresupuestos(QWidget):
             self._pagina_actual += 1
             self.recargar()
             
+    def _actualizar_colores_seleccion(self):
+        sel_rows = {item.row() for item in self._tabla.selectedItems()}
+        for r in range(self._tabla.rowCount()):
+            is_sel = r in sel_rows
+            
+            # Columna Validez (3)
+            w_val = self._tabla.cellWidget(r, 3)
+            if w_val:
+                lbls = w_val.findChildren(QLabel)
+                if len(lbls) >= 2:
+                    lbl_f = lbls[0]
+                    lbl_t = lbls[1]
+                    color_f = "white" if is_sel else COLOR_TEXT_SEC
+                    lbl_f.setStyleSheet(f"color: {color_f}; font-size: 11px;")
+                    
+                    # If lbl_t has no background (ANULADO/CONFIRMADO), update it too
+                    # We can check its current text or style
+                    if "background-color" not in lbl_t.styleSheet():
+                        lbl_t.setStyleSheet(f"color: {color_f}; font-weight: bold; font-size: 12px;")
+            
+            # Columna Acciones (6)
+            w_acc = self._tabla.cellWidget(r, 6)
+            if w_acc:
+                btns = w_acc.findChildren(QPushButton)
+                if btns:
+                    btn = btns[0]
+                    color_btn = "white" if is_sel else COLOR_TEXT_MAIN
+                    btn.setStyleSheet(f"""
+                        QPushButton {{
+                            background-color: transparent;
+                            border: 1px solid transparent;
+                            border-radius: 4px;
+                            font-size: 18px;
+                            font-weight: bold;
+                            color: {color_btn};
+                        }}
+                        QPushButton:hover {{
+                            background-color: {COLOR_BG};
+                            border: 1px solid {COLOR_BORDER};
+                            color: {COLOR_TEXT_MAIN};
+                        }}
+                        QPushButton::menu-indicator {{ image: none; width: 0px; }}
+                    """)
+
     def _on_seleccion_cambiada(self):
+        self._actualizar_colores_seleccion()
         sel = self._tabla.selectedItems()
         if not sel:
             self._id_seleccionado = None
@@ -1320,17 +1365,7 @@ class PestanaPresupuestos(QWidget):
         if dlg.exec() == QDialog.DialogCode.Accepted:
             try:
                 qp.anular_presupuesto(self.conn, id_documento)
-                self.recargar()
-                
-                # Intentar recargar la pestaña de stock usando una llamada segura al parent
-                try:
-                    vp = self.window()
-                    if hasattr(vp, 'pestana_stock'):
-                        vp.pestana_stock.cargar_datos()
-                    if hasattr(vp, 'actualizar_catalogos_operaciones'):
-                        vp.actualizar_catalogos_operaciones()
-                except Exception:
-                    pass
+                self._notificar_cambios_globales()
             except Exception as e:
                 # Usar QMessageBox genérico para crash de DB inesperado está bien, o uno integrado
                 QMessageBox.critical(self, "Error", f"Ocurrió un error al anular:\n{e}")
@@ -1373,16 +1408,7 @@ class PestanaPresupuestos(QWidget):
         if dlg.exec() == QDialog.DialogCode.Accepted:
             try:
                 num_venta = qp.confirmar_presupuesto(self.conn, id_documento)
-                self.recargar()
-                
-                try:
-                    vp = self.window()
-                    if hasattr(vp, 'pestana_stock'):
-                        vp.pestana_stock.cargar_datos()
-                    if hasattr(vp, 'actualizar_catalogos_operaciones'):
-                        vp.actualizar_catalogos_operaciones()
-                except Exception:
-                    pass
+                self._notificar_cambios_globales()
                 
                 # Lanzar modal de éxito usando DialogoVentaExitosa y pasando el origen extra
                 from ui.components.operacion_base import DialogoVentaExitosa
@@ -1494,6 +1520,13 @@ class PestanaPresupuestos(QWidget):
     # CARGA DE DATOS
     # ──────────────────────────────────────────────────────────────────────────
 
+    def _notificar_cambios_globales(self):
+        vp = self.window()
+        if hasattr(vp, 'notificar_cambios'):
+            vp.notificar_cambios(["PRESUPUESTOS", "STOCK"])
+        else:
+            self.recargar()
+
     def recargar(self):
         kpis = qp.obtener_kpis_presupuestos(self.conn)
         self._mk_total.set_valor(str(kpis["total"]))
@@ -1519,6 +1552,7 @@ class PestanaPresupuestos(QWidget):
         self._btn_next.setEnabled(self._pagina_actual < self._total_paginas)
         
         self._tabla.blockSignals(True)
+        self._tabla.setUpdatesEnabled(False)
         self._tabla.setRowCount(0)
         self._lista_activos.clear()
         
@@ -1640,9 +1674,12 @@ class PestanaPresupuestos(QWidget):
                 
         if id_sel_encontrado and fila_seleccionar >= 0:
             self._tabla.selectRow(fila_seleccionar)
+            # Forzar actualización del panel porque signals están bloqueadas
+            self._panel_detalle.cargar(self.conn, self._id_seleccionado)
         else:
             self._id_seleccionado = None
             self._panel_detalle.hide()
             self._panel_vacio.show()
             
+        self._tabla.setUpdatesEnabled(True)
         self._tabla.blockSignals(False)
