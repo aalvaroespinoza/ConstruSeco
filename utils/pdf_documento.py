@@ -27,23 +27,23 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
     styles = getSampleStyleSheet()
     
     # Estilos de párrafo
-    style_normal = ParagraphStyle('Normal_Custom', parent=styles['Normal'], fontName='Helvetica', fontSize=11, leading=14)
+    style_normal = ParagraphStyle('Normal_Custom', parent=styles['Normal'], fontName='Helvetica', fontSize=12, leading=16)
     style_bold = ParagraphStyle('Bold_Custom', parent=style_normal, fontName='Helvetica-Bold')
-    style_title = ParagraphStyle('Title', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=24, leading=28, textColor=colors.HexColor('#1e3a8a'), alignment=TA_RIGHT)
-    style_subtitle = ParagraphStyle('Subtitle', parent=style_normal, fontName='Helvetica-Bold', fontSize=14, textColor=colors.HexColor('#475569'), alignment=TA_RIGHT)
+    style_title = ParagraphStyle('Title', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=26, leading=30, textColor=colors.HexColor('#1e3a8a'), alignment=TA_RIGHT)
+    style_subtitle = ParagraphStyle('Subtitle', parent=style_normal, fontName='Helvetica-Bold', fontSize=15, textColor=colors.HexColor('#475569'), alignment=TA_RIGHT)
     
-    style_company_name = ParagraphStyle('CompName', parent=style_bold, fontSize=20, textColor=colors.HexColor('#1e3a8a'))
-    style_company_desc = ParagraphStyle('CompDesc', parent=style_normal, fontSize=11, textColor=colors.HexColor('#64748b'))
+    style_company_name = ParagraphStyle('CompName', parent=style_bold, fontSize=22, textColor=colors.HexColor('#1e3a8a'))
+    style_company_desc = ParagraphStyle('CompDesc', parent=style_normal, fontSize=12, textColor=colors.HexColor('#64748b'))
     
-    style_box_title = ParagraphStyle('BoxTitle', parent=style_bold, fontSize=12, textColor=colors.HexColor('#1e3a8a'), spaceAfter=6)
+    style_box_title = ParagraphStyle('BoxTitle', parent=style_bold, fontSize=13, textColor=colors.HexColor('#1e3a8a'), spaceAfter=8)
     
-    style_table_header = ParagraphStyle('TableHeader', parent=style_bold, fontSize=11, textColor=colors.white, alignment=TA_CENTER)
+    style_table_header = ParagraphStyle('TableHeader', parent=style_bold, fontSize=12, textColor=colors.white, alignment=TA_CENTER)
     style_table_header_left = ParagraphStyle('TableHeaderL', parent=style_table_header, alignment=TA_LEFT)
     style_table_header_right = ParagraphStyle('TableHeaderR', parent=style_table_header, alignment=TA_RIGHT)
     
-    style_table_cell = ParagraphStyle('TableCell', parent=style_normal, fontSize=11, alignment=TA_CENTER)
-    style_table_cell_left = ParagraphStyle('TableCellL', parent=style_normal, fontSize=11, alignment=TA_LEFT)
-    style_table_cell_right = ParagraphStyle('TableCellR', parent=style_normal, fontSize=11, alignment=TA_RIGHT)
+    style_table_cell = ParagraphStyle('TableCell', parent=style_normal, fontSize=12, alignment=TA_CENTER)
+    style_table_cell_left = ParagraphStyle('TableCellL', parent=style_normal, fontSize=12, alignment=TA_LEFT)
+    style_table_cell_right = ParagraphStyle('TableCellR', parent=style_normal, fontSize=12, alignment=TA_RIGHT)
 
     elements = []
     
@@ -113,20 +113,20 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
     
     if tipo_documento.upper() == "PRESUPUESTO":
         meta_info.append(Spacer(1, 10))
-        meta_info.append(Paragraph("<font color='#64748b' size='9'>* Validez de 48 hs desde su emisión.<br/>* Sujeto a disponibilidad de stock.</font>", style_normal))
+        meta_info.append(Paragraph("<font color='#64748b' size='10'>* Validez de 48 hs desde su emisión.<br/>* Sujeto a disponibilidad de stock.</font>", style_normal))
         
     info_table = Table([[cliente_info, meta_info]], colWidths=[10*cm, 8*cm])
     info_table.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BACKGROUND', (0,0), (0,0), colors.HexColor('#f8fafc')),
         ('BOX', (0,0), (0,0), 1, colors.HexColor('#e2e8f0')),
-        ('PADDING', (0,0), (0,0), 10),
+        ('PADDING', (0,0), (0,0), 14),
         
         ('BACKGROUND', (1,0), (1,0), colors.white),
-        ('PADDING', (1,0), (1,0), 10),
+        ('PADDING', (1,0), (1,0), 14),
     ]))
     elements.append(info_table)
-    elements.append(Spacer(1, 20))
+    elements.append(Spacer(1, 25))
     
     # 3. TABLA DE DETALLES
     headers = [
@@ -150,7 +150,7 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
         
         desc_linea = ""
         if item.get('descuento_porcentaje', 0) > 0:
-            desc_linea = f"<br/><font color='red' size='9'>Dto: {item['descuento_porcentaje']:g}%</font>"
+            desc_linea = f"<br/><font color='red' size='10'>Dto: {item['descuento_porcentaje']:g}%</font>"
             
         row = [
             Paragraph(cod, style_table_cell_left),
@@ -162,14 +162,14 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
         ]
         table_data.append(row)
         
-    t = Table(table_data, colWidths=[2.5*cm, 7.5*cm, 1.5*cm, 1.5*cm, 2.5*cm, 2.5*cm], repeatRows=1)
+    t = Table(table_data, colWidths=[2.5*cm, 7.1*cm, 1.7*cm, 1.7*cm, 2.5*cm, 2.5*cm], repeatRows=1)
     
     ts = TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1e3a8a')),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0,0), (-1,0), 8),
-        ('TOPPADDING', (0,0), (-1,0), 8),
+        ('BOTTOMPADDING', (0,0), (-1,0), 10),
+        ('TOPPADDING', (0,0), (-1,0), 10),
     ])
     
     # Zebra styling and borders
@@ -180,12 +180,12 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
             bg_color = colors.white
         ts.add('BACKGROUND', (0, i), (-1, i), bg_color)
         ts.add('LINEBELOW', (0, i), (-1, i), 1, colors.HexColor('#e2e8f0'))
-        ts.add('TOPPADDING', (0, i), (-1, i), 8)
-        ts.add('BOTTOMPADDING', (0, i), (-1, i), 8)
+        ts.add('TOPPADDING', (0, i), (-1, i), 10)
+        ts.add('BOTTOMPADDING', (0, i), (-1, i), 10)
         
     t.setStyle(ts)
     elements.append(t)
-    elements.append(Spacer(1, 20))
+    elements.append(Spacer(1, 25))
     
     # 4. TOTALES FINALES
     subtotal = det.get('subtotal_bruto', 0.0)
@@ -211,8 +211,8 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
         ])
         
     totals_data.append([
-        Paragraph("<b>TOTAL FINAL:</b>", ParagraphStyle('TotFinal', parent=style_table_cell_right, textColor=colors.white, fontSize=13)),
-        Paragraph(f"<b>$ {_fmt_moneda(total_final)}</b>", ParagraphStyle('TotFinalV', parent=style_bold, textColor=colors.white, fontSize=16, alignment=TA_RIGHT))
+        Paragraph("<b>TOTAL FINAL:</b>", ParagraphStyle('TotFinal', parent=style_table_cell_right, textColor=colors.white, fontSize=14)),
+        Paragraph(f"<b>$ {_fmt_moneda(total_final)}</b>", ParagraphStyle('TotFinalV', parent=style_bold, textColor=colors.white, fontSize=18, alignment=TA_RIGHT))
     ])
     
     totals_table = Table(totals_data, colWidths=[5*cm, 4*cm])
@@ -220,9 +220,9 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
         ('ALIGN', (0,0), (-1,-1), 'RIGHT'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (0,0), (-1,-2), 1, colors.HexColor('#e2e8f0')),
-        ('PADDING', (0,0), (-1,-2), 8),
+        ('PADDING', (0,0), (-1,-2), 10),
         ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#1e3a8a')),
-        ('PADDING', (0,-1), (-1,-1), 12),
+        ('PADDING', (0,-1), (-1,-1), 14),
     ])
     totals_table.setStyle(tts)
     
@@ -238,7 +238,7 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
         obs_table.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (0,0), colors.HexColor('#f0fdf4')),
             ('BOX', (0,0), (0,0), 1, colors.HexColor('#bbf7d0')),
-            ('PADDING', (0,0), (0,0), 10),
+            ('PADDING', (0,0), (0,0), 14),
         ]))
     else:
         obs_table = ""
@@ -255,7 +255,7 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
     # but for simplicity we can use SimpleDocTemplate's build callback.
     def add_footer(canvas, doc):
         canvas.saveState()
-        canvas.setFont('Helvetica', 9)
+        canvas.setFont('Helvetica', 10)
         canvas.setFillColor(colors.HexColor('#64748b'))
         canvas.setStrokeColor(colors.HexColor('#e2e8f0'))
         canvas.line(1.5*cm, 2*cm, 19.5*cm, 2*cm)

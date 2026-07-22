@@ -16,44 +16,9 @@ PALETA_CLARO = {
     "DANGER":    "#ef4444",
 }
 
-PALETA_OSCURO = {
-    "PRIMARY":   "#3b82f6",
-    "BG":        "#0f172a",
-    "CARD_BG":   "#1e293b",
-    "TEXT_MAIN": "#f1f5f9",
-    "TEXT_SEC":  "#94a3b8",
-    "BORDER":    "#334155",
-    "SUCCESS":   "#22c55e",
-    "WARNING":   "#f59e0b",
-    "DANGER":    "#f87171",
-}
-
-def tema_guardado() -> str:
-    """'claro' u 'oscuro', lee la preferencia persistida (default 'claro')."""
-    settings = QSettings("ConstruSeco", "ERP")
-    return settings.value("tema", "claro", type=str)
-
-def guardar_preferencia_tema(nombre: str):
-    settings = QSettings("ConstruSeco", "ERP")
-    settings.setValue("tema", nombre)
-
-def _refrescar_constantes():
-    global COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG, COLOR_TEXT_MAIN, \
-           COLOR_TEXT_SEC, COLOR_BORDER, COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER
-    p = PALETA_OSCURO if tema_guardado() == "oscuro" else PALETA_CLARO
-    COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG = p["PRIMARY"], p["BG"], p["CARD_BG"]
-    COLOR_TEXT_MAIN, COLOR_TEXT_SEC, COLOR_BORDER = p["TEXT_MAIN"], p["TEXT_SEC"], p["BORDER"]
-    COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER = p["SUCCESS"], p["WARNING"], p["DANGER"]
-
-_refrescar_constantes()
-
-def cambiar_tema(nombre: str, app):
-    """Guarda la preferencia, recalcula las constantes globales de este módulo,
-    y re-aplica el QSS global. NO reconstruye las pestañas — eso lo hace
-    VentanaPrincipal, que es quien sabe cuáles existen."""
-    guardar_preferencia_tema(nombre)
-    _refrescar_constantes()
-    aplicar_tema_claro(app)
+COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG = PALETA_CLARO["PRIMARY"], PALETA_CLARO["BG"], PALETA_CLARO["CARD_BG"]
+COLOR_TEXT_MAIN, COLOR_TEXT_SEC, COLOR_BORDER = PALETA_CLARO["TEXT_MAIN"], PALETA_CLARO["TEXT_SEC"], PALETA_CLARO["BORDER"]
+COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER = PALETA_CLARO["SUCCESS"], PALETA_CLARO["WARNING"], PALETA_CLARO["DANGER"]
 
 class UIGlobalPolisher(QObject):
     """Filtro global de eventos para asegurar uniformidad visual sin modificar todos los archivos."""

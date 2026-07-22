@@ -16,11 +16,14 @@ class BotonCerrarX(QPushButton):
         self.setStyleSheet("""
             QPushButton { 
                 border: none; 
+                font-family: "Segoe UI", Arial, sans-serif;
                 font-size: 16px; 
                 font-weight: bold; 
                 color: #94a3b8; 
                 background: transparent; 
                 border-radius: 6px; 
+                padding: 0px;
+                margin: 0px;
             }
             QPushButton:hover { 
                 background-color: #ef4444; 

@@ -52,11 +52,11 @@ class ImageSelectorWidget(QFrame):
         self.lbl_preview.setScaledContents(True)
         self.lbl_preview.hide()
         
-        self.btn_clear = QPushButton("❌")
+        self.btn_clear = QPushButton("✕")
         self.btn_clear.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_clear.setToolTip("Eliminar Imagen")
         self.btn_clear.setStyleSheet(f"""
-            QPushButton {{ background: white; border: 1px solid {COLOR_BORDER}; border-radius: 12px; font-size: 8px; color: red; }}
+            QPushButton {{ background: white; border: 1px solid {COLOR_BORDER}; border-radius: 12px; font-family: "Segoe UI", Arial, sans-serif; font-size: 12px; font-weight: bold; padding: 0px; margin: 0px; color: red; }}
         """)
         self.btn_clear.setFixedSize(24, 24)
         self.btn_clear.clicked.connect(self._clear_image)

@@ -54,74 +54,117 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
 
     def init_ui(self):
         main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(32, 32, 32, 32)
+        main_layout.setSpacing(24)
         
-        # Imagen
-        img_layout = QHBoxLayout()
-        img_layout.addStretch()
+        # Contenedor central dividido (Imagen | Formulario)
+        center_layout = QHBoxLayout()
+        center_layout.setSpacing(32)
+        
+        # --- PANEL IZQUIERDO: Imagen ---
+        left_panel = QVBoxLayout()
+        left_panel.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
         self.img_selector = ImageSelectorWidget()
-        img_layout.addWidget(self.img_selector)
-        img_layout.addStretch()
-        main_layout.addLayout(img_layout)
+        left_panel.addWidget(self.img_selector, alignment=Qt.AlignmentFlag.AlignHCenter)
         
-        # Formulario
+        # Panel informativo
+        self.lbl_existente_info = QLabel("Ingrese un código para verificar si el producto ya existe. Si existe, podrá sumarle stock.")
+        self.lbl_existente_info.setWordWrap(True)
+        self.lbl_existente_info.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 11px; margin-top: 16px; background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px; padding: 12px;")
+        left_panel.addWidget(self.lbl_existente_info)
+        
+        center_layout.addLayout(left_panel)
+        
+        # --- PANEL DERECHO: Formulario ---
+        right_panel = QVBoxLayout()
+        right_panel.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
         self.form = QFormLayout()
+        self.form.setVerticalSpacing(16)
+        
+        style_input = f"""
+            QLineEdit, QComboBox {{
+                padding: 10px;
+                border: 1px solid {COLOR_BORDER};
+                border-radius: 6px;
+                background-color: {COLOR_BG};
+                font-size: 13px;
+                color: {COLOR_TEXT_MAIN};
+            }}
+            QLineEdit:focus, QComboBox:focus {{ border: 1px solid {COLOR_PRIMARY}; }}
+            QComboBox::drop-down {{ border: none; }}
+            QComboBox::down-arrow {{ image: none; }}
+        """
+        style_label = f"font-weight: bold; color: {COLOR_TEXT_SEC}; font-size: 12px;"
         
         self.inp_codigo = SelectAllLineEdit()
+        self.inp_codigo.setStyleSheet(style_input)
+        
         self.inp_desc = SelectAllLineEdit()
+        self.inp_desc.setStyleSheet(style_input)
         
         self.cmb_unidad = QComboBox()
+        self.cmb_unidad.setStyleSheet(style_input)
         for v, l in UNIDADES_PERMITIDAS:
             self.cmb_unidad.addItem(l, userData=v)
             
         self.inp_precio = SelectAllLineEdit("0.0")
+        self.inp_precio.setStyleSheet(style_input)
+        
         self.inp_stock_ini = SelectAllLineEdit("0.0")
+        self.inp_stock_ini.setStyleSheet(style_input)
         
-        self.err_codigo = QLabel()
-        self.err_codigo.setStyleSheet("color: red; font-size: 11px;")
-        self.err_codigo.hide()
-        
-        self.err_desc = QLabel()
-        self.err_desc.setStyleSheet("color: red; font-size: 11px;")
-        self.err_desc.hide()
-        
-        self.err_precio = QLabel()
-        self.err_precio.setStyleSheet("color: red; font-size: 11px;")
-        self.err_precio.hide()
-        
-        self.err_stock = QLabel()
-        self.err_stock.setStyleSheet("color: red; font-size: 11px;")
-        self.err_stock.hide()
+        self.err_codigo = QLabel(); self.err_codigo.setStyleSheet("color: #ef4444; font-size: 11px;"); self.err_codigo.hide()
+        self.err_desc = QLabel(); self.err_desc.setStyleSheet("color: #ef4444; font-size: 11px;"); self.err_desc.hide()
+        self.err_precio = QLabel(); self.err_precio.setStyleSheet("color: #ef4444; font-size: 11px;"); self.err_precio.hide()
+        self.err_stock = QLabel(); self.err_stock.setStyleSheet("color: #ef4444; font-size: 11px;"); self.err_stock.hide()
         
         def add_validated_row(titulo, widget, err_lbl):
             ly = QVBoxLayout()
             ly.setContentsMargins(0,0,0,0)
-            ly.setSpacing(2)
+            ly.setSpacing(4)
             ly.addWidget(widget)
             ly.addWidget(err_lbl)
-            self.form.addRow(titulo, ly)
-            widget.textChanged.connect(lambda: (widget.setStyleSheet(""), err_lbl.hide()))
+            lbl = QLabel(titulo)
+            lbl.setStyleSheet(style_label)
+            self.form.addRow(lbl, ly)
+            widget.textChanged.connect(lambda: (widget.setStyleSheet(style_input), err_lbl.hide()))
         
         add_validated_row("Código (*):", self.inp_codigo, self.err_codigo)
         add_validated_row("Nombre o Producto (*):", self.inp_desc, self.err_desc)
-        self.form.addRow("Unidad:", self.cmb_unidad)
+        
+        lbl_uni = QLabel("Unidad:")
+        lbl_uni.setStyleSheet(style_label)
+        self.form.addRow(lbl_uni, self.cmb_unidad)
+        
         add_validated_row("Precio Venta ($):", self.inp_precio, self.err_precio)
         
         self.lbl_lbl_stock = QLabel("Cantidad (Agregar Stock):")
+        self.lbl_lbl_stock.setStyleSheet(style_label)
         ly_stk = QVBoxLayout()
         ly_stk.setContentsMargins(0,0,0,0)
-        ly_stk.setSpacing(2)
+        ly_stk.setSpacing(4)
         ly_stk.addWidget(self.inp_stock_ini)
         ly_stk.addWidget(self.err_stock)
         self.form.addRow(self.lbl_lbl_stock, ly_stk)
-        self.inp_stock_ini.textChanged.connect(lambda: (self.inp_stock_ini.setStyleSheet(""), self.err_stock.hide()))
+        self.inp_stock_ini.textChanged.connect(lambda: (self.inp_stock_ini.setStyleSheet(style_input), self.err_stock.hide()))
         
-        main_layout.addLayout(self.form)
+        right_panel.addLayout(self.form)
+        center_layout.addLayout(right_panel)
         
+        main_layout.addLayout(center_layout)
+        
+        # --- BOTONES ---
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
         self.btn_guardar = QPushButton("Guardar Producto")
         self.btn_guardar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_guardar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 4px; font-weight: bold;")
+        self.btn_guardar.setStyleSheet(f"QPushButton {{ background-color: {COLOR_PRIMARY}; color: white; padding: 10px 24px; border-radius: 6px; font-weight: bold; border: none; }} QPushButton:hover {{ background-color: #1d4ed8; }}")
         self.btn_guardar.clicked.connect(self.guardar)
-        main_layout.addWidget(self.btn_guardar)
+        btn_layout.addWidget(self.btn_guardar)
+        
+        main_layout.addLayout(btn_layout)
         
         self.inp_codigo.textChanged.connect(self._verificar_codigo)
 
@@ -274,46 +317,93 @@ class DialogoEditarProducto(DialogoModalIntegrado):
 
     def init_ui(self):
         main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(32, 32, 32, 32)
+        main_layout.setSpacing(24)
         
-        # Recuperar imagen actual
+        # Contenedor central dividido (Imagen | Formulario)
+        center_layout = QHBoxLayout()
+        center_layout.setSpacing(32)
+        
+        # --- PANEL IZQUIERDO: Imagen e Info ---
+        left_panel = QVBoxLayout()
+        left_panel.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
         img_path = obtener_imagen_path(self.conn, self.p_data['codigo'])
-        
-        # Imagen
-        img_layout = QHBoxLayout()
-        img_layout.addStretch()
         self.img_selector = ImageSelectorWidget(current_image_path=img_path)
-        img_layout.addWidget(self.img_selector)
-        img_layout.addStretch()
-        main_layout.addLayout(img_layout)
+        left_panel.addWidget(self.img_selector, alignment=Qt.AlignmentFlag.AlignHCenter)
         
-        # Formulario
+        lbl_info = QLabel(
+            f"<div style='text-align: center;'>"
+            f"<span style='color: {COLOR_TEXT_SEC}; font-size: 11px; text-transform: uppercase;'>Stock Físico</span><br>"
+            f"<span style='font-size: 16px; font-weight: bold; color: {COLOR_TEXT_MAIN};'>{self.p_data.get('stock_fisico',0):g} {self.p_data['unidad_base']}</span><br><br>"
+            f"<span style='color: {COLOR_TEXT_SEC}; font-size: 11px; text-transform: uppercase;'>ATP</span><br>"
+            f"<span style='font-size: 16px; font-weight: bold; color: {COLOR_TEXT_MAIN};'>{self.p_data.get('atp',0):g} {self.p_data['unidad_base']}</span>"
+            f"</div>"
+        )
+        lbl_info.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px; padding: 16px; margin-top: 16px;")
+        left_panel.addWidget(lbl_info)
+        
+        center_layout.addLayout(left_panel)
+        
+        # --- PANEL DERECHO: Formulario ---
+        right_panel = QVBoxLayout()
+        right_panel.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
         form = QFormLayout()
+        form.setVerticalSpacing(16)
         
-        self.inp_desc = QLineEdit(self.p_data['descripcion'])
-        self.inp_precio = QLineEdit(str(self.p_data['precio_venta']))
-        self.inp_stock_min = QLineEdit(str(self.p_data.get('stock_minimo', 0)))
+        style_input = f"""
+            QLineEdit {{
+                padding: 10px;
+                border: 1px solid {COLOR_BORDER};
+                border-radius: 6px;
+                background-color: {COLOR_BG};
+                font-size: 13px;
+                color: {COLOR_TEXT_MAIN};
+            }}
+            QLineEdit:focus {{ border: 1px solid {COLOR_PRIMARY}; }}
+        """
+        style_label = f"font-weight: bold; color: {COLOR_TEXT_SEC}; font-size: 12px;"
         
-        form.addRow("Descripción (*):", self.inp_desc)
-        form.addRow("Precio Venta ($):", self.inp_precio)
-        form.addRow("Stock Mínimo:", self.inp_stock_min)
+        self.inp_desc = SelectAllLineEdit(self.p_data['descripcion'])
+        self.inp_desc.setStyleSheet(style_input)
         
-        # Solo mostrar info (físico y ATP no se editan acá)
-        lbl_info = QLabel(f"<b>Stock Físico:</b> {self.p_data.get('stock_fisico',0):g} {self.p_data['unidad_base']} <br>"
-                          f"<b>ATP:</b> {self.p_data.get('atp',0):g} {self.p_data['unidad_base']}")
-        lbl_info.setStyleSheet("color: #64748b; margin-top: 10px;")
-        form.addRow(lbl_info)
+        self.inp_precio = SelectAllLineEdit(str(self.p_data['precio_venta']))
+        self.inp_precio.setStyleSheet(style_input)
         
-        main_layout.addLayout(form)
+        self.inp_stock_min = SelectAllLineEdit(str(self.p_data.get('stock_minimo', 0)))
+        self.inp_stock_min.setStyleSheet(style_input)
         
+        lbl_desc = QLabel("Descripción (*):")
+        lbl_desc.setStyleSheet(style_label)
+        form.addRow(lbl_desc, self.inp_desc)
+        
+        lbl_precio = QLabel("Precio Venta ($):")
+        lbl_precio.setStyleSheet(style_label)
+        form.addRow(lbl_precio, self.inp_precio)
+        
+        lbl_smin = QLabel("Stock Mínimo:")
+        lbl_smin.setStyleSheet(style_label)
+        form.addRow(lbl_smin, self.inp_stock_min)
+        
+        right_panel.addLayout(form)
+        center_layout.addLayout(right_panel)
+        
+        main_layout.addLayout(center_layout)
+        
+        # --- BOTONES ---
         btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(12)
+        btn_layout.addStretch()
+        
         self.btn_eliminar = QPushButton("Eliminar producto")
         self.btn_eliminar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_eliminar.setStyleSheet(f"background-color: {COLOR_DANGER}; color: white; padding: 10px; border-radius: 4px; font-weight: bold;")
+        self.btn_eliminar.setStyleSheet(f"QPushButton {{ background-color: transparent; color: {COLOR_DANGER}; padding: 10px 20px; border-radius: 6px; font-weight: bold; border: 1px solid {COLOR_DANGER}; }} QPushButton:hover {{ background-color: #fef2f2; }}")
         self.btn_eliminar.clicked.connect(self.eliminar_producto)
         
         self.btn_guardar = QPushButton("Guardar Cambios")
         self.btn_guardar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_guardar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 4px; font-weight: bold;")
+        self.btn_guardar.setStyleSheet(f"QPushButton {{ background-color: {COLOR_PRIMARY}; color: white; padding: 10px 20px; border-radius: 6px; font-weight: bold; border: none; }} QPushButton:hover {{ background-color: #1d4ed8; }}")
         self.btn_guardar.clicked.connect(self.guardar)
         
         btn_layout.addWidget(self.btn_eliminar)
@@ -385,20 +475,33 @@ class DialogoStockMinimo(DialogoModalIntegrado):
         self.setMinimumWidth(300)
         
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(32, 32, 32, 32)
+        layout.setSpacing(24)
         
         lbl = QLabel(f"Producto: <b>{producto_data['descripcion']}</b>")
+        lbl.setStyleSheet(f"font-size: 15px; color: {COLOR_TEXT_MAIN};")
         layout.addWidget(lbl)
         
         form = QFormLayout()
-        self.inp_min = QLineEdit(str(producto_data.get('stock_minimo', 0)))
-        form.addRow("Alerta en Stock <= a:", self.inp_min)
+        form.setVerticalSpacing(16)
+        
+        self.inp_min = SelectAllLineEdit(str(producto_data.get('stock_minimo', 0)))
+        self.inp_min.setStyleSheet(f"padding: 10px; border: 1px solid {COLOR_BORDER}; border-radius: 6px; background-color: {COLOR_BG}; font-size: 13px; color: {COLOR_TEXT_MAIN};")
+        
+        lbl_alerta = QLabel("Alerta en Stock <= a:")
+        lbl_alerta.setStyleSheet(f"font-weight: bold; color: {COLOR_TEXT_SEC}; font-size: 12px;")
+        
+        form.addRow(lbl_alerta, self.inp_min)
         layout.addLayout(form)
         
-        btn = QPushButton("Guardar")
+        btn_ly = QHBoxLayout()
+        btn_ly.addStretch()
+        btn = QPushButton("Guardar Configuración")
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 4px; font-weight: bold;")
+        btn.setStyleSheet(f"QPushButton {{ background-color: {COLOR_PRIMARY}; color: white; padding: 10px 24px; border-radius: 6px; font-weight: bold; border: none; }} QPushButton:hover {{ background-color: #1d4ed8; }}")
         btn.clicked.connect(self.guardar)
-        layout.addWidget(btn)
+        btn_ly.addWidget(btn)
+        layout.addLayout(btn_ly)
         
     def guardar(self):
         try:
@@ -419,149 +522,227 @@ class DialogoStockMinimo(DialogoModalIntegrado):
 # DIÁLOGOS DE MOVIMIENTOS E INVENTARIO
 # =====================================================================
 
-class DialogoEntradaStock(DialogoModalIntegrado):
-    def __init__(self, conexion_db, producto_data, parent=None):
-        super().__init__(parent)
-        self.conn = conexion_db
-        self.p_data = producto_data
-        self.setWindowTitle(f"Entrada de Stock: {producto_data['codigo']}")
-        self.setMinimumWidth(350)
-        self.init_ui()
-
-    def init_ui(self):
-        layout = QVBoxLayout(self)
-        
-        lbl = QLabel(f"<b>{self.p_data['descripcion']}</b>")
-        lbl.setStyleSheet("font-size: 14px;")
-        layout.addWidget(lbl)
-        
-        layout.addWidget(QLabel(f"Stock Físico Actual: {self.p_data['stock_fisico']:g} {self.p_data['unidad_base']}"))
-        
-        form = QFormLayout()
-        self.inp_cant = QLineEdit("0.0")
-        self.inp_notas = QLineEdit()
-        self.inp_notas.setPlaceholderText("Remito, proveedor, motivo...")
-        
-        form.addRow(f"Cantidad a Ingresar ({self.p_data['unidad_base']}):", self.inp_cant)
-        form.addRow("Observaciones:", self.inp_notas)
-        
-        layout.addLayout(form)
-        
-        self.btn_confirmar = QPushButton("Confirmar Entrada")
-        self.btn_confirmar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_confirmar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px;")
-        self.btn_confirmar.clicked.connect(self.guardar)
-        layout.addWidget(self.btn_confirmar)
-
-    def guardar(self):
-        try:
-            cant = float(self.inp_cant.text().replace(',', '.'))
-            if cant <= 0: raise ValueError
-        except ValueError:
-            QMessageBox.warning(self, "Error", "La cantidad debe ser un número mayor a 0.")
-            return
-            
-        notas = self.inp_notas.text().strip()
-        cod = self.p_data['codigo']
-        
-        try:
-            registrar_ingreso_manual(self.conn, cod, cant, notas)
-            QMessageBox.information(self, "Éxito", "Entrada registrada correctamente.")
-            self.accept()
-        except Exception as e:
-            QMessageBox.critical(self, "Error", str(e))
-
-
-class DialogoAjusteInventario(DialogoModalIntegrado):
-    """
-    Ajuste ciego o inventariado. El usuario ingresa cuánto HAY realmente,
-    el sistema calcula la diferencia y genera el movimiento para igualar.
-    """
+class DialogoModificarStock(DialogoModalIntegrado):
     def __init__(self, conexion_db, producto_data, parent=None):
         super().__init__(parent)
         self.conn = conexion_db
         self.p_data = producto_data
         self.fisico_actual = float(self.p_data['stock_fisico'])
-        self.setWindowTitle(f"Ajuste de Inventario: {producto_data['codigo']}")
-        self.setMinimumWidth(380)
+        self.setWindowTitle(f"Modificar Stock: {producto_data['codigo']}")
+        self.setMinimumWidth(400)
         self.init_ui()
 
     def init_ui(self):
+        from PyQt6.QtWidgets import QRadioButton, QButtonGroup, QStackedWidget, QWidget
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(32, 32, 32, 32)
+        layout.setSpacing(24)
         
-        lbl = QLabel(f"<b>{self.p_data['descripcion']}</b>")
-        layout.addWidget(lbl)
+        # Header Info
+        header_ly = QHBoxLayout()
+        header_ly.setSpacing(16)
         
-        self.lbl_actual = QLabel(f"Físico en sistema: {self.fisico_actual:g} {self.p_data['unidad_base']}")
-        self.lbl_actual.setStyleSheet("color: #64748b; font-size: 13px; margin-bottom: 10px;")
-        layout.addWidget(self.lbl_actual)
+        lbl_img = QLabel()
+        lbl_img.setFixedSize(48, 48)
+        lbl_img.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border-radius: 24px; border: 1px solid {COLOR_BORDER}; font-size: 20px;")
+        lbl_img.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_img.setText("📦")
+        header_ly.addWidget(lbl_img)
         
-        form = QFormLayout()
+        info_ly = QVBoxLayout()
+        info_ly.setSpacing(4)
+        lbl_desc = QLabel(self.p_data['descripcion'])
+        lbl_desc.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {COLOR_TEXT_MAIN};")
+        self.lbl_actual = QLabel(f"Stock Físico Actual: <b>{self.fisico_actual:g} {self.p_data['unidad_base']}</b>")
+        self.lbl_actual.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 13px;")
+        info_ly.addWidget(lbl_desc)
+        info_ly.addWidget(self.lbl_actual)
         
-        self.inp_real = QLineEdit()
-        self.inp_real.setPlaceholderText("Ej: 15.5")
-        self.inp_real.textChanged.connect(self.calcular_diferencia)
+        header_ly.addLayout(info_ly)
+        header_ly.addStretch()
+        layout.addLayout(header_ly)
         
-        self.lbl_diff = QLabel("Diferencia: 0.0")
-        self.lbl_diff.setStyleSheet("font-weight: bold;")
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet(f"color: {COLOR_BORDER}; margin: 8px 0;")
+        layout.addWidget(sep)
         
-        self.inp_motivo = QLineEdit()
-        self.inp_motivo.setPlaceholderText("Rotura, pérdida, recuento, etc.")
+        # Radio buttons con estilo
+        op_layout = QVBoxLayout()
+        op_layout.setSpacing(12)
         
-        form.addRow("Stock Físico Real (Contado):", self.inp_real)
-        form.addRow("", self.lbl_diff)
-        form.addRow("Motivo del Ajuste (*):", self.inp_motivo)
+        self.grupo_op = QButtonGroup(self)
         
-        layout.addLayout(form)
+        style_radio = f"""
+            QRadioButton {{ font-size: 13px; font-weight: bold; color: {COLOR_TEXT_MAIN}; }}
+        """
         
-        self.btn_confirmar = QPushButton("Aplicar Ajuste")
+        self.radio_entrada = QRadioButton(" Entrada de Stock")
+        self.radio_entrada.setStyleSheet(style_radio)
+        self.radio_ajuste = QRadioButton(" Ajuste de Inventario")
+        self.radio_ajuste.setStyleSheet(style_radio)
+        self.radio_entrada.setChecked(True)
+        
+        self.grupo_op.addButton(self.radio_entrada, 0)
+        self.grupo_op.addButton(self.radio_ajuste, 1)
+        
+        lbl_info_entrada = QLabel("Suma una cantidad al stock actual (Ej: Ingreso de mercadería)")
+        lbl_info_entrada.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 12px; margin-left: 28px;")
+        
+        lbl_info_ajuste = QLabel("Reemplaza el stock actual por un nuevo valor contado (Ej: Recuento)")
+        lbl_info_ajuste.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 12px; margin-left: 28px;")
+        
+        op_layout.addWidget(self.radio_entrada)
+        op_layout.addWidget(lbl_info_entrada)
+        op_layout.addWidget(self.radio_ajuste)
+        op_layout.addWidget(lbl_info_ajuste)
+        
+        layout.addLayout(op_layout)
+        
+        # Contenedor de formulario
+        self.stack = QStackedWidget()
+        self.stack.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
+        
+        style_input = f"""
+            QLineEdit {{ padding: 10px; border: 1px solid {COLOR_BORDER}; border-radius: 6px; background-color: {COLOR_BG}; font-size: 13px; color: {COLOR_TEXT_MAIN}; }}
+            QLineEdit:focus {{ border: 1px solid {COLOR_PRIMARY}; }}
+        """
+        style_label = f"font-weight: bold; color: {COLOR_TEXT_SEC}; font-size: 12px;"
+        
+        # WIDGET ENTRADA
+        self.wdg_entrada = QWidget()
+        form_entrada = QFormLayout(self.wdg_entrada)
+        form_entrada.setContentsMargins(20, 20, 20, 20)
+        form_entrada.setVerticalSpacing(16)
+        
+        self.inp_cant_entrada = SelectAllLineEdit("0.0")
+        self.inp_cant_entrada.setStyleSheet(style_input)
+        self.inp_notas_entrada = SelectAllLineEdit()
+        self.inp_notas_entrada.setPlaceholderText("Remito, proveedor, motivo...")
+        self.inp_notas_entrada.setStyleSheet(style_input)
+        
+        lbl_cant_ent = QLabel(f"Cantidad a Ingresar ({self.p_data['unidad_base']}):")
+        lbl_cant_ent.setStyleSheet(style_label)
+        lbl_obs_ent = QLabel("Observaciones:")
+        lbl_obs_ent.setStyleSheet(style_label)
+        
+        form_entrada.addRow(lbl_cant_ent, self.inp_cant_entrada)
+        form_entrada.addRow(lbl_obs_ent, self.inp_notas_entrada)
+        
+        # WIDGET AJUSTE
+        self.wdg_ajuste = QWidget()
+        form_ajuste = QFormLayout(self.wdg_ajuste)
+        form_ajuste.setContentsMargins(20, 20, 20, 20)
+        form_ajuste.setVerticalSpacing(16)
+        
+        self.inp_real_ajuste = SelectAllLineEdit()
+        self.inp_real_ajuste.setPlaceholderText("Ej: 15.5")
+        self.inp_real_ajuste.setStyleSheet(style_input)
+        self.inp_real_ajuste.textChanged.connect(self.calcular_diferencia_ajuste)
+        
+        self.lbl_diff_ajuste = QLabel("Diferencia: 0.0")
+        self.lbl_diff_ajuste.setStyleSheet("font-weight: bold; font-size: 13px; padding: 8px;")
+        
+        self.inp_motivo_ajuste = SelectAllLineEdit()
+        self.inp_motivo_ajuste.setPlaceholderText("Rotura, pérdida, recuento, etc.")
+        self.inp_motivo_ajuste.setStyleSheet(style_input)
+        
+        lbl_real_aju = QLabel("Stock Físico Real (Contado):")
+        lbl_real_aju.setStyleSheet(style_label)
+        lbl_mot_aju = QLabel("Motivo del Ajuste (*):")
+        lbl_mot_aju.setStyleSheet(style_label)
+        
+        form_ajuste.addRow(lbl_real_aju, self.inp_real_ajuste)
+        form_ajuste.addRow("", self.lbl_diff_ajuste)
+        form_ajuste.addRow(lbl_mot_aju, self.inp_motivo_ajuste)
+        
+        self.stack.addWidget(self.wdg_entrada)
+        self.stack.addWidget(self.wdg_ajuste)
+        layout.addWidget(self.stack)
+        
+        self.grupo_op.idToggled.connect(self.cambiar_operacion)
+        
+        btn_ly = QHBoxLayout()
+        btn_ly.addStretch()
+        self.btn_confirmar = QPushButton("Confirmar Operación")
         self.btn_confirmar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_confirmar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px;")
+        self.btn_confirmar.setStyleSheet(f"QPushButton {{ background-color: {COLOR_PRIMARY}; color: white; padding: 10px 24px; font-weight: bold; border-radius: 6px; border: none; }} QPushButton:hover {{ background-color: #1d4ed8; }}")
         self.btn_confirmar.clicked.connect(self.guardar)
-        layout.addWidget(self.btn_confirmar)
+        btn_ly.addWidget(self.btn_confirmar)
+        
+        layout.addLayout(btn_ly)
         
         self.diferencia = 0.0
+        self.cambiar_operacion()
 
-    def calcular_diferencia(self):
-        txt = self.inp_real.text().replace(',', '.')
+    def cambiar_operacion(self):
+        op_id = self.grupo_op.checkedId()
+        self.stack.setCurrentIndex(op_id)
+        if op_id == 0:
+            self.btn_confirmar.setText("Confirmar Entrada")
+        else:
+            self.btn_confirmar.setText("Aplicar Ajuste")
+
+    def calcular_diferencia_ajuste(self):
+        txt = self.inp_real_ajuste.text().replace(',', '.')
         try:
             real = float(txt)
             self.diferencia = real - self.fisico_actual
             if self.diferencia > 0:
-                self.lbl_diff.setText(f"Diferencia: +{self.diferencia:g} (Se creará ENTRADA)")
-                self.lbl_diff.setStyleSheet("color: #10b981; font-weight: bold;")
+                self.lbl_diff_ajuste.setText(f"Diferencia: +{self.diferencia:g} (Se creará ENTRADA)")
+                self.lbl_diff_ajuste.setStyleSheet("color: #10b981; font-weight: bold;")
             elif self.diferencia < 0:
-                self.lbl_diff.setText(f"Diferencia: {self.diferencia:g} (Se creará SALIDA)")
-                self.lbl_diff.setStyleSheet("color: #ef4444; font-weight: bold;")
+                self.lbl_diff_ajuste.setText(f"Diferencia: {self.diferencia:g} (Se creará SALIDA)")
+                self.lbl_diff_ajuste.setStyleSheet("color: #ef4444; font-weight: bold;")
             else:
-                self.lbl_diff.setText("Diferencia: 0 (No hay ajuste)")
-                self.lbl_diff.setStyleSheet("color: #64748b; font-weight: bold;")
+                self.lbl_diff_ajuste.setText("Diferencia: 0 (No hay ajuste)")
+                self.lbl_diff_ajuste.setStyleSheet("color: #64748b; font-weight: bold;")
         except:
             self.diferencia = 0.0
-            self.lbl_diff.setText("Diferencia: --")
-            self.lbl_diff.setStyleSheet("color: #64748b;")
+            self.lbl_diff_ajuste.setText("Diferencia: --")
+            self.lbl_diff_ajuste.setStyleSheet("color: #64748b;")
 
     def guardar(self):
-        motivo = self.inp_motivo.text().strip()
-        if not motivo:
-            QMessageBox.warning(self, "Error", "El motivo del ajuste es obligatorio para la trazabilidad.")
-            return
-            
-        if abs(self.diferencia) < 0.001:
-            QMessageBox.information(self, "Aviso", "No hay diferencia que ajustar.")
-            self.accept()
-            return
-            
         cod = self.p_data['codigo']
-        tipo_mov = 'ENTRADA' if self.diferencia > 0 else 'SALIDA'
-        cant_absoluta = abs(self.diferencia)
+        op_id = self.grupo_op.checkedId()
         
-        try:
-            registrar_ajuste_inventario(self.conn, cod, self.diferencia, motivo)
-            QMessageBox.information(self, "Éxito", f"Inventario ajustado. {tipo_mov} de {cant_absoluta:g} aplicada.")
-            self.accept()
-        except Exception as e:
-            QMessageBox.critical(self, "Error", str(e))
+        if op_id == 0:
+            try:
+                cant = float(self.inp_cant_entrada.text().replace(',', '.'))
+                if cant <= 0: raise ValueError
+            except ValueError:
+                QMessageBox.warning(self, "Error", "La cantidad debe ser un número mayor a 0.")
+                return
+                
+            notas = self.inp_notas_entrada.text().strip()
+            
+            try:
+                registrar_ingreso_manual(self.conn, cod, cant, notas)
+                QMessageBox.information(self, "Éxito", "Entrada registrada correctamente.")
+                self.accept()
+            except Exception as e:
+                QMessageBox.critical(self, "Error", str(e))
+                
+        else:
+            motivo = self.inp_motivo_ajuste.text().strip()
+            if not motivo:
+                QMessageBox.warning(self, "Error", "El motivo del ajuste es obligatorio para la trazabilidad.")
+                return
+                
+            if abs(self.diferencia) < 0.001:
+                QMessageBox.information(self, "Aviso", "No hay diferencia que ajustar.")
+                self.accept()
+                return
+                
+            tipo_mov = 'ENTRADA' if self.diferencia > 0 else 'SALIDA'
+            cant_absoluta = abs(self.diferencia)
+            
+            try:
+                registrar_ajuste_inventario(self.conn, cod, self.diferencia, motivo)
+                QMessageBox.information(self, "Éxito", f"Inventario ajustado. {tipo_mov} de {cant_absoluta:g} aplicada.")
+                self.accept()
+            except Exception as e:
+                QMessageBox.critical(self, "Error", str(e))
 
 class DialogoAlertasInventario(DialogoModalIntegrado):
     def __init__(self, datos_catalogo, callback_seleccionar, parent=None):
@@ -578,6 +759,8 @@ class DialogoAlertasInventario(DialogoModalIntegrado):
         from PyQt6.QtGui import QColor, QFont
         
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
         
         lbl_info = QLabel("Productos que requieren atención inmediata:")
         lbl_info.setStyleSheet("font-weight: bold; font-size: 14px;")
@@ -589,7 +772,26 @@ class DialogoAlertasInventario(DialogoModalIntegrado):
         self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.tabla.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tabla.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.tabla.setStyleSheet(f"QTableWidget {{ border: 1px solid {COLOR_BORDER}; border-radius: 6px; font-size: 13px; }}")
+        self.tabla.setStyleSheet(f"""
+            QTableWidget {{
+                border: 1px solid {COLOR_BORDER}; border-radius: 8px;
+                gridline-color: {COLOR_BORDER};
+                background-color: {COLOR_CARD_BG}; outline: none; font-size: 13px;
+                color: {COLOR_TEXT_MAIN};
+            }}
+            QHeaderView::section {{
+                background-color: {COLOR_BG}; color: {COLOR_TEXT_SEC};
+                font-weight: 700; font-size: 12px;
+                border: none; border-bottom: 1px solid {COLOR_BORDER}; padding: 10px 8px;
+            }}
+            QTableWidget::item {{
+                border-bottom: 1px solid #f1f5f9;
+                padding: 4px 8px;
+            }}
+            QTableWidget::item:selected {{
+                background-color: #ebf5ff;
+            }}
+        """)
         self.tabla.itemDoubleClicked.connect(self.on_item_clicked)
         
         layout.addWidget(self.tabla)
@@ -678,22 +880,24 @@ class VistaDetalleProducto(QFrame):
         self.card.setStyleSheet(f"""
             QFrame#vista_detalle_card {{
                 background-color: white;
-                border-radius: 12px;
+                border-radius: 16px;
                 border: 1px solid {COLOR_BORDER};
             }}
         """)
-        self.card.setFixedWidth(420)
+        self.card.setFixedWidth(520)
         
         card_layout = QVBoxLayout(self.card)
-        card_layout.setContentsMargins(24, 20, 24, 24)
-        card_layout.setSpacing(12)
+        card_layout.setContentsMargins(32, 32, 32, 32)
+        card_layout.setSpacing(24)
         
         # Header (Close button)
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(0, 0, 0, 0)
-        lbl_titulo = QLabel("Detalles del Producto")
-        lbl_titulo.setStyleSheet(f"font-size: 16px; font-weight: 800; color: {COLOR_TEXT_MAIN};")
-        header_layout.addWidget(lbl_titulo)
+        
+        lbl_title = QLabel("Detalle del Producto")
+        lbl_title.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {COLOR_TEXT_MAIN};")
+        header_layout.addWidget(lbl_title)
+        
         header_layout.addStretch()
         
         from ui.components.boton_x import BotonCerrarX
@@ -701,11 +905,17 @@ class VistaDetalleProducto(QFrame):
         btn_close.clicked.connect(self.cerrar)
         header_layout.addWidget(btn_close)
         
-        # Image
+        card_layout.addLayout(header_layout)
+        
+        # --- PERFIL DEL PRODUCTO ---
+        profile_layout = QHBoxLayout()
+        profile_layout.setSpacing(24)
+        
+        # Imagen
         img_label = QLabel()
         img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        img_label.setFixedSize(160, 160)
-        img_label.setStyleSheet("background-color: #F8FAFC; border-radius: 8px; border: 1px dashed #CBD5E1;")
+        img_label.setFixedSize(140, 140)
+        img_label.setStyleSheet(f"background-color: {COLOR_BG}; border-radius: 16px; border: 1px solid {COLOR_BORDER};")
         
         has_image = False
         img_path = producto.get('imagen_path')
@@ -714,69 +924,113 @@ class VistaDetalleProducto(QFrame):
         if p_res:
             pix = QPixmap(str(p_res))
             if not pix.isNull():
-                img_label.setPixmap(pix.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                img_label.setPixmap(pix.scaled(140, 140, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
                 img_label.setStyleSheet("background-color: transparent; border: none;")
                 has_image = True
                 
         if not has_image:
-            img_label.setText("📦\nSin imagen")
-            img_label.setStyleSheet("background-color: #F8FAFC; border-radius: 8px; border: 1px dashed #CBD5E1; color: #94A3B8; font-size: 18px;")
-        
-        img_layout = QHBoxLayout()
-        img_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        img_layout.addWidget(img_label)
-        
-        # Details
-        det_layout = QFormLayout()
-        det_layout.setSpacing(10)
-        det_layout.setContentsMargins(10, 10, 10, 10)
-        
-        def add_row(label, value, bold=False, color="#1e293b"):
-            lbl_key = QLabel(label)
-            lbl_key.setStyleSheet("color: #64748B; font-size: 13px; font-weight: 500;")
-            lbl_val = QLabel(str(value))
-            weight = "800" if bold else "normal"
-            lbl_val.setStyleSheet(f"color: {color}; font-size: 13px; font-weight: {weight};")
-            lbl_val.setWordWrap(True)
-            det_layout.addRow(lbl_key, lbl_val)
+            img_label.setText("📦")
+            img_label.setStyleSheet(f"background-color: {COLOR_BG}; border-radius: 16px; border: 1px dashed #CBD5E1; color: #94A3B8; font-size: 48px;")
             
-        add_row("Código:", producto['codigo'], True)
-        add_row("Descripción:", producto['descripcion'], True)
-        add_row("Unidad:", producto['unidad_base'])
-        add_row("Precio Venta:", f"$ {producto['precio_venta']:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), True, COLOR_PRIMARY)
+        profile_layout.addWidget(img_label)
+        
+        # Info Principal
+        from PyQt6.QtWidgets import QSizePolicy
+        info_ly = QVBoxLayout()
+        info_ly.setSpacing(4)
         
         atp = producto.get('atp', 0.0)
         min_stk = producto.get('stock_minimo', 0.0)
-        stk_color = COLOR_TEXT_MAIN
-        estado = "Óptimo"
+        
+        estado_txt = "DISPONIBLE"
+        bg_badge = "#dcfce7"
+        color_badge = "#166534"
+        
         if atp <= 0:
-            stk_color = COLOR_DANGER
-            estado = "Sin Stock"
+            estado_txt = "SIN STOCK"
+            bg_badge = "#fee2e2"
+            color_badge = "#991b1b"
         elif min_stk > 0 and atp <= min_stk:
-            stk_color = "#D97706" # Warning/Orange
-            estado = "Stock Bajo"
+            estado_txt = "STOCK BAJO"
+            bg_badge = "#fef9c3"
+            color_badge = "#854d0e"
             
-        add_row("Stock Físico:", f"{producto.get('stock_fisico', 0):g}")
-        add_row("Comprometido:", f"{producto.get('comprometido', 0):g}")
-        add_row("Disponible (ATP):", f"{atp:g}", True, stk_color)
-        add_row("Stock Mínimo:", f"{min_stk:g}")
-        add_row("Estado:", estado, True, stk_color)
+        lbl_estado = QLabel(estado_txt)
+        lbl_estado.setStyleSheet(f"background-color: {bg_badge}; color: {color_badge}; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 10px; letter-spacing: 0.5px;")
+        lbl_estado.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         
-        cat = producto.get('categoria')
-        if cat:
-            add_row("Categoría:", cat)
+        lbl_desc = QLabel(producto['descripcion'])
+        lbl_desc.setStyleSheet(f"font-size: 20px; font-weight: 900; color: {COLOR_TEXT_MAIN}; letter-spacing: -0.5px;")
+        lbl_desc.setWordWrap(True)
+        
+        lbl_cod = QLabel(f"Código: {producto['codigo']}")
+        lbl_cod.setStyleSheet(f"font-size: 13px; color: {COLOR_TEXT_SEC}; font-weight: 500;")
+        
+        lbl_precio = QLabel(f"$ {producto['precio_venta']:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        lbl_precio.setStyleSheet(f"font-size: 24px; font-weight: 900; color: {COLOR_PRIMARY}; margin-top: 6px;")
+        
+        info_ly.addWidget(lbl_estado)
+        info_ly.addWidget(lbl_desc)
+        info_ly.addWidget(lbl_cod)
+        info_ly.addWidget(lbl_precio)
+        info_ly.addStretch()
+        
+        profile_layout.addLayout(info_ly)
+        
+        card_layout.addLayout(profile_layout)
+        card_layout.addSpacing(20)
+        
+        # Divisor
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet(f"background-color: {COLOR_BORDER}; border: none; min-height: 1px; max-height: 1px;")
+        card_layout.addWidget(sep)
+        card_layout.addSpacing(20)
+        
+        # --- MÉTRICAS DE STOCK ---
+        from PyQt6.QtWidgets import QGridLayout
+        
+        lbl_stk_tit = QLabel("Métricas de Inventario")
+        lbl_stk_tit.setStyleSheet(f"font-size: 14px; font-weight: 800; color: {COLOR_TEXT_MAIN};")
+        card_layout.addWidget(lbl_stk_tit)
+        card_layout.addSpacing(12)
+        
+        grid_ly = QGridLayout()
+        grid_ly.setSpacing(12)
+        
+        def crear_tarjeta_metrica(titulo, valor, color_valor, es_destacado=False):
+            f = QFrame()
+            bg = COLOR_BG if not es_destacado else "#f0f9ff"
+            border = COLOR_BORDER if not es_destacado else "#bae6fd"
+            f.setStyleSheet(f"background-color: {bg}; border: 1px solid {border}; border-radius: 8px;")
+            l = QVBoxLayout(f)
+            l.setContentsMargins(14, 12, 14, 12)
+            l.setSpacing(2)
+            lt = QLabel(titulo)
+            lt.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 11px; font-weight: bold; border: none; background: transparent; text-transform: uppercase;")
+            lv = QLabel(valor)
+            lv.setStyleSheet(f"color: {color_valor}; font-size: 17px; font-weight: 900; border: none; background: transparent;")
+            l.addWidget(lt)
+            l.addWidget(lv)
+            return f
             
-        card_layout.addLayout(header_layout)
-        card_layout.addSpacing(10)
-        card_layout.addLayout(img_layout)
-        card_layout.addSpacing(16)
+        uni = producto['unidad_base']
+        fis = f"{producto.get('stock_fisico', 0):g} {uni}"
+        comp = f"{producto.get('comprometido', 0):g} {uni}"
+        disp = f"{atp:g} {uni}"
+        min_v = f"{min_stk:g} {uni}"
         
-        # Marco de detalles
-        frame_det = QFrame()
-        frame_det.setStyleSheet(f"background-color: {COLOR_BG}; border-radius: 8px;")
-        frame_det.setLayout(det_layout)
+        t_fis = crear_tarjeta_metrica("Físico", fis, COLOR_TEXT_MAIN)
+        t_comp = crear_tarjeta_metrica("Comprometido", comp, COLOR_TEXT_MAIN)
+        t_disp = crear_tarjeta_metrica("ATP (Disponible)", disp, COLOR_PRIMARY, True)
+        t_min = crear_tarjeta_metrica("Mínimo", min_v, COLOR_TEXT_MAIN)
         
-        card_layout.addWidget(frame_det)
+        grid_ly.addWidget(t_fis, 0, 0)
+        grid_ly.addWidget(t_comp, 0, 1)
+        grid_ly.addWidget(t_disp, 1, 0)
+        grid_ly.addWidget(t_min, 1, 1)
+        
+        card_layout.addLayout(grid_ly)
         
         main_layout.addWidget(self.card, alignment=Qt.AlignmentFlag.AlignCenter)
         
@@ -810,6 +1064,8 @@ class DialogoProductosFrecuentes(DialogoModalIntegrado):
         from db.queries import obtener_productos_frecuentes
         
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
         
         lbl_info = QLabel("Análisis de rotación de productos:")
         lbl_info.setStyleSheet("font-weight: bold; font-size: 14px;")
@@ -821,7 +1077,26 @@ class DialogoProductosFrecuentes(DialogoModalIntegrado):
         self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.tabla.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tabla.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.tabla.setStyleSheet(f"QTableWidget {{ border: 1px solid {COLOR_BORDER}; border-radius: 6px; font-size: 13px; }}")
+        self.tabla.setStyleSheet(f"""
+            QTableWidget {{
+                border: 1px solid {COLOR_BORDER}; border-radius: 8px;
+                gridline-color: {COLOR_BORDER};
+                background-color: {COLOR_CARD_BG}; outline: none; font-size: 13px;
+                color: {COLOR_TEXT_MAIN};
+            }}
+            QHeaderView::section {{
+                background-color: {COLOR_BG}; color: {COLOR_TEXT_SEC};
+                font-weight: 700; font-size: 12px;
+                border: none; border-bottom: 1px solid {COLOR_BORDER}; padding: 10px 8px;
+            }}
+            QTableWidget::item {{
+                border-bottom: 1px solid #f1f5f9;
+                padding: 4px 8px;
+            }}
+            QTableWidget::item:selected {{
+                background-color: #ebf5ff;
+            }}
+        """)
         self.tabla.itemDoubleClicked.connect(self.on_item_clicked)
         
         layout.addWidget(self.tabla)

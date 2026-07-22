@@ -242,7 +242,7 @@ class DialogoDetallePresupuesto(DialogoModalIntegrado):
         tmp_path = os.path.join(tempfile.gettempdir(), f"preview_presupuesto_{self.id_documento}.pdf")
         if generar_pdf_documento(det, tmp_path, "PRESUPUESTO"):
             from ui.components.pdf_viewer import DialogoVistaPreviaPDF
-            dlg = DialogoVistaPreviaPDF(tmp_path, self.parent())
+            dlg = DialogoVistaPreviaPDF(tmp_path, self.window())
             from PyQt6.QtWidgets import QDialog
             if dlg.exec() == QDialog.DialogCode.Accepted:
                 self._generar_pdf()
@@ -408,7 +408,6 @@ class PestanaNuevoPresupuesto(OperacionBaseWidget):
         ly_main.addWidget(sep)
         
         ly_botones = QHBoxLayout()
-        ly_botones.addWidget(self.btn_vaciar_carrito)
         ly_botones.addStretch()
         ly_botones.addWidget(self.btn_confirmar)
         
@@ -570,86 +569,82 @@ class _CeldaAcciones(QWidget):
         self._estado = estado
         
         ly = QHBoxLayout(self)
-        ly.setContentsMargins(4, 4, 4, 4)
-        ly.setSpacing(6)
-        ly.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ly.setContentsMargins(0, 0, 0, 0)
+        ly.setSpacing(0)
         
-        style_btn = f"""
+        btn_more = QPushButton("⋮")
+        btn_more.setToolTip("Opciones")
+        btn_more.setFixedSize(28, 28)
+        btn_more.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_more.setStyleSheet(f"""
             QPushButton {{
-                border: 1px solid {COLOR_BORDER}; 
-                border-radius: 6px; 
-                background-color: {COLOR_CARD_BG}; 
-                color: {COLOR_TEXT_MAIN}; 
-                font-size: 14px;
+                background-color: transparent;
+                border: 1px solid transparent;
+                border-radius: 4px;
+                font-size: 18px;
+                font-weight: bold;
+                color: {COLOR_TEXT_MAIN};
+                padding-bottom: 6px;
             }}
             QPushButton:hover {{
                 background-color: {COLOR_BG};
-                border-color: {COLOR_PRIMARY};
-                color: {COLOR_PRIMARY};
+                border: 1px solid {COLOR_BORDER};
             }}
-        """
-        style_btn_disabled = f"""
-            QPushButton {{
-                border: 1px solid #e2e8f0; 
+            QPushButton::menu-indicator {{
+                image: none;
+                width: 0px;
+            }}
+        """)
+        
+        menu = QMenu(btn_more)
+        menu.setCursor(Qt.CursorShape.PointingHandCursor)
+        menu.setStyleSheet(f"""
+            QMenu {{ 
+                background-color: {COLOR_CARD_BG}; 
+                border: 1px solid {COLOR_BORDER}; 
                 border-radius: 6px; 
-                background-color: #f8fafc; 
-                color: #cbd5e1; 
-                font-size: 14px;
+                padding: 4px; 
+            }} 
+            QMenu::item {{ 
+                padding: 8px 20px; 
+                border-radius: 4px; 
+                color: {COLOR_TEXT_MAIN}; 
+                font-size: 13px; 
+            }} 
+            QMenu::item:selected {{ 
+                background-color: {COLOR_BG}; 
+            }} 
+            QMenu::separator {{ 
+                height: 1px; 
+                background-color: {COLOR_BORDER}; 
+                margin: 3px 8px; 
             }}
-        """
-
-        # Ojo: Ver
-        btn_ver = QPushButton("👁")
-        btn_ver.setToolTip("Ver detalle")
-        btn_ver.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_ver.setFixedSize(32, 32)
-        btn_ver.setStyleSheet(style_btn)
-        btn_ver.clicked.connect(lambda: self.ver_solicitado.emit(self._id))
-        ly.addWidget(btn_ver)
+        """)
         
-        # Lápiz: Editar
-        btn_editar = QPushButton("✎")
-        btn_editar.setToolTip("Editar presupuesto")
-        btn_editar.setFixedSize(32, 32)
+        act_ver = menu.addAction("👁 Ver Detalle")
+        act_ver.triggered.connect(lambda: self.ver_solicitado.emit(self._id))
         
         if estado == "ACTIVO":
-            btn_editar.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn_editar.setStyleSheet(style_btn)
-            btn_editar.clicked.connect(lambda: self.editar_solicitado.emit(self._id))
-        else:
-            btn_editar.setEnabled(False)
-            btn_editar.setStyleSheet(style_btn_disabled)
-            
-        ly.addWidget(btn_editar)
-        
-        # Tres puntos: Menú
-        btn_menu = QPushButton("⋮")
-        btn_menu.setToolTip("Más acciones")
-        btn_menu.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_menu.setFixedSize(32, 32)
-        btn_menu.setStyleSheet(style_btn)
-        
-        menu = QMenu(self)
-        menu.setStyleSheet(f"QMenu {{ background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 6px; padding: 4px; }} QMenu::item {{ padding: 8px 20px; border-radius: 4px; color: {COLOR_TEXT_MAIN}; font-size: 13px; }} QMenu::item:selected {{ background-color: {COLOR_BG}; }} QMenu::separator {{ height: 1px; background-color: {COLOR_BORDER}; margin: 3px 8px; }}")
-        
-        if estado == "ACTIVO":
-            act_conf = menu.addAction("Confirmar como Venta")
+            act_edit = menu.addAction("✎ Editar")
+            act_edit.triggered.connect(lambda: self.editar_solicitado.emit(self._id))
+            menu.addSeparator()
+            act_conf = menu.addAction("✓ Confirmar como Venta")
             act_conf.triggered.connect(lambda: self.confirmar_solicitado.emit(self._id))
             menu.addSeparator()
             
-        act_prev = menu.addAction("Vista Previa")
+        act_prev = menu.addAction("📄 Vista Previa")
         act_prev.triggered.connect(lambda: self.preview_solicitado.emit(self._id))
         
-        act_pdf = menu.addAction("Generar PDF")
+        act_pdf = menu.addAction("⬇ Generar PDF")
         act_pdf.triggered.connect(lambda: self.pdf_solicitado.emit(self._id))
         
         if estado == "ACTIVO":
             menu.addSeparator()
-            act_anul = menu.addAction("Anular Presupuesto")
+            act_anul = menu.addAction("❌ Anular Presupuesto")
             act_anul.triggered.connect(lambda: self.anular_solicitado.emit(self._id))
             
-        btn_menu.setMenu(menu)
-        ly.addWidget(btn_menu)
+        btn_more.setMenu(menu)
+        ly.addWidget(btn_more, 0, Qt.AlignmentFlag.AlignCenter)
 
 class _PanelVacio(QFrame):
     def __init__(self):
@@ -1041,7 +1036,7 @@ class PestanaPresupuestos(QWidget):
         self._tabla.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._tabla.setShowGrid(True)
         self._tabla.verticalHeader().setVisible(False)
-        self._tabla.verticalHeader().setDefaultSectionSize(64)
+        self._tabla.verticalHeader().setDefaultSectionSize(56)
         
         hdr = self._tabla.horizontalHeader()
         hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
@@ -1056,7 +1051,10 @@ class PestanaPresupuestos(QWidget):
         hdr.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
         self._tabla.setColumnWidth(5, 130)
         hdr.setSectionResizeMode(6, QHeaderView.ResizeMode.Fixed)
-        self._tabla.setColumnWidth(6, 140)
+        self._tabla.setColumnWidth(6, 90)
+        item_acc = self._tabla.horizontalHeaderItem(6)
+        if item_acc:
+            item_acc.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         
         self._tabla.itemSelectionChanged.connect(self._on_seleccion_cambiada)
         

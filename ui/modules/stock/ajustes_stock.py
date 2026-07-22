@@ -12,7 +12,8 @@ from PyQt6.QtGui import QColor, QFont
 
 
 from ui.core.theme import (
-    COLOR_PRIMARY, COLOR_BG, COLOR_TEXT_MAIN, COLOR_BORDER
+    COLOR_PRIMARY, COLOR_BG, COLOR_TEXT_MAIN, COLOR_BORDER,
+    COLOR_CARD_BG, COLOR_TEXT_SEC
 )
 
 
@@ -26,8 +27,11 @@ class DialogoConfiguracionGeneral(DialogoModalIntegrado):
 
     def init_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
         
         form = QFormLayout()
+        form.setVerticalSpacing(12)
         
         # 1. Stock mínimo predeterminado para nuevos
         self.inp_min = QLineEdit(str(self.settings.value("default_stock_min", 0.0, type=float)))
@@ -60,7 +64,7 @@ class DialogoConfiguracionGeneral(DialogoModalIntegrado):
             QPushButton#btn_guardar_config {{
                 background-color: {COLOR_PRIMARY}; 
                 color: white; 
-                padding: 10px; 
+                padding: 10px 20px; 
                 border-radius: 6px;
                 font-weight: bold;
                 border: none;
@@ -104,9 +108,12 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
 
     def init_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
         
         # Buscador
         ly_busq = QHBoxLayout()
+        ly_busq.setSpacing(12)
         self.inp_buscar = QLineEdit()
         self.inp_buscar.setPlaceholderText("Buscar por código, producto o doc...")
         self.inp_buscar.textChanged.connect(self.cargar_datos)
@@ -127,7 +134,26 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
         self.tabla.horizontalHeader().setSectionResizeMode(7, QHeaderView.ResizeMode.Stretch)
         self.tabla.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.tabla.setStyleSheet(f"QTableWidget {{ border: 1px solid {COLOR_BORDER}; }}")
+        self.tabla.setStyleSheet(f"""
+            QTableWidget {{
+                border: 1px solid {COLOR_BORDER}; border-radius: 8px;
+                gridline-color: {COLOR_BORDER};
+                background-color: {COLOR_CARD_BG}; outline: none; font-size: 13px;
+                color: {COLOR_TEXT_MAIN};
+            }}
+            QHeaderView::section {{
+                background-color: {COLOR_BG}; color: {COLOR_TEXT_SEC};
+                font-weight: 700; font-size: 12px;
+                border: none; border-bottom: 1px solid {COLOR_BORDER}; padding: 10px 8px;
+            }}
+            QTableWidget::item {{
+                border-bottom: 1px solid #f1f5f9;
+                padding: 4px 8px;
+            }}
+            QTableWidget::item:selected {{
+                background-color: #ebf5ff;
+            }}
+        """)
         
         layout.addWidget(self.tabla)
         self.tabla.itemDoubleClicked.connect(self.abrir_documento_asociado)
@@ -259,9 +285,12 @@ class DialogoVisualizacionInventario(DialogoModalIntegrado):
 
     def init_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
         
         grp = QGroupBox("Columnas Visibles en Tabla Principal")
         ly_grp = QVBoxLayout()
+        ly_grp.setSpacing(12)
         
         self.chk_precio = QCheckBox("Mostrar 'Precio'")
         self.chk_precio.setChecked(self.settings.value("col_precio_visible", True, type=bool))
@@ -281,7 +310,7 @@ class DialogoVisualizacionInventario(DialogoModalIntegrado):
         
         self.btn_guardar = QPushButton("Aplicar")
         self.btn_guardar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_guardar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px;")
+        self.btn_guardar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px 20px; border-radius: 6px; font-weight: bold;")
         self.btn_guardar.clicked.connect(self.guardar)
         layout.addWidget(self.btn_guardar)
 

@@ -184,6 +184,8 @@ class DialogoImportarExcel(DialogoModalIntegrado):
 
     def init_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
         
         # Panel superior
         ly_top = QHBoxLayout()
@@ -192,7 +194,7 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         
         btn_seleccionar = QPushButton("📂 Seleccionar Excel")
         btn_seleccionar.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_seleccionar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold;")
+        btn_seleccionar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px 20px; border-radius: 6px; font-weight: bold;")
         btn_seleccionar.clicked.connect(self.seleccionar_archivo)
         
         ly_top.addWidget(self.lbl_archivo, stretch=1)
@@ -211,12 +213,32 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         self.tabla.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self.tabla.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self.tabla.setStyleSheet(f"""
+            QTableWidget {{
+                border: 1px solid {COLOR_BORDER}; border-radius: 8px;
+                gridline-color: {COLOR_BORDER};
+                background-color: {COLOR_CARD_BG}; outline: none; font-size: 13px;
+                color: {COLOR_TEXT_MAIN};
+            }}
+            QHeaderView::section {{
+                background-color: {COLOR_BG}; color: {COLOR_TEXT_SEC};
+                font-weight: 700; font-size: 12px;
+                border: none; border-bottom: 1px solid {COLOR_BORDER}; padding: 10px 8px;
+            }}
+            QTableWidget::item {{
+                border-bottom: 1px solid #f1f5f9;
+                padding: 4px 8px;
+            }}
+            QTableWidget::item:selected {{
+                background-color: #ebf5ff;
+            }}
+        """)
         layout.addWidget(self.tabla)
         
         # Boton Confirmar
         self.btn_confirmar = QPushButton("✅ Confirmar Importación Segura")
         self.btn_confirmar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_confirmar.setStyleSheet(f"background-color: {COLOR_SUCCESS}; color: white; padding: 12px; border-radius: 4px; font-weight: bold; font-size: 14px;")
+        self.btn_confirmar.setStyleSheet(f"background-color: {COLOR_SUCCESS}; color: white; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 14px;")
         self.btn_confirmar.clicked.connect(self.ejecutar_importacion)
         self.btn_confirmar.setEnabled(False)
         layout.addWidget(self.btn_confirmar)

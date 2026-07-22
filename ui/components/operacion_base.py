@@ -261,7 +261,7 @@ class DialogoVentaExitosa(DialogoModalIntegrado):
         tipo = "PRESUPUESTO" if self.is_presupuesto else "VENTA"
         if generar_pdf_documento(det, tmp_path, tipo):
             from ui.components.pdf_viewer import DialogoVistaPreviaPDF
-            dlg = DialogoVistaPreviaPDF(tmp_path, self.parent())
+            dlg = DialogoVistaPreviaPDF(tmp_path, self.window())
             from PyQt6.QtWidgets import QDialog
             if dlg.exec() == QDialog.DialogCode.Accepted:
                 self._generar_pdf()
@@ -478,16 +478,30 @@ class OperacionBaseWidget(QWidget):
                 color: #94A3B8;
             }
             QPushButton#btn_peligro_sutil {
+                background-color: #FFFFFF;
                 color: #EF4444;
-                background-color: transparent;
-                border: none;
+                border: 1px solid #FECACA;
+                border-radius: 8px;
+                padding: 8px 16px;
                 font-weight: 600;
-                font-size: 13px;
-                padding: 6px 12px;
-                border-radius: 6px;
+                font-size: 14px;
             }
             QPushButton#btn_peligro_sutil:hover {
                 background-color: #FEF2F2;
+                border-color: #F87171;
+            }
+            QPushButton#btn_peligro_sutil_chico {
+                background-color: #FFFFFF;
+                color: #EF4444;
+                border: 1px solid #FECACA;
+                border-radius: 16px;
+                padding: 4px 12px;
+                font-weight: 600;
+                font-size: 12px;
+            }
+            QPushButton#btn_peligro_sutil_chico:hover {
+                background-color: #FEF2F2;
+                border-color: #F87171;
             }
 
             QCheckBox { 
@@ -568,8 +582,15 @@ class OperacionBaseWidget(QWidget):
         self.lbl_info_items = QLabel("🟢 Nueva operación")
         self.lbl_info_items.setStyleSheet("color: #0F172A; font-weight: 600; font-size: 14px; padding: 6px 12px; background: #E2E8F0; border-radius: 16px;")
         
+        self.btn_vaciar_carrito = QPushButton("Vaciar [F11]")
+        self.btn_vaciar_carrito.setObjectName("btn_peligro_sutil_chico")
+        self.btn_vaciar_carrito.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_vaciar_carrito.clicked.connect(self.vaciar_carrito_directo)
+        self.btn_vaciar_carrito.setFixedHeight(32)
+        
         ly_tit.addLayout(ly_izq)
         ly_tit.addStretch()
+        ly_tit.addWidget(self.btn_vaciar_carrito)
         ly_tit.addWidget(self.lbl_info_items)
         ly_tit.addWidget(btn_ayuda)
         
@@ -600,6 +621,14 @@ class OperacionBaseWidget(QWidget):
         self.btn_nuevo_cliente = QPushButton("+ Nuevo")
         self.btn_nuevo_cliente.setObjectName("btn_secundario")
         self.btn_nuevo_cliente.setFixedHeight(40)
+        self.btn_nuevo_cliente.setStyleSheet("""
+            QPushButton#btn_secundario {
+                padding: 0px 16px;
+                font-size: 14px;
+                text-align: center;
+                qproperty-iconSize: 16px;
+            }
+        """)
         self.btn_nuevo_cliente.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_nuevo_cliente.clicked.connect(self.modal_nuevo_cliente)
         
@@ -650,12 +679,22 @@ class OperacionBaseWidget(QWidget):
         layout_buscador.setSpacing(16)
         
         # Contenedor del buscador
-        ly_busq_inner = QHBoxLayout()
+        self.frame_buscador = QFrame()
+        self.frame_buscador.setObjectName("frame_buscador")
+        self.frame_buscador.setStyleSheet("""
+            QFrame#frame_buscador {
+                background-color: #F8FAFC;
+                border: 1px solid #E2E8F0;
+                border-radius: 8px;
+            }
+        """)
+        
+        ly_busq_inner = QHBoxLayout(self.frame_buscador)
         ly_busq_inner.setContentsMargins(0, 0, 0, 0)
         ly_busq_inner.setSpacing(0)
         
         lbl_lupa = QLabel("🔍")
-        lbl_lupa.setStyleSheet("font-size: 18px; padding-left: 16px; background-color: #F8FAFC; border: 1px solid #E2E8F0; border-right: none; border-top-left-radius: 8px; border-bottom-left-radius: 8px;")
+        lbl_lupa.setStyleSheet("font-size: 18px; padding-left: 16px; background-color: transparent; border: none;")
         lbl_lupa.setFixedSize(44, 48)
         
         self.input_buscador = QLineEdit()
@@ -664,26 +703,39 @@ class OperacionBaseWidget(QWidget):
         self.input_buscador.setMinimumHeight(48)
         self.input_buscador.setStyleSheet("""
             QLineEdit {
-                background-color: #F8FAFC;
-                border: 1px solid #E2E8F0;
-                border-left: none;
-                border-top-right-radius: 8px;
-                border-bottom-right-radius: 8px;
+                background-color: transparent;
+                border: none;
                 font-size: 16px;
                 padding-left: 8px;
                 color: #0F172A;
-            }
-            QLineEdit:focus {
-                background-color: #FFFFFF;
-                border: 1px solid #3B82F6;
-                border-left: 1px solid #3B82F6;
             }
         """)
         self.input_buscador.textChanged.connect(self.on_buscador_text_changed)
         self.input_buscador.installEventFilter(self)
         
+        self.btn_limpiar_buscador = QPushButton("✕")
+        self.btn_limpiar_buscador.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_limpiar_buscador.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_limpiar_buscador.setFixedSize(36, 48)
+        self.btn_limpiar_buscador.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #94A3B8;
+                border: none;
+                font-size: 16px;
+                font-weight: bold;
+                padding-right: 12px;
+            }
+            QPushButton:hover {
+                color: #EF4444;
+            }
+        """)
+        self.btn_limpiar_buscador.setVisible(False)
+        self.btn_limpiar_buscador.clicked.connect(self.limpiar_buscador_producto)
+        
         ly_busq_inner.addWidget(lbl_lupa)
         ly_busq_inner.addWidget(self.input_buscador)
+        ly_busq_inner.addWidget(self.btn_limpiar_buscador)
         
         self.combo_unidad = QComboBox()
         self.combo_unidad.setFixedWidth(140)
@@ -757,7 +809,7 @@ class OperacionBaseWidget(QWidget):
         lbl_v_por = QLabel("Por:")
         lbl_v_por.setStyleSheet("color: #64748B; font-weight: 600; font-size: 14px;")
         
-        layout_buscador.addLayout(ly_busq_inner, stretch=1)
+        layout_buscador.addWidget(self.frame_buscador, stretch=1)
         layout_buscador.addWidget(lbl_v_por, 0, Qt.AlignmentFlag.AlignRight)
         self.lbl_vender_por = layout_buscador.itemAt(layout_buscador.count() - 1).widget()
         self.lbl_vender_por.setVisible(False)
@@ -788,8 +840,8 @@ class OperacionBaseWidget(QWidget):
                 color: #172033;
             }
             QListWidget::item:selected {
-                background-color: #EBF5FF;
-                color: #172033;
+                background-color: #2563EB;
+                color: #FFFFFF;
             }
             QListWidget::item:hover {
                 background-color: #F0F7FF;
@@ -952,12 +1004,6 @@ class OperacionBaseWidget(QWidget):
         self.lbl_total.setAlignment(Qt.AlignmentFlag.AlignRight)
         
         # --- ACCIONES ---
-        self.btn_vaciar_carrito = QPushButton("Vaciar [F11]")
-        self.btn_vaciar_carrito.setObjectName("btn_peligro_sutil")
-        self.btn_vaciar_carrito.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_vaciar_carrito.clicked.connect(self.vaciar_carrito_directo)
-        self.btn_vaciar_carrito.setFixedHeight(36)
-        
         if self.is_edicion:
             texto_btn = "Guardar [F12]"
         else:
@@ -1030,6 +1076,20 @@ class OperacionBaseWidget(QWidget):
 
     def hideEvent(self, event):
         super().hideEvent(event)
+
+    def mousePressEvent(self, event):
+        if hasattr(self, 'frame_buscador'):
+            pos_in_frame = self.frame_buscador.mapFrom(self, event.position().toPoint())
+            if self.frame_buscador.rect().contains(pos_in_frame):
+                self.input_buscador.setFocus()
+                super().mousePressEvent(event)
+                return
+
+        if hasattr(self, 'panel_resultados') and self.panel_resultados.isVisible():
+            self.panel_resultados.hide()
+            if hasattr(self, 'input_buscador') and self.input_buscador.hasFocus():
+                self.input_buscador.clearFocus()
+        super().mousePressEvent(event)
 
 
     def modal_nuevo_cliente(self):
@@ -1198,39 +1258,14 @@ class OperacionBaseWidget(QWidget):
         return finales
 
     def obtener_sugerencias_rapidas(self) -> list[dict]:
-        from db.queries import obtener_productos_frecuentes
-        frecuentes = obtener_productos_frecuentes(self.conn, limite=8, dias=30)
-        codigos_frec = [f['codigo'] for f in frecuentes]
-        
-        sugerencias = []
-        for cod in codigos_frec:
-            for p in self.catalogo:
-                if p['codigo'] == cod:
-                    sugerencias.append(p)
-                    break
-                    
-        # Fallback si no hay suficientes ventas
-        if len(sugerencias) < 4:
-            sugerencias = []
-            for p in self.catalogo:
-                if p['stock'] > 0:
-                    sugerencias.append(p)
-                if len(sugerencias) >= 8:
-                    break
-            
-            # Si aun no hay 8 con stock, completar con lo que haya
-            if len(sugerencias) < 8:
-                for p in self.catalogo:
-                    if p not in sugerencias:
-                        sugerencias.append(p)
-                    if len(sugerencias) >= 8:
-                        break
-                        
-        return sugerencias
+        # El catálogo ya está cargado y ordenado por la consulta SQL (ORDER BY p.descripcion)
+        # Retornamos una copia o la misma lista para mostrar todo el catálogo.
+        return self.catalogo
 
     def on_buscador_text_changed(self, texto):
         if not self._suspender_resultados and getattr(self, "producto_en_foco", None) is not None:
             self.producto_en_foco = None
+            self.btn_limpiar_buscador.setVisible(False)
             self.input_cantidad.clear()
             self.input_cantidad.setEnabled(False)
             self.combo_unidad.setVisible(False)
@@ -1357,19 +1392,33 @@ class OperacionBaseWidget(QWidget):
                     return True
                     
         elif obj == self.input_buscador and event.type() == QEvent.Type.FocusIn:
+            self.frame_buscador.setStyleSheet("""
+                QFrame#frame_buscador {
+                    background-color: #FFFFFF;
+                    border: 1px solid #3B82F6;
+                    border-radius: 8px;
+                }
+            """)
             # Mostrar sugerencias automáticamente si está vacío o tiene texto y no hay producto seleccionado
             if getattr(self, "producto_en_foco", None) is None:
                 QTimer.singleShot(0, lambda: self.on_buscador_text_changed(self.input_buscador.text()))
                     
-        elif obj == self.combo_unidad and event.type() == QEvent.Type.KeyPress:
+        elif obj == getattr(self, "combo_unidad", None) and event.type() == QEvent.Type.KeyPress:
             if event.key() in [Qt.Key.Key_Enter, Qt.Key.Key_Return]:
                 self.input_cantidad.setFocus()
                 return True
                 
         if obj == self.input_buscador and event.type() == QEvent.Type.FocusOut:
+            self.frame_buscador.setStyleSheet("""
+                QFrame#frame_buscador {
+                    background-color: #F8FAFC;
+                    border: 1px solid #E2E8F0;
+                    border-radius: 8px;
+                }
+            """)
             QTimer.singleShot(100, self.chequear_foco_panel)
             
-        if event.type() == QEvent.Type.FocusIn and obj in (self.input_desc_gral, self.input_iva_porc, self.input_cantidad):
+        if event.type() == QEvent.Type.FocusIn and obj in (getattr(self, 'input_desc_gral', None), getattr(self, 'input_iva_porc', None), getattr(self, 'input_cantidad', None)):
             QTimer.singleShot(0, obj.selectAll)
             
         return super().eventFilter(obj, event)
@@ -1383,6 +1432,17 @@ class OperacionBaseWidget(QWidget):
         if producto:
             self.seleccionar_producto(producto)
 
+    def limpiar_buscador_producto(self):
+        self.producto_en_foco = None
+        self.btn_limpiar_buscador.setVisible(False)
+        self.input_cantidad.clear()
+        self.input_cantidad.setEnabled(False)
+        self.combo_unidad.setVisible(False)
+        self.lbl_vender_por.setVisible(False)
+        self.actualizar_etiqueta_cantidad()
+        self.input_buscador.clear()
+        self.input_buscador.setFocus()
+
     def seleccionar_producto(self, producto: dict):
         self.producto_en_foco = producto.copy()
         self.panel_resultados.hide()
@@ -1390,6 +1450,7 @@ class OperacionBaseWidget(QWidget):
         self._suspender_resultados = True
         self.input_buscador.setText(f"{producto['codigo']} - {producto['desc']}")
         self._suspender_resultados = False
+        self.btn_limpiar_buscador.setVisible(True)
         
         unidades = producto['unidades_venta']
         if len(unidades) > 1:
@@ -1520,6 +1581,7 @@ class OperacionBaseWidget(QWidget):
         self.insertar_fila(self.producto_en_foco, unidad_venta, factor_conversion, cantidad_ingresada, cantidad_base, precio_unit_mostrado)
         
         self.producto_en_foco = None
+        self.btn_limpiar_buscador.setVisible(False)
         self.input_cantidad.clear()
         self.input_cantidad.setEnabled(False)
         self.combo_unidad.setVisible(False)

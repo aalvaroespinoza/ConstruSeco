@@ -17,7 +17,7 @@ class PestanaNuevaVenta(OperacionBaseWidget):
         ly_b1_bot = QHBoxLayout()
         self.input_observaciones.setFixedWidth(200)
         ly_b1_bot.addWidget(self.input_observaciones)
-        ly_b1_bot.addWidget(self.btn_vaciar_carrito)
+        ly_b1_bot.addStretch()
         ly_b1.addLayout(ly_b1_bot)
         layout.addLayout(ly_b1)
         layout.addStretch()

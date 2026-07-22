@@ -362,23 +362,6 @@ class VentanaPrincipal(QMainWindow):
         footer_layout.setContentsMargins(10, 10, 10, 20)
         footer_layout.setSpacing(4)
         
-        self.btn_tema = QPushButton()
-        self.btn_tema.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_tema.setFixedSize(34, 34)
-        
-        self.btn_tema.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(255, 255, 255, 0.06);
-                border: none;
-                border-radius: 17px;
-            }
-            QPushButton:hover {
-                background-color: rgba(255, 255, 255, 0.12);
-            }
-        """)
-        self.btn_tema.clicked.connect(self._toggle_tema)
-        self._actualizar_icono_tema()
-        
         self.lbl_version = QLabel("Versión")
         self.lbl_version.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lbl_db = QLabel("SQLite")
@@ -394,7 +377,6 @@ class VentanaPrincipal(QMainWindow):
         self.lbl_version.setStyleSheet(footer_style)
         self.lbl_db.setStyleSheet(footer_style)
         
-        footer_layout.addWidget(self.btn_tema)
         footer_layout.addWidget(self.lbl_version)
         footer_layout.addWidget(self.lbl_db)
         
@@ -455,7 +437,6 @@ class VentanaPrincipal(QMainWindow):
         self.lbl_sub.setVisible(not self.sidebar_colapsada)
         self.lbl_version.setVisible(not self.sidebar_colapsada)
         self.lbl_db.setVisible(not self.sidebar_colapsada)
-        self.btn_tema.setVisible(not self.sidebar_colapsada)
         
         # Tamaño del logo
         size_logo = 40 if self.sidebar_colapsada else 90
@@ -543,80 +524,3 @@ class VentanaPrincipal(QMainWindow):
         
         self.fade_anim.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
         self.fade_anim.finished.connect(lambda: self.contenedor_vistas.setGraphicsEffect(None))
-
-    def _reconstruir_pestanas(self):
-        indice_actual = self.contenedor_vistas.currentIndex()
-
-        for w in (self.vista_ventas_temp, self.pestana_stock,
-                  self.pestana_clientes, self.vista_presupuestos_temp):
-            self.contenedor_vistas.removeWidget(w)
-            w.deleteLater()
-
-        self.vista_ventas_temp = PestanaNuevaVenta(self.conn)
-        self.pestana_stock     = PestanaStock(self.conn)
-        self.pestana_clientes  = PestanaClientes(self.conn)
-        self.vista_presupuestos_temp = PestanaPresupuestos(self.conn)
-
-        self.contenedor_vistas.addWidget(self.vista_ventas_temp)         # Índice 0
-        self.contenedor_vistas.addWidget(self.pestana_stock)             # Índice 1
-        self.contenedor_vistas.addWidget(self.pestana_clientes)          # Índice 2
-        self.contenedor_vistas.addWidget(self.vista_presupuestos_temp)   # Índice 3
-
-        self.contenedor_vistas.setCurrentIndex(indice_actual)
-
-    def _actualizar_icono_tema(self):
-        from ui.core.theme import tema_guardado
-        from PyQt6.QtGui import QIcon
-        from PyQt6.QtCore import QSize
-        import os
-        
-        tema_actual = tema_guardado()
-        
-        svg_sol = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round">
-  <circle cx="12" cy="12" r="4"/>
-  <line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/>
-  <line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/>
-  <line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/>
-  <line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/>
-</svg>'''
-        
-        svg_luna = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#cbd5e1" stroke="none">
-  <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/>
-</svg>'''
-        
-        assets_dir = Path(__file__).resolve().parent.parent / "assets"
-        os.makedirs(assets_dir, exist_ok=True)
-        
-        sol_path = assets_dir / "tema_sol.svg"
-        luna_path = assets_dir / "tema_luna.svg"
-        
-        if not sol_path.exists():
-            with open(sol_path, "w", encoding="utf-8") as f:
-                f.write(svg_sol)
-        if not luna_path.exists():
-            with open(luna_path, "w", encoding="utf-8") as f:
-                f.write(svg_luna)
-                
-        ruta_icono = sol_path if tema_actual == "claro" else luna_path
-        self.btn_tema.setIcon(QIcon(str(ruta_icono)))
-        self.btn_tema.setIconSize(QSize(20, 20))
-
-    def _toggle_tema(self):
-        resp = QMessageBox.warning(
-            self,
-            "Advertencia",
-            "Cambiar el tema recarga las pantallas. Si tenés una venta o presupuesto sin guardar, se va a perder. ¿Continuar?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        if resp != QMessageBox.StandardButton.Yes:
-            return
-
-        from ui.core.theme import tema_guardado, cambiar_tema
-        from PyQt6.QtWidgets import QApplication
-        
-        tema_actual = tema_guardado()
-        nuevo_tema = "claro" if tema_actual == "oscuro" else "oscuro"
-        
-        cambiar_tema(nuevo_tema, QApplication.instance())
-        self._reconstruir_pestanas()
-        self._actualizar_icono_tema()

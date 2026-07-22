@@ -45,6 +45,7 @@ def obtener_catalogo_venta(conn):
         FROM productos p
         LEFT JOIN conversiones_unidad c ON c.codigo_producto = p.codigo
         WHERE p.activo = 1
+        ORDER BY p.descripcion
     """)
     return cursor.fetchall()
 
