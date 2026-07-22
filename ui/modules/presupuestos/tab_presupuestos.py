@@ -327,8 +327,6 @@ class PestanaNuevoPresupuesto(OperacionBaseWidget):
     def __init__(self, conexion_db, is_edicion=False, id_presupuesto_edicion=None):
         super().__init__(conexion_db, is_presupuesto=True, is_edicion=is_edicion, id_presupuesto_edicion=id_presupuesto_edicion)
         self.tipo_documento_seleccionado = 'PRESUPUESTO'
-        self.chk_descontar.setChecked(False)
-        self.chk_descontar.setEnabled(False)
         self.btn_confirmar.setText('Guardar [F12]' if is_edicion else 'Crear Presupuesto [F12]')
 
     def init_ui(self):
@@ -359,59 +357,97 @@ class PestanaNuevoPresupuesto(OperacionBaseWidget):
 
         # Reducir tamaños fijos "excesivos"
         self.input_buscador.setMinimumHeight(38)
-        self.input_cliente.setMinimumHeight(38)
-        self.btn_nuevo_cliente.setFixedHeight(38)
         self.btn_agregar.setFixedHeight(38)
         self.caja_cant_frame.setFixedHeight(38)
         if hasattr(self, 'combo_unidad'):
             self.combo_unidad.setMinimumHeight(38)
 
     def armar_panel_inferior(self, layout):
-        from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QFrame
+        from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QFrame
         from PyQt6.QtCore import Qt
-        
+
         ly_main = QVBoxLayout()
-        ly_main.setSpacing(16)
+        ly_main.setSpacing(6)
+        ly_main.setContentsMargins(0, 0, 0, 0)
+
+        # --- FILA 1 ---
+        ly_r1 = QHBoxLayout()
+        ly_r1.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         
-        grid = QGridLayout()
-        grid.setSpacing(12)
-        grid.setColumnStretch(1, 1)
-        
-        lbl_validez = QLabel('Validez:')
-        lbl_validez.setStyleSheet('color: #64748B; font-weight: 600; font-size: 13px;')
-        grid.addWidget(lbl_validez, 0, 0)
-        grid.addWidget(self.combo_validez, 0, 1)
-        
-        lbl_sub = QLabel('Subtotal:')
-        lbl_sub.setStyleSheet('color: #64748B; font-weight: 600; font-size: 14px;')
-        grid.addWidget(lbl_sub, 0, 2, Qt.AlignmentFlag.AlignRight)
-        grid.addWidget(self.lbl_subtotal, 0, 3, Qt.AlignmentFlag.AlignRight)
-        
-        lbl_obs = QLabel('Observaciones:')
-        lbl_obs.setStyleSheet('color: #64748B; font-weight: 600; font-size: 13px;')
-        grid.addWidget(lbl_obs, 1, 0)
-        
-        self.input_observaciones.setMaximumWidth(16777215)
         self.input_observaciones.setMinimumWidth(200)
-        grid.addWidget(self.input_observaciones, 1, 1)
+        self.input_observaciones.setMaximumHeight(32)
+        self.input_observaciones.setPlaceholderText("Observaciones (opcional)...")
+        ly_r1.addWidget(self.input_observaciones)
         
-        lbl_tot = QLabel('TOTAL:')
-        lbl_tot.setStyleSheet('font-weight: 900; color: #334155; font-size: 18px;')
-        grid.addWidget(lbl_tot, 1, 2, Qt.AlignmentFlag.AlignRight)
-        grid.addWidget(self.lbl_total, 1, 3, Qt.AlignmentFlag.AlignRight)
+        ly_r1.addStretch()
         
-        ly_main.addLayout(grid)
+        lbl_desc = QLabel('Desc:')
+        lbl_desc.setStyleSheet('color: #64748B; font-weight: 600;')
+        ly_r1.addWidget(lbl_desc)
+        self.input_desc_gral.setFixedWidth(50)
+        self.input_desc_gral.setMaximumHeight(32)
+        ly_r1.addWidget(self.input_desc_gral)
+        lbl_perc = QLabel('%')
+        lbl_perc.setStyleSheet('color: #64748B;')
+        ly_r1.addWidget(lbl_perc)
         
         sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet('background-color: #E2E8F0; border: none; height: 1px;')
-        ly_main.addWidget(sep)
+        sep.setFrameShape(QFrame.Shape.VLine)
+        sep.setStyleSheet("color: #E2E8F0; margin: 0 8px;")
+        ly_r1.addWidget(sep)
         
-        ly_botones = QHBoxLayout()
-        ly_botones.addStretch()
-        ly_botones.addWidget(self.btn_confirmar)
+        self.chk_iva.setStyleSheet("color: #475569; font-weight: 500;")
+        ly_r1.addWidget(self.chk_iva)
+        self.input_iva_porc.setFixedWidth(50)
+        self.input_iva_porc.setMaximumHeight(32)
+        ly_r1.addWidget(self.input_iva_porc)
+        lbl_perc2 = QLabel('%')
+        lbl_perc2.setStyleSheet('color: #64748B;')
+        ly_r1.addWidget(lbl_perc2)
         
-        ly_main.addLayout(ly_botones)
+        sep2 = QFrame()
+        sep2.setFrameShape(QFrame.Shape.VLine)
+        sep2.setStyleSheet("color: #E2E8F0; margin: 0 8px;")
+        ly_r1.addWidget(sep2)
+        
+        lbl_sub = QLabel('Subtotal:')
+        lbl_sub.setStyleSheet('color: #64748B; font-weight: 600;')
+        ly_r1.addWidget(lbl_sub)
+        self.lbl_subtotal.setStyleSheet('color: #64748B; font-size: 13px;')
+        self.lbl_subtotal.setMinimumWidth(80)
+        self.lbl_subtotal.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        ly_r1.addWidget(self.lbl_subtotal)
+
+        # --- FILA 2 ---
+        ly_r2 = QHBoxLayout()
+        ly_r2.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        
+        ly_val = QHBoxLayout()
+        ly_val.setSpacing(6)
+        lbl_validez = QLabel('Validez:')
+        lbl_validez.setStyleSheet('color: #64748B; font-weight: 600;')
+        ly_val.addWidget(lbl_validez)
+        self.combo_validez.setMaximumHeight(32)
+        ly_val.addWidget(self.combo_validez)
+        ly_r2.addLayout(ly_val)
+        
+        ly_r2.addStretch()
+        
+        lbl_tot = QLabel('TOTAL:')
+        lbl_tot.setStyleSheet('font-weight: 900; color: #334155; font-size: 16px;')
+        ly_r2.addWidget(lbl_tot)
+        
+        self.lbl_total.setStyleSheet('font-weight: 900; color: #0F172A; font-size: 20px;')
+        self.lbl_total.setMinimumWidth(120)
+        self.lbl_total.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        ly_r2.addWidget(self.lbl_total)
+        
+        self.btn_confirmar.setMinimumWidth(160)
+        self.btn_confirmar.setMaximumHeight(40)
+        ly_r2.addWidget(self.btn_confirmar)
+        
+        ly_main.addLayout(ly_r1)
+        ly_main.addLayout(ly_r2)
         
         layout.addLayout(ly_main)
 
@@ -1199,14 +1235,14 @@ class PestanaPresupuestos(QWidget):
         dlg.exec()
 
     def _abrir_modal_nuevo_presupuesto(self):
-        dlg = DialogoNuevoPresupuesto(self.conn, parent=self.window())
-        if dlg.exec() == QDialog.DialogCode.Accepted:
-            self.recargar()
+        vp = self.window()
+        if hasattr(vp, 'crear_operacion'):
+            vp.crear_operacion("PRESUPUESTO")
             
     def _editar_presupuesto(self, id_documento: int):
-        dlg = DialogoEditarPresupuesto(self.conn, id_documento, parent=self.window())
-        if dlg.exec() == QDialog.DialogCode.Accepted:
-            self.recargar()
+        vp = self.window()
+        if hasattr(vp, 'crear_operacion'):
+            vp.crear_operacion("PRESUPUESTO", is_edicion=True, id_edicion=id_documento)
 
     def _abrir_vista_previa(self, id_documento: int):
         import tempfile, os
@@ -1291,8 +1327,8 @@ class PestanaPresupuestos(QWidget):
                     vp = self.window()
                     if hasattr(vp, 'pestana_stock'):
                         vp.pestana_stock.cargar_datos()
-                    if hasattr(vp, 'vista_ventas_temp'):
-                        vp.vista_ventas_temp.cargar_catalogo_memoria()
+                    if hasattr(vp, 'actualizar_catalogos_operaciones'):
+                        vp.actualizar_catalogos_operaciones()
                 except Exception:
                     pass
             except Exception as e:
@@ -1343,8 +1379,8 @@ class PestanaPresupuestos(QWidget):
                     vp = self.window()
                     if hasattr(vp, 'pestana_stock'):
                         vp.pestana_stock.cargar_datos()
-                    if hasattr(vp, 'vista_ventas_temp'):
-                        vp.vista_ventas_temp.cargar_catalogo_memoria()
+                    if hasattr(vp, 'actualizar_catalogos_operaciones'):
+                        vp.actualizar_catalogos_operaciones()
                 except Exception:
                     pass
                 

@@ -1,14 +1,121 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
                              QPushButton, QStackedWidget, QLabel, QFrame,
-                             QGraphicsOpacityEffect, QMessageBox)
-from PyQt6.QtCore import Qt, QTimer, QVariantAnimation, QPropertyAnimation, QEasingCurve, QSettings
+                             QGraphicsOpacityEffect, QMessageBox, QMenu, QScrollArea)
+from PyQt6.QtCore import Qt, QTimer, QVariantAnimation, QPropertyAnimation, QEasingCurve, QSettings, pyqtSignal
 from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont, QPainterPath
 from pathlib import Path
 from ui.modules.stock.tab_stock import PestanaStock
 from ui.modules.ventas.tab_ventas import PestanaNuevaVenta
 from ui.modules.clientes.tab_clientes import PestanaClientes
-from ui.modules.presupuestos.tab_presupuestos import PestanaPresupuestos
+from ui.modules.presupuestos.tab_presupuestos import PestanaPresupuestos, PestanaNuevoPresupuesto
 
+class TarjetaOperacionSidebar(QFrame):
+    clicked = pyqtSignal()
+    cerrar_solicitado = pyqtSignal()
+
+    def __init__(self, id_op):
+        super().__init__()
+        self.id_op = id_op
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFixedHeight(50)
+        self.setObjectName("tarjeta_op")
+        
+        # Estado
+        self.colapsada = False
+        self.seleccionada = False
+        self.tipo = "VENTA"
+        
+        self.layout_principal = QHBoxLayout(self)
+        self.layout_principal.setContentsMargins(8, 4, 8, 4)
+        self.layout_principal.setSpacing(8)
+        
+        # Icono
+        self.lbl_icono = QLabel("🛒")
+        self.lbl_icono.setStyleSheet("font-size: 16px; background: transparent; border: none;")
+        self.lbl_icono.setFixedSize(24, 24)
+        self.lbl_icono.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Textos
+        self.contenedor_textos = QWidget()
+        ly_textos = QVBoxLayout(self.contenedor_textos)
+        ly_textos.setContentsMargins(0, 0, 0, 0)
+        ly_textos.setSpacing(0)
+        
+        self.lbl_titulo = QLabel("Venta")
+        self.lbl_titulo.setStyleSheet("color: #f8fafc; font-size: 12px; font-weight: bold;")
+        
+        self.lbl_detalle = QLabel("Cons. Final")
+        self.lbl_detalle.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        
+        ly_textos.addWidget(self.lbl_titulo)
+        ly_textos.addWidget(self.lbl_detalle)
+        
+        # Botón cerrar
+        self.btn_cerrar = QPushButton("✕")
+        self.btn_cerrar.setFixedSize(20, 20)
+        self.btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_cerrar.setStyleSheet("QPushButton { color: #94a3b8; background: transparent; border: none; font-size: 14px; font-weight: bold; padding-bottom: 2px; } QPushButton:hover { color: #ef4444; }")
+        self.btn_cerrar.clicked.connect(self.cerrar_solicitado.emit)
+        
+        self.layout_principal.addWidget(self.lbl_icono, alignment=Qt.AlignmentFlag.AlignVCenter)
+        self.layout_principal.addWidget(self.contenedor_textos, alignment=Qt.AlignmentFlag.AlignVCenter)
+        self.layout_principal.addStretch()
+        self.layout_principal.addWidget(self.btn_cerrar, alignment=Qt.AlignmentFlag.AlignVCenter)
+        
+        self.actualizar_estilo()
+
+    def actualizar_estilo(self):
+        bg = "#1e293b" if self.seleccionada else "transparent"
+        border = "border-left: 3px solid #3b82f6;" if self.seleccionada else "border-left: 3px solid transparent;"
+        hover = "QFrame#tarjeta_op:hover { background-color: #1e293b; }"
+        self.setStyleSheet(f"QFrame#tarjeta_op {{ background-color: {bg}; {border} border-radius: 4px; }} {hover}")
+        
+    def set_seleccionada(self, sel):
+        self.seleccionada = sel
+        self.actualizar_estilo()
+        
+    def set_colapsada(self, colapsada):
+        self.colapsada = colapsada
+        self.contenedor_textos.setVisible(not colapsada)
+        self.btn_cerrar.setVisible(not colapsada)
+        self.setToolTip(self.lbl_titulo.text() + " - " + self.lbl_detalle.text() if colapsada else "")
+        
+    def mousePressEvent(self, e):
+        super().mousePressEvent(e)
+        self.clicked.emit()
+        
+    def actualizar_datos(self, datos):
+        self.tipo = datos.get('tipo', 'VENTA')
+        is_edicion = datos.get('is_edicion', False)
+        
+        if is_edicion:
+            icono = "✏️"
+            txt_tipo = f"Edición P-{datos.get('id_presupuesto_edicion', '')}"
+        elif self.tipo == 'PRESUPUESTO':
+            icono = "📄"
+            txt_tipo = "Presupuesto"
+        else:
+            icono = "🛒"
+            txt_tipo = "Venta"
+            
+        self.lbl_icono.setText(icono)
+        self.lbl_titulo.setText(txt_tipo)
+        
+        cliente = datos.get('cliente')
+        nombre = cliente['nombre'] if cliente else "Cons. Final"
+        
+        items = datos.get('items', 0)
+        total = datos.get('total', 0.0)
+        
+        from ui.components.operacion_base import formato_arg
+        
+        if items > 0:
+            self.lbl_detalle.setText(f"{nombre} ({items} it. $ {formato_arg(total)})")
+        else:
+            self.lbl_detalle.setText(nombre)
+            
+        if self.colapsada:
+            self.setToolTip(f"{txt_tipo} - {self.lbl_detalle.text()}")
 
 class SidebarButton(QPushButton):
     def __init__(self, tipo_icono, texto):
@@ -256,6 +363,10 @@ class VentanaPrincipal(QMainWindow):
         # Configuración para recordar estado
         self.settings = QSettings("ConstruSeco", "ERP")
         self.sidebar_colapsada = self.settings.value("sidebar_colapsada", False, type=bool)
+        
+        # Inicializamos estado para operaciones abiertas
+        self.operaciones_abiertas = {} # {id_operacion: (widget, tarjeta)}
+        self.siguiente_id_operacion = 1
 
         self.init_ui()
 
@@ -353,8 +464,70 @@ class VentanaPrincipal(QMainWindow):
         for btn in self.botones_menu:
             layout_sidebar.addWidget(btn)
 
-        # Resorte inferior invisible para empujar los botones hacia arriba
-        layout_sidebar.addStretch()
+        # Resorte inferior invisible para empujar los botones principales hacia arriba si hace falta
+        # layout_sidebar.addStretch() # Quitado para que la lista de operaciones crezca.
+        # SECCIÓN EN CURSO
+        ly_en_curso = QHBoxLayout()
+        ly_en_curso.setContentsMargins(15, 10, 15, 10)
+        self.lbl_en_curso = QLabel("EN CURSO")
+        self.lbl_en_curso.setStyleSheet("color: #64748b; font-size: 11px; font-weight: bold; letter-spacing: 1px;")
+        
+        self.btn_nueva_op = QPushButton("＋")
+        self.btn_nueva_op.setFixedSize(22, 22)
+        self.btn_nueva_op.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_nueva_op.setStyleSheet("""
+            QPushButton { 
+                color: #64748b; 
+                background: transparent; 
+                border: none; 
+                border-radius: 4px; 
+                font-weight: 800; 
+                font-size: 14px;
+                padding: 0;
+                margin: 0;
+            } 
+            QPushButton:hover { 
+                background: #e2e8f0; 
+                color: #0f172a;
+            }
+            QPushButton::menu-indicator {
+                image: none;
+                width: 0px;
+            }
+        """)
+        
+        self.menu_nueva_op = QMenu(self)
+        self.menu_nueva_op.setStyleSheet("QMenu { background-color: #1e293b; color: #f8fafc; border: 1px solid #334155; } QMenu::item:selected { background-color: #3b82f6; }")
+        
+        accion_venta = self.menu_nueva_op.addAction("🛒 Venta Rápida")
+        accion_venta.triggered.connect(lambda: self.crear_operacion("VENTA"))
+        
+        accion_presup = self.menu_nueva_op.addAction("📄 Nuevo Presupuesto")
+        accion_presup.triggered.connect(lambda: self.crear_operacion("PRESUPUESTO"))
+        
+        self.btn_nueva_op.clicked.connect(lambda: self.menu_nueva_op.exec(self.btn_nueva_op.mapToGlobal(self.btn_nueva_op.rect().bottomLeft())))
+        
+        ly_en_curso.addWidget(self.lbl_en_curso, alignment=Qt.AlignmentFlag.AlignVCenter)
+        ly_en_curso.addStretch()
+        ly_en_curso.addWidget(self.btn_nueva_op, alignment=Qt.AlignmentFlag.AlignVCenter)
+        
+        layout_sidebar.addLayout(ly_en_curso)
+        
+        # Scroll para tarjetas
+        scroll_tarjetas = QScrollArea()
+        scroll_tarjetas.setWidgetResizable(True)
+        scroll_tarjetas.setFrameShape(QFrame.Shape.NoFrame)
+        scroll_tarjetas.setStyleSheet("background: transparent;")
+        
+        content_tarjetas = QWidget()
+        content_tarjetas.setStyleSheet("background: transparent;")
+        self.layout_tarjetas = QVBoxLayout(content_tarjetas)
+        self.layout_tarjetas.setContentsMargins(10, 5, 10, 5)
+        self.layout_tarjetas.setSpacing(4)
+        self.layout_tarjetas.addStretch() # Empuja hacia arriba
+        
+        scroll_tarjetas.setWidget(content_tarjetas)
+        layout_sidebar.addWidget(scroll_tarjetas, stretch=1)
         
         # PIE DE LA BARRA
         footer_container = QWidget()
@@ -385,27 +558,21 @@ class VentanaPrincipal(QMainWindow):
         # 2. CONTENEDOR DE PESTAÑAS (DERECHA)
         self.contenedor_vistas = QStackedWidget()
 
-        # Instanciamos las pestañas reales
-        self.vista_ventas_temp = PestanaNuevaVenta(self.conn)        # Índice 0
-        self.pestana_stock     = PestanaStock(self.conn)             # Índice 1
-        self.pestana_clientes  = PestanaClientes(self.conn)          # Índice 2
+        # Instanciamos las pestañas fijas
+        self.pestana_stock     = PestanaStock(self.conn)
+        self.pestana_clientes  = PestanaClientes(self.conn)
+        self.pestana_historial_presupuestos = PestanaPresupuestos(self.conn)
 
-        self.vista_presupuestos_temp = PestanaPresupuestos(self.conn)
+        # Agregamos las vistas fijas al mazo de cartas (QStackedWidget)
+        self.contenedor_vistas.addWidget(self.pestana_stock)             
+        self.contenedor_vistas.addWidget(self.pestana_clientes)          
+        self.contenedor_vistas.addWidget(self.pestana_historial_presupuestos)   
 
-        # Agregamos las vistas al mazo de cartas (QStackedWidget)
-        self.contenedor_vistas.addWidget(self.vista_ventas_temp)         # Índice 0
-        self.contenedor_vistas.addWidget(self.pestana_stock)             # Índice 1
-        self.contenedor_vistas.addWidget(self.pestana_clientes)          # Índice 2
-        self.contenedor_vistas.addWidget(self.vista_presupuestos_temp)   # Índice 3
-
-        # Enlazamos los clics de los botones para cambiar de pestaña dinámicamente
-        self.btn_ventas.clicked.connect(lambda: self.cambiar_pestana(0, self.btn_ventas))
-        self.btn_stock.clicked.connect(lambda: self.cambiar_pestana(1, self.btn_stock))
-        self.btn_clientes.clicked.connect(lambda: self.cambiar_pestana(2, self.btn_clientes))
-        self.btn_presupuestos.clicked.connect(lambda: self.cambiar_pestana(3, self.btn_presupuestos))
-
-        # Dejar la primera pestaña (Ventas) seleccionada por defecto al abrir
-        self.cambiar_pestana(0, self.btn_ventas)
+        # Enlazamos los clics de los botones de navegación principal
+        self.btn_ventas.clicked.connect(self._navegar_ventas)
+        self.btn_stock.clicked.connect(lambda: self.cambiar_pestana_fija(self.pestana_stock, self.btn_stock))
+        self.btn_clientes.clicked.connect(lambda: self.cambiar_pestana_fija(self.pestana_clientes, self.btn_clientes))
+        self.btn_presupuestos.clicked.connect(lambda: self.cambiar_pestana_fija(self.pestana_historial_presupuestos, self.btn_presupuestos))
 
         # Ensamblamos todo en la ventana central
         layout_principal.addWidget(self.sidebar)
@@ -416,13 +583,14 @@ class VentanaPrincipal(QMainWindow):
         # Aplicar estado inicial de la sidebar sin animar
         self.actualizar_estado_sidebar(animar=False)
         
-        # Iniciar timer operativo global (Ej: cada 5 min = 300,000 ms)
+        # Iniciar timer operativo global y limpiar vencidos
         self._timer_limpieza = QTimer(self)
         self._timer_limpieza.timeout.connect(self._verificar_y_limpiar_vencidos)
         self._timer_limpieza.start(300_000)
-        
-        # Hacer una limpieza inicial silenciosa
         QTimer.singleShot(1000, self._verificar_y_limpiar_vencidos)
+        
+        # Abrimos la primera venta por defecto
+        QTimer.singleShot(0, lambda: self.crear_operacion("VENTA"))
 
     def toggle_sidebar(self):
         self.sidebar_colapsada = not self.sidebar_colapsada
@@ -437,6 +605,9 @@ class VentanaPrincipal(QMainWindow):
         self.lbl_sub.setVisible(not self.sidebar_colapsada)
         self.lbl_version.setVisible(not self.sidebar_colapsada)
         self.lbl_db.setVisible(not self.sidebar_colapsada)
+        self.lbl_en_curso.setVisible(not self.sidebar_colapsada)
+        if hasattr(self, 'btn_nueva_op'):
+            self.btn_nueva_op.setVisible(not self.sidebar_colapsada)
         
         # Tamaño del logo
         size_logo = 40 if self.sidebar_colapsada else 90
@@ -456,6 +627,13 @@ class VentanaPrincipal(QMainWindow):
         # Tooltips de los botones
         for btn in self.botones_menu:
             btn.setToolTip(btn.texto if self.sidebar_colapsada else "")
+            
+        self.btn_nueva_op.setToolTip("Nueva Operación" if self.sidebar_colapsada else "")
+        
+        # Actualizar tarjetas
+        if hasattr(self, 'operaciones_abiertas'):
+            for id_op, (w, t) in self.operaciones_abiertas.items():
+                t.set_colapsada(self.sidebar_colapsada)
             
         # Actualizar estado de rotación del botón hamburguesa
         if isinstance(self.btn_toggle, SidebarToggleButton):
@@ -491,36 +669,114 @@ class VentanaPrincipal(QMainWindow):
         from db.conexion import limpiar_presupuestos_vencidos
         afectados = limpiar_presupuestos_vencidos(self.conn)
         if afectados and afectados > 0:
-            # Recargar Presupuestos para reflejar cambios (vencidos) sin perder selección
-            self.vista_presupuestos_temp.recargar()
-            
-            # Recargar Stock para que el catálogo refleje el ATP liberado
+            self.pestana_historial_presupuestos.recargar()
             self.pestana_stock.cargar_datos()
-            
-            # Recargar catálogo en memoria de la pantalla de Venta/Presupuesto
-            self.vista_ventas_temp.cargar_catalogo_memoria()
+            self.actualizar_catalogos_operaciones()
 
-    def cambiar_pestana(self, indice, boton_presionado):
-        """Cambia la vista del contenedor de la derecha y actualiza el botón activo en la barra lateral."""
-        if self.contenedor_vistas.currentIndex() == indice and boton_presionado.isChecked():
-            return
+    def _navegar_ventas(self):
+        # Buscar la última venta activa si la hay, si no crear una.
+        ultima_op = None
+        for id_op, (w, t) in self.operaciones_abiertas.items():
+            if t.tipo == "VENTA":
+                ultima_op = id_op
             
-        # Desmarcar todos los botones excepto el que se presionó
+        if ultima_op is not None:
+            self.seleccionar_operacion(ultima_op)
+        else:
+            self.crear_operacion("VENTA")
+
+    def crear_operacion(self, tipo="VENTA", is_edicion=False, id_edicion=None):
+        id_op = self.siguiente_id_operacion
+        self.siguiente_id_operacion += 1
+        
+        if is_edicion or tipo == "PRESUPUESTO":
+            widget = PestanaNuevoPresupuesto(self.conn, is_edicion=is_edicion, id_presupuesto_edicion=id_edicion)
+        else:
+            widget = PestanaNuevaVenta(self.conn)
+            
+        tarjeta = TarjetaOperacionSidebar(id_op)
+        tarjeta.set_colapsada(self.sidebar_colapsada)
+        
+        tarjeta.clicked.connect(lambda: self.seleccionar_operacion(id_op))
+        tarjeta.cerrar_solicitado.connect(lambda: self.cerrar_operacion(id_op))
+        
+        widget.estado_cambiado.connect(tarjeta.actualizar_datos)
+        widget.operacion_completada.connect(lambda _: self.cerrar_operacion(id_op, forzar=True))
+        
+        self.operaciones_abiertas[id_op] = (widget, tarjeta)
+        
+        self.contenedor_vistas.addWidget(widget)
+        self.layout_tarjetas.insertWidget(self.layout_tarjetas.count() - 1, tarjeta)
+        
+        tarjeta.actualizar_datos({'tipo': tipo, 'items': 0, 'total': 0.0, 'is_edicion': is_edicion, 'id_presupuesto_edicion': id_edicion})
+        
+        self.seleccionar_operacion(id_op)
+
+    def seleccionar_operacion(self, id_op):
+        if id_op not in self.operaciones_abiertas: return
+        widget, tarjeta = self.operaciones_abiertas[id_op]
+        
+        for op, (w, t) in self.operaciones_abiertas.items():
+            t.set_seleccionada(op == id_op)
+            
+        for btn in self.botones_menu:
+            btn.setChecked(False)
+            btn.update()
+            
+        if tarjeta.tipo == "VENTA":
+            self.btn_ventas.setChecked(True)
+            self.btn_ventas.update()
+            
+        self._transicion_vista(widget)
+
+    def cerrar_operacion(self, id_op, forzar=False):
+        if id_op not in self.operaciones_abiertas: return
+        widget, tarjeta = self.operaciones_abiertas[id_op]
+        
+        if not forzar and not widget.esta_vacia():
+            res = QMessageBox.question(self, "Cerrar Operación", "¿Seguro que desea cerrar esta operación? Se perderán los ítems cargados.")
+            if res != QMessageBox.StandardButton.Yes:
+                return
+                
+        self.contenedor_vistas.removeWidget(widget)
+        widget.deleteLater()
+        self.layout_tarjetas.removeWidget(tarjeta)
+        tarjeta.deleteLater()
+        
+        del self.operaciones_abiertas[id_op]
+        
+        # Si cerramos la actual, ir a la última o a stock
+        if self.contenedor_vistas.currentWidget() == widget:
+            if self.operaciones_abiertas:
+                self.seleccionar_operacion(list(self.operaciones_abiertas.keys())[-1])
+            else:
+                self.cambiar_pestana_fija(self.pestana_stock, self.btn_stock)
+
+    def actualizar_catalogos_operaciones(self):
+        for id_op, (widget, tarjeta) in self.operaciones_abiertas.items():
+            if hasattr(widget, 'cargar_catalogo_memoria'):
+                widget.cargar_catalogo_memoria()
+
+    def cambiar_pestana_fija(self, widget, boton_presionado):
+        for op, (w, t) in self.operaciones_abiertas.items():
+            t.set_seleccionada(False)
+            
         for btn in self.botones_menu:
             btn.setChecked(btn == boton_presionado)
             btn.update()
             
-        # Transición sutil (fade)
+        self._transicion_vista(widget)
+
+    def _transicion_vista(self, widget):
+        if self.contenedor_vistas.currentWidget() == widget:
+            return
         self.fade_effect = QGraphicsOpacityEffect(self.contenedor_vistas)
         self.contenedor_vistas.setGraphicsEffect(self.fade_effect)
-        
         self.fade_anim = QPropertyAnimation(self.fade_effect, b"opacity")
         self.fade_anim.setDuration(250)
         self.fade_anim.setStartValue(0.0)
         self.fade_anim.setEndValue(1.0)
         self.fade_anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
-        
-        self.contenedor_vistas.setCurrentIndex(indice)
-        
+        self.contenedor_vistas.setCurrentWidget(widget)
         self.fade_anim.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
         self.fade_anim.finished.connect(lambda: self.contenedor_vistas.setGraphicsEffect(None))

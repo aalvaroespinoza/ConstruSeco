@@ -292,6 +292,7 @@ class DialogoVentaExitosa(DialogoModalIntegrado):
 
 class OperacionBaseWidget(QWidget):
     operacion_completada = pyqtSignal(str)
+    estado_cambiado = pyqtSignal(object)
     
     def __init__(self, conexion_db, is_presupuesto=False, is_edicion=False, id_presupuesto_edicion=None):
         super().__init__()
@@ -599,12 +600,12 @@ class OperacionBaseWidget(QWidget):
         # --- 2. SECCIÓN CLIENTE ---
         frm_cliente = QFrame()
         frm_cliente.setObjectName("tarjeta_blanca")
-        ly_cliente = QVBoxLayout(frm_cliente)
-        ly_cliente.setContentsMargins(20, 16, 20, 16)
-        ly_cliente.setSpacing(8)
+        ly_cliente = QHBoxLayout(frm_cliente)
+        ly_cliente.setContentsMargins(12, 8, 12, 8)
+        ly_cliente.setSpacing(12)
         
         lbl_cli_tit = QLabel("1. CLIENTE")
-        lbl_cli_tit.setStyleSheet("color: #64748B; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;")
+        lbl_cli_tit.setStyleSheet("color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;")
         ly_cliente.addWidget(lbl_cli_tit)
 
         self.widget_busqueda_cliente = QWidget()
@@ -614,17 +615,17 @@ class OperacionBaseWidget(QWidget):
         
         self.input_cliente = QLineEdit()
         self.input_cliente.setPlaceholderText("Buscar por nombre o CUIT (F3)...")
-        self.input_cliente.setMinimumHeight(40)
-        self.input_cliente.setStyleSheet("QLineEdit { border: 1px solid #E2E8F0; border-radius: 6px; padding: 0 12px; font-size: 14px; background: #F8FAFC; } QLineEdit:focus { border: 1px solid #3B82F6; background: #FFFFFF; }")
+        self.input_cliente.setMinimumHeight(32)
+        self.input_cliente.setStyleSheet("QLineEdit { border: 1px solid #E2E8F0; border-radius: 6px; padding: 0 12px; font-size: 13px; background: #F8FAFC; } QLineEdit:focus { border: 1px solid #3B82F6; background: #FFFFFF; }")
         self.input_cliente.returnPressed.connect(self.procesar_input_cliente)
         
         self.btn_nuevo_cliente = QPushButton("+ Nuevo")
         self.btn_nuevo_cliente.setObjectName("btn_secundario")
-        self.btn_nuevo_cliente.setFixedHeight(40)
+        self.btn_nuevo_cliente.setFixedHeight(32)
         self.btn_nuevo_cliente.setStyleSheet("""
             QPushButton#btn_secundario {
-                padding: 0px 16px;
-                font-size: 14px;
+                padding: 0px 12px;
+                font-size: 13px;
                 text-align: center;
                 qproperty-iconSize: 16px;
             }
@@ -637,15 +638,15 @@ class OperacionBaseWidget(QWidget):
         
         self.widget_tarjeta_cliente = QFrame()
         self.widget_tarjeta_cliente.setStyleSheet("background-color: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 6px;")
-        self.widget_tarjeta_cliente.setFixedHeight(40)
+        self.widget_tarjeta_cliente.setFixedHeight(32)
         layout_tarjeta_cli = QHBoxLayout(self.widget_tarjeta_cliente)
         layout_tarjeta_cli.setContentsMargins(12, 0, 8, 0)
         layout_tarjeta_cli.setSpacing(12)
         
         self.lbl_nombre_cliente = QLabel("<b>Nombre Cliente</b>")
-        self.lbl_nombre_cliente.setStyleSheet("color: #0F172A; font-size: 14px;")
+        self.lbl_nombre_cliente.setStyleSheet("color: #0F172A; font-size: 13px;")
         self.lbl_datos_cliente = QLabel("CUIT/DNI - Tel")
-        self.lbl_datos_cliente.setStyleSheet("color: #64748B; font-size: 13px;")
+        self.lbl_datos_cliente.setStyleSheet("color: #64748B; font-size: 12px;")
         
         from ui.components.boton_x import BotonCerrarX
         self.btn_quitar_cliente = BotonCerrarX()
@@ -657,8 +658,8 @@ class OperacionBaseWidget(QWidget):
         layout_tarjeta_cli.addWidget(self.btn_quitar_cliente)
         self.widget_tarjeta_cliente.setVisible(False)
         
-        ly_cliente.addWidget(self.widget_busqueda_cliente)
-        ly_cliente.addWidget(self.widget_tarjeta_cliente)
+        ly_cliente.addWidget(self.widget_busqueda_cliente, stretch=1)
+        ly_cliente.addWidget(self.widget_tarjeta_cliente, stretch=1)
         
         layout_principal.addWidget(frm_cliente)
 
@@ -953,11 +954,6 @@ class OperacionBaseWidget(QWidget):
         layout_footer.setSpacing(24)
         
         # --- INICIALIZAR COMPONENTES COMPARTIDOS/NECESARIOS ---
-        self.chk_descontar = QCheckBox("Descontar del stock")
-        self.chk_descontar.setChecked(not self.is_presupuesto)
-        self.chk_descontar.setEnabled(not self.is_presupuesto)
-        self.chk_descontar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.chk_descontar.setStyleSheet("color: #334155; font-size: 13px; font-weight: 600;")
         
         self.input_observaciones = QLineEdit()
         self.input_observaciones.setPlaceholderText("Observaciones (opcional)...")
@@ -965,7 +961,7 @@ class OperacionBaseWidget(QWidget):
         self.input_observaciones.setStyleSheet("border: 1px solid #E2E8F0; border-radius: 6px; font-size: 13px; padding: 0 10px; background-color: #F8FAFC;")
         
         self.combo_validez = QComboBox()
-        self.combo_validez.addItems(["15 días", "30 días", "48 horas", "7 días", "Hasta agotar stock"])
+        self.combo_validez.addItems(["48 horas", "15 días", "30 días", "7 días", "Hasta agotar stock"])
         self.combo_validez.setStyleSheet("border: 1px solid #E2E8F0; border-radius: 6px; font-size: 13px; padding: 4px 10px; background-color: #F8FAFC;")
         
         self.lbl_subtotal = QLabel("$ 0,00")
@@ -1172,6 +1168,7 @@ class OperacionBaseWidget(QWidget):
         self.widget_busqueda_cliente.setVisible(False)
         self.widget_tarjeta_cliente.setVisible(True)
         self.input_buscador.setFocus()
+        self._emitir_estado_cambiado()
         
     def deseleccionar_cliente(self):
         self.cliente_seleccionado = None
@@ -1179,6 +1176,7 @@ class OperacionBaseWidget(QWidget):
         self.widget_tarjeta_cliente.setVisible(False)
         self.widget_busqueda_cliente.setVisible(True)
         self.input_cliente.setFocus()
+        self._emitir_estado_cambiado()
 
 
 
@@ -1503,7 +1501,7 @@ class OperacionBaseWidget(QWidget):
         return precio_base * factor
 
     def requiere_control_stock(self):
-        return self.chk_descontar.isChecked()
+        return not self.is_presupuesto
 
     def cantidad_base_en_carrito(self, codigo, excluir_fila=None):
         total = 0.0
@@ -1880,12 +1878,12 @@ class OperacionBaseWidget(QWidget):
         subtotal_neto = subtotal_bruto - monto_desc_gral
         
         monto_iva = subtotal_neto * (self.iva_porcentaje / 100.0) if self.iva_aplicado else 0.0
-        total_final = subtotal_neto + monto_iva
+        self.total_final_calculado = subtotal_neto + monto_iva # guardamos para poder emitirlo
             
         self.lbl_subtotal.setText(f"$ {formato_arg(subtotal_bruto)}")
         self.lbl_monto_desc.setText(f"-$ {formato_arg(monto_desc_gral)}")
         self.lbl_monto_iva.setText(f"+$ {formato_arg(monto_iva)}")
-        self.lbl_total.setText(f"$ {formato_arg(total_final)}")
+        self.lbl_total.setText(f"$ {formato_arg(self.total_final_calculado)}")
         
         estado = "🟢 Nueva operación" if not self.carrito else "🟢 En curso"
         
@@ -1901,6 +1899,22 @@ class OperacionBaseWidget(QWidget):
             self.stack_tabla.setCurrentIndex(0)
         else:
             self.stack_tabla.setCurrentIndex(1)
+            
+        self._emitir_estado_cambiado()
+
+    def _emitir_estado_cambiado(self):
+        total = getattr(self, 'total_final_calculado', 0.0)
+        self.estado_cambiado.emit({
+            'tipo': self.tipo_documento_seleccionado,
+            'cliente': self.cliente_seleccionado,
+            'items': len(self.carrito),
+            'total': total,
+            'is_edicion': self.is_edicion,
+            'id_presupuesto_edicion': getattr(self, 'id_presupuesto_edicion', None)
+        })
+
+    def esta_vacia(self):
+        return len(self.carrito) == 0 and self.cliente_seleccionado is None
 
     def confirmar_operacion(self, tipo):
         self.setFocus()
@@ -1908,7 +1922,7 @@ class OperacionBaseWidget(QWidget):
             QMessageBox.information(self, "Venta Vacía", "Agrega al menos un producto para confirmar.")
             return
             
-        descontar_stock = self.chk_descontar.isChecked()
+        descontar_stock = not self.is_presupuesto
         if tipo == 'PRESUPUESTO':
             descontar_stock = False
             estado_doc = 'ACTIVO'
