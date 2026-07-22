@@ -597,6 +597,7 @@ class VentanaPrincipal(QMainWindow):
         self.pestana_inicio.nuevo_presupuesto_solicitado.connect(lambda: self.crear_operacion("PRESUPUESTO"))
         self.pestana_inicio.ver_stock_solicitado.connect(lambda: self.cambiar_pestana_fija(self.pestana_stock, self.btn_stock))
         self.pestana_inicio.ver_clientes_solicitado.connect(lambda: self.cambiar_pestana_fija(self.pestana_clientes, self.btn_clientes))
+        self.pestana_inicio.ver_presupuestos_solicitado.connect(lambda: self.cambiar_pestana_fija(self.pestana_historial_presupuestos, self.btn_presupuestos))
 
         # Ensamblamos todo en la ventana central
         layout_principal.addWidget(self.sidebar)
@@ -751,6 +752,9 @@ class VentanaPrincipal(QMainWindow):
         if tarjeta.tipo == "VENTA":
             self.btn_ventas.setChecked(True)
             self.btn_ventas.update()
+        elif tarjeta.tipo == "PRESUPUESTO":
+            self.btn_presupuestos.setChecked(True)
+            self.btn_presupuestos.update()
             
         self._transicion_vista(widget)
 
@@ -803,6 +807,7 @@ class VentanaPrincipal(QMainWindow):
             self.actualizar_estado_sidebar(animar=True)
             
         if self.contenedor_vistas.currentWidget() == widget:
+            self._aplicar_foco(widget)
             return
             
         self.fade_effect = QGraphicsOpacityEffect(self.contenedor_vistas)
@@ -814,4 +819,14 @@ class VentanaPrincipal(QMainWindow):
         self.fade_anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
         self.contenedor_vistas.setCurrentWidget(widget)
         self.fade_anim.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
-        self.fade_anim.finished.connect(lambda: self.contenedor_vistas.setGraphicsEffect(None))
+        self.fade_anim.finished.connect(lambda: self._on_transition_finished(widget))
+
+    def _on_transition_finished(self, widget):
+        self.contenedor_vistas.setGraphicsEffect(None)
+        self._aplicar_foco(widget)
+
+    def _aplicar_foco(self, widget):
+        if hasattr(widget, 'input_buscador'):
+            widget.input_buscador.setFocus()
+        elif hasattr(widget, 'input_busqueda'):
+            widget.input_busqueda.setFocus()

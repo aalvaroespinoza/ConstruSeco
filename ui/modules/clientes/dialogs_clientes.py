@@ -77,7 +77,7 @@ class _CampoFormulario(QFrame):
         self.setStyleSheet("_CampoFormulario#campo_formulario { border: none; background: transparent; }")
         ly = QVBoxLayout(self)
         ly.setContentsMargins(0, 0, 0, 0)
-        ly.setSpacing(3)
+        ly.setSpacing(16)
 
         # Etiqueta con asterisco para campos obligatorios
         texto_lbl = (
@@ -195,7 +195,7 @@ class DialogoFormularioCliente(DialogoModalIntegrado):
     def _construir_ui(self):
         ly = QVBoxLayout(self)
         ly.setContentsMargins(24, 20, 24, 20)
-        ly.setSpacing(0)
+        ly.setSpacing(16)
 
         # Encabezado interno
         lbl_titulo = QLabel(

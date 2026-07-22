@@ -41,8 +41,8 @@ class DialogoNota(DialogoModalIntegrado):
 
     def _construir_ui(self):
         ly = QVBoxLayout(self)
-        ly.setContentsMargins(20, 20, 20, 20)
-        ly.setSpacing(12)
+        ly.setContentsMargins(24, 24, 24, 24)
+        ly.setSpacing(16)
 
         lbl_titulo = QLabel("Editar Nota" if self.modo_edicion else "Nueva Nota")
         lbl_titulo.setStyleSheet(f"font-size: 16px; font-weight: 800; color: {COLOR_TEXT_MAIN};")
@@ -129,8 +129,8 @@ class DialogoContacto(DialogoModalIntegrado):
 
     def _construir_ui(self):
         ly = QVBoxLayout(self)
-        ly.setContentsMargins(20, 20, 20, 20)
-        ly.setSpacing(12)
+        ly.setContentsMargins(24, 24, 24, 24)
+        ly.setSpacing(16)
 
         lbl_titulo = QLabel("Editar Contacto" if self.modo_edicion else "Nuevo Contacto")
         lbl_titulo.setStyleSheet(f"font-size: 16px; font-weight: 800; color: {COLOR_TEXT_MAIN};")

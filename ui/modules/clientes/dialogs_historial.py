@@ -32,8 +32,8 @@ class DialogoHistorialCliente(QDialog):
 
     def _construir_ui(self):
         ly = QVBoxLayout(self)
-        ly.setContentsMargins(20, 20, 20, 20)
-        ly.setSpacing(14)
+        ly.setContentsMargins(24, 24, 24, 24)
+        ly.setSpacing(16)
 
         # Cabecera
         ly_hdr = QHBoxLayout()
@@ -67,7 +67,7 @@ class DialogoHistorialCliente(QDialog):
         self.tabla.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.tabla.setStyleSheet(
             f"QTableWidget {{ background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 6px; }}"
-            f"QHeaderView::section {{ background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_SEC}; font-weight: bold; padding: 6px; border: none; border-bottom: 1px solid {COLOR_BORDER}; }}"
+            f"QHeaderView::section {{ background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_SEC}; font-weight: 600; font-size: 12px; padding: 8px; border: none; border-bottom: 1px solid {COLOR_BORDER}; }}"
         )
         ly.addWidget(self.tabla)
 

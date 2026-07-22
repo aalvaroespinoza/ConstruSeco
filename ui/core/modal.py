@@ -32,7 +32,7 @@ class DialogoModalIntegrado(QFrame):
         self.setStyleSheet(f"""
             QFrame#dialogo_modal_card {{
                 background-color: {COLOR_CARD_BG};
-                border-radius: 12px;
+                border-radius: 6px;
                 border: 1px solid {COLOR_BORDER};
             }}
         """)

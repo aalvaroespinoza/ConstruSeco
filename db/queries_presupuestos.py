@@ -276,8 +276,8 @@ def anular_presupuesto(conn, id_documento: int) -> bool:
         row = c.fetchone()
         if not row:
             raise ValueError("El presupuesto no existe.")
-        if row[0] != 'ACTIVO':
-            raise ValueError(f"El presupuesto está en estado {row[0]}, solo se pueden anular presupuestos ACTIVOS.")
+        if row[0] not in ('ACTIVO', 'VENCIDO'):
+            raise ValueError(f"El presupuesto está en estado {row[0]}, solo se pueden anular presupuestos ACTIVOS o VENCIDOS.")
             
         # 2. Liberar compromisos de ATP
         c.execute("""

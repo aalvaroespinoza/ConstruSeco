@@ -16,7 +16,7 @@ class DialogoVistaPreviaPDF(DialogoModalIntegrado):
         self.resize(1100, 850)
         
         ly = QVBoxLayout(self)
-        ly.setContentsMargins(16, 16, 16, 16)
+        ly.setContentsMargins(24, 24, 24, 24)
         
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)

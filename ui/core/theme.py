@@ -40,6 +40,7 @@ class UIGlobalPolisher(QObject):
                 obj.setGridStyle(Qt.PenStyle.SolidLine)
                 # Alineación y comportamiento consistente
                 obj.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+                obj.setAlternatingRowColors(True)
                 if obj.horizontalHeader():
                     obj.horizontalHeader().setHighlightSections(False)
                     # Forzar cursor normal en headers
@@ -137,16 +138,17 @@ def aplicar_tema_claro(app):
             border: 1px solid {COLOR_BORDER};
             border-radius: 6px;
             gridline-color: {COLOR_BORDER};
-            selection-background-color: {COLOR_BG};
-            selection-color: {COLOR_TEXT_MAIN};
-            alternate-background-color: {COLOR_BG};
+            selection-background-color: #eff6ff;
+            selection-color: {COLOR_PRIMARY};
+            alternate-background-color: #f1f5f9;
+            outline: none;
         }}
         QTableWidget::item {{
-            padding: 4px 8px;
+            padding: 8px 10px;
             border-bottom: 1px solid {COLOR_BORDER};
         }}
         QTableWidget::item:selected {{
-            background-color: {COLOR_BG};
+            background-color: #eff6ff;
             color: {COLOR_PRIMARY};
         }}
         QHeaderView::section {{

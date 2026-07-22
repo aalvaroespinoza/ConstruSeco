@@ -46,13 +46,13 @@ class DialogoDetallePresupuesto(DialogoModalIntegrado):
         
         ly = QVBoxLayout(self)
         ly.setContentsMargins(24, 24, 24, 24)
-        ly.setSpacing(20)
+        ly.setSpacing(16)
         
         # Info Header (Cliente y Documento integrados)
         f_info = QFrame()
-        f_info.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
+        f_info.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 6px;")
         ly_info = QHBoxLayout(f_info)
-        ly_info.setContentsMargins(20, 20, 20, 20)
+        ly_info.setContentsMargins(24, 24, 24, 24)
         ly_info.setSpacing(40)
         
         # Lado Izquierdo: Cliente
@@ -168,7 +168,7 @@ class DialogoDetallePresupuesto(DialogoModalIntegrado):
         ly_totales.addStretch()
         
         f_totales = QFrame()
-        f_totales.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
+        f_totales.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 6px;")
         ly_t = QHBoxLayout(f_totales)
         ly_t.setContentsMargins(16, 12, 16, 12)
         ly_t.setSpacing(24)
@@ -227,7 +227,7 @@ class DialogoDetallePresupuesto(DialogoModalIntegrado):
         btn_cerrar = QPushButton("Cerrar")
         btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_cerrar.setMinimumHeight(36)
-        btn_cerrar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; border: none; padding: 0 24px; border-radius: 6px; font-weight: bold; color: white;")
+        btn_cerrar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; color: white;")
         btn_cerrar.clicked.connect(self.accept)
         
         ly_btn.addWidget(btn_preview)
@@ -384,7 +384,7 @@ class PestanaNuevoPresupuesto(OperacionBaseWidget):
         lbl_desc = QLabel('Desc:')
         lbl_desc.setStyleSheet('color: #64748B; font-weight: 600;')
         ly_r1.addWidget(lbl_desc)
-        self.input_desc_gral.setFixedWidth(50)
+        self.input_desc_gral.setFixedWidth(60)
         self.input_desc_gral.setMaximumHeight(32)
         ly_r1.addWidget(self.input_desc_gral)
         lbl_perc = QLabel('%')
@@ -398,7 +398,7 @@ class PestanaNuevoPresupuesto(OperacionBaseWidget):
         
         self.chk_iva.setStyleSheet("color: #475569; font-weight: 500;")
         ly_r1.addWidget(self.chk_iva)
-        self.input_iva_porc.setFixedWidth(50)
+        self.input_iva_porc.setFixedWidth(60)
         self.input_iva_porc.setMaximumHeight(32)
         ly_r1.addWidget(self.input_iva_porc)
         lbl_perc2 = QLabel('%')
@@ -434,16 +434,16 @@ class PestanaNuevoPresupuesto(OperacionBaseWidget):
         ly_r2.addStretch()
         
         lbl_tot = QLabel('TOTAL:')
-        lbl_tot.setStyleSheet('font-weight: 900; color: #334155; font-size: 16px;')
+        lbl_tot.setStyleSheet('font-weight: 900; color: #64748B; font-size: 16px;')
         ly_r2.addWidget(lbl_tot)
         
-        self.lbl_total.setStyleSheet('font-weight: 900; color: #0F172A; font-size: 20px;')
+        self.lbl_total.setStyleSheet('font-weight: 900; color: #2563EB; font-size: 24px;')
         self.lbl_total.setMinimumWidth(120)
         self.lbl_total.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         ly_r2.addWidget(self.lbl_total)
         
         self.btn_confirmar.setMinimumWidth(160)
-        self.btn_confirmar.setMaximumHeight(40)
+        self.btn_confirmar.setMaximumHeight(36)
         ly_r2.addWidget(self.btn_confirmar)
         
         ly_main.addLayout(ly_r1)
@@ -501,7 +501,7 @@ class _TarjetaMetrica(QFrame):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(14, 10, 14, 10)
-        layout.setSpacing(2)
+        layout.setSpacing(16)
 
         self._lbl_titulo = QLabel(titulo)
         self._lbl_titulo.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 11px; font-weight: 600; border: none;")
@@ -516,7 +516,7 @@ class _TarjetaMetrica(QFrame):
             _TarjetaMetrica {{
                 background-color: {bg};
                 border: 1px solid {COLOR_BORDER};
-                border-radius: 8px;
+                border-radius: 6px;
                 border-left: 4px solid {self._color_borde};
             }}
             _TarjetaMetrica:hover {{ background-color: #f8fafc; }}
@@ -674,7 +674,7 @@ class _CeldaAcciones(QWidget):
         act_pdf = menu.addAction("⬇ Generar PDF")
         act_pdf.triggered.connect(lambda: self.pdf_solicitado.emit(self._id))
         
-        if estado == "ACTIVO":
+        if estado in ("ACTIVO", "VENCIDO"):
             menu.addSeparator()
             act_anul = menu.addAction("❌ Anular Presupuesto")
             act_anul.triggered.connect(lambda: self.anular_solicitado.emit(self._id))
@@ -685,7 +685,7 @@ class _CeldaAcciones(QWidget):
 class _PanelVacio(QFrame):
     def __init__(self):
         super().__init__()
-        self.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
+        self.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 6px;")
         ly = QVBoxLayout(self)
         ly.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -893,7 +893,7 @@ class _PanelDetalle(QScrollArea):
         
         self._btn_editar.setVisible(det['estado'] == 'ACTIVO')
         self._btn_confirmar.setVisible(det['estado'] == 'ACTIVO')
-        self._btn_anular.setVisible(det['estado'] == 'ACTIVO')
+        self._btn_anular.setVisible(det['estado'] in ('ACTIVO', 'VENCIDO'))
 
 class PestanaPresupuestos(QWidget):
     _OPCIONES_POR_PAGINA = [20, 50, 100]
@@ -926,7 +926,7 @@ class PestanaPresupuestos(QWidget):
         self.setStyleSheet(self._stylesheet())
         ly = QVBoxLayout(self)
         ly.setContentsMargins(20, 16, 20, 16)
-        ly.setSpacing(14)
+        ly.setSpacing(16)
 
         ly.addLayout(self._construir_encabezado())
         ly.addLayout(self._construir_metricas())
@@ -950,7 +950,7 @@ class PestanaPresupuestos(QWidget):
             QPushButton.primario:hover {{ background-color: #1d4ed8; }}
             QPushButton.secundario {{
                 background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; font-weight: 600; font-size: 13px;
-                padding: 8px 14px; border-radius: 6px; border: 1px solid {COLOR_BORDER};
+                padding: 8px 16px; border-radius: 6px; border: 1px solid {COLOR_BORDER};
             }}
             QPushButton.secundario:hover {{ background-color: {COLOR_BG}; }}
             QPushButton.pagina {{
@@ -960,7 +960,7 @@ class PestanaPresupuestos(QWidget):
             QPushButton.pagina:hover {{ background-color: {COLOR_BG}; border-color: {COLOR_PRIMARY}; }}
             QPushButton.pagina:disabled {{ color: {COLOR_BORDER}; background-color: {COLOR_BG}; }}
             QTableWidget {{
-                border: 1px solid {COLOR_BORDER}; border-radius: 8px; gridline-color: {COLOR_BORDER};
+                border: 1px solid {COLOR_BORDER}; border-radius: 6px; gridline-color: {COLOR_BORDER};
                 background-color: {COLOR_CARD_BG}; outline: none; font-size: 13px;
             }}
             QHeaderView::section {{
@@ -1040,7 +1040,7 @@ class PestanaPresupuestos(QWidget):
 
     def _construir_panel_filtros(self) -> QFrame:
         f = QFrame()
-        f.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
+        f.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 6px;")
         ly = QHBoxLayout(f)
         ly.setContentsMargins(12, 10, 12, 10)
         ly.setSpacing(12)
@@ -1293,12 +1293,12 @@ class PestanaPresupuestos(QWidget):
 
     def _anular_presupuesto(self, id_documento: int):
         det = qp.obtener_detalle_presupuesto(self.conn, id_documento)
-        if not det or det['estado'] != 'ACTIVO':
+        if not det or det['estado'] not in ('ACTIVO', 'VENCIDO'):
             from ui.core.modal import DialogoModalIntegrado
             msg = DialogoModalIntegrado(self.window())
             msg.setWindowTitle("Error")
             msg_ly = QVBoxLayout(msg)
-            lbl = QLabel("El presupuesto no se puede anular porque ya no está ACTIVO.")
+            lbl = QLabel("El presupuesto no se puede anular porque ya no está ACTIVO ni VENCIDO.")
             lbl.setStyleSheet(f"font-size: 14px; color: {COLOR_TEXT_MAIN};")
             msg_ly.addWidget(lbl)
             btn = QPushButton("Aceptar")
@@ -1593,18 +1593,18 @@ class PestanaPresupuestos(QWidget):
             ly_est.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl_est = QLabel(st)
             lbl_est.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl_est.setFixedHeight(24)
+            # lbl_est.setFixedHeight(24) removed to prevent text cutoff
             
             if st == "ACTIVO":
-                lbl_est.setStyleSheet("background-color: #dcfce7; color: #166534; border-radius: 12px; padding: 0 12px; font-size: 11px; font-weight: 800; border: none;")
+                lbl_est.setStyleSheet("background-color: #dcfce7; color: #166534; border-radius: 12px; padding: 4px 10px; font-size: 11px; font-weight: 800; border: none;")
             elif st == "VENCIDO":
-                lbl_est.setStyleSheet("background-color: #fee2e2; color: #991b1b; border-radius: 12px; padding: 0 12px; font-size: 11px; font-weight: 800; border: none;")
+                lbl_est.setStyleSheet("background-color: #fee2e2; color: #991b1b; border-radius: 12px; padding: 4px 10px; font-size: 11px; font-weight: 800; border: none;")
             elif st == "CONFIRMADO":
-                lbl_est.setStyleSheet(f"background-color: {COLOR_PRIMARY}20; color: {COLOR_PRIMARY}; border-radius: 12px; padding: 0 12px; font-size: 11px; font-weight: 800; border: none;")
+                lbl_est.setStyleSheet(f"background-color: {COLOR_PRIMARY}20; color: {COLOR_PRIMARY}; border-radius: 12px; padding: 4px 10px; font-size: 11px; font-weight: 800; border: none;")
             elif st == "ANULADO":
-                lbl_est.setStyleSheet("background-color: #f1f5f9; color: #475569; border-radius: 12px; padding: 0 12px; font-size: 11px; font-weight: 800; border: none;")
+                lbl_est.setStyleSheet("background-color: #f1f5f9; color: #475569; border-radius: 12px; padding: 4px 10px; font-size: 11px; font-weight: 800; border: none;")
             else:
-                lbl_est.setStyleSheet("background-color: #f1f5f9; color: #475569; border-radius: 12px; padding: 0 12px; font-size: 11px; font-weight: 800; border: none;")
+                lbl_est.setStyleSheet("background-color: #f1f5f9; color: #475569; border-radius: 12px; padding: 4px 10px; font-size: 11px; font-weight: 800; border: none;")
             
             ly_est.addWidget(lbl_est)
             

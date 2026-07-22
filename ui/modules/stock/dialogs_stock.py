@@ -55,7 +55,7 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
     def init_ui(self):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(32, 32, 32, 32)
-        main_layout.setSpacing(24)
+        main_layout.setSpacing(16)
         
         # Contenedor central dividido (Imagen | Formulario)
         center_layout = QHBoxLayout()
@@ -71,7 +71,7 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
         # Panel informativo
         self.lbl_existente_info = QLabel("Ingrese un código para verificar si el producto ya existe. Si existe, podrá sumarle stock.")
         self.lbl_existente_info.setWordWrap(True)
-        self.lbl_existente_info.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 11px; margin-top: 16px; background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px; padding: 12px;")
+        self.lbl_existente_info.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 11px; margin-top: 16px; background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 6px; padding: 12px;")
         left_panel.addWidget(self.lbl_existente_info)
         
         center_layout.addLayout(left_panel)
@@ -318,7 +318,7 @@ class DialogoEditarProducto(DialogoModalIntegrado):
     def init_ui(self):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(32, 32, 32, 32)
-        main_layout.setSpacing(24)
+        main_layout.setSpacing(16)
         
         # Contenedor central dividido (Imagen | Formulario)
         center_layout = QHBoxLayout()
@@ -340,7 +340,7 @@ class DialogoEditarProducto(DialogoModalIntegrado):
             f"<span style='font-size: 16px; font-weight: bold; color: {COLOR_TEXT_MAIN};'>{self.p_data.get('atp',0):g} {self.p_data['unidad_base']}</span>"
             f"</div>"
         )
-        lbl_info.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px; padding: 16px; margin-top: 16px;")
+        lbl_info.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 6px; padding: 16px; margin-top: 16px;")
         left_panel.addWidget(lbl_info)
         
         center_layout.addLayout(left_panel)
@@ -472,11 +472,11 @@ class DialogoStockMinimo(DialogoModalIntegrado):
         self.conn = conexion_db
         self.p_data = producto_data
         self.setWindowTitle("Configurar Stock Mínimo")
-        self.setMinimumWidth(300)
+        self.setMinimumWidth(400)
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 32, 32, 32)
-        layout.setSpacing(24)
+        layout.setSpacing(16)
         
         lbl = QLabel(f"Producto: <b>{producto_data['descripcion']}</b>")
         lbl.setStyleSheet(f"font-size: 15px; color: {COLOR_TEXT_MAIN};")
@@ -536,7 +536,7 @@ class DialogoModificarStock(DialogoModalIntegrado):
         from PyQt6.QtWidgets import QRadioButton, QButtonGroup, QStackedWidget, QWidget
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 32, 32, 32)
-        layout.setSpacing(24)
+        layout.setSpacing(16)
         
         # Header Info
         header_ly = QHBoxLayout()
@@ -601,7 +601,7 @@ class DialogoModificarStock(DialogoModalIntegrado):
         
         # Contenedor de formulario
         self.stack = QStackedWidget()
-        self.stack.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
+        self.stack.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 6px;")
         
         style_input = f"""
             QLineEdit {{ padding: 10px; border: 1px solid {COLOR_BORDER}; border-radius: 6px; background-color: {COLOR_BG}; font-size: 13px; color: {COLOR_TEXT_MAIN}; }}
@@ -612,7 +612,7 @@ class DialogoModificarStock(DialogoModalIntegrado):
         # WIDGET ENTRADA
         self.wdg_entrada = QWidget()
         form_entrada = QFormLayout(self.wdg_entrada)
-        form_entrada.setContentsMargins(20, 20, 20, 20)
+        form_entrada.setContentsMargins(24, 24, 24, 24)
         form_entrada.setVerticalSpacing(16)
         
         self.inp_cant_entrada = SelectAllLineEdit("0.0")
@@ -632,7 +632,7 @@ class DialogoModificarStock(DialogoModalIntegrado):
         # WIDGET AJUSTE
         self.wdg_ajuste = QWidget()
         form_ajuste = QFormLayout(self.wdg_ajuste)
-        form_ajuste.setContentsMargins(20, 20, 20, 20)
+        form_ajuste.setContentsMargins(24, 24, 24, 24)
         form_ajuste.setVerticalSpacing(16)
         
         self.inp_real_ajuste = SelectAllLineEdit()
@@ -774,7 +774,7 @@ class DialogoAlertasInventario(DialogoModalIntegrado):
         self.tabla.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.tabla.setStyleSheet(f"""
             QTableWidget {{
-                border: 1px solid {COLOR_BORDER}; border-radius: 8px;
+                border: 1px solid {COLOR_BORDER}; border-radius: 6px;
                 gridline-color: {COLOR_BORDER};
                 background-color: {COLOR_CARD_BG}; outline: none; font-size: 13px;
                 color: {COLOR_TEXT_MAIN};
@@ -1002,7 +1002,7 @@ class VistaDetalleProducto(QFrame):
             f = QFrame()
             bg = COLOR_BG if not es_destacado else "#f0f9ff"
             border = COLOR_BORDER if not es_destacado else "#bae6fd"
-            f.setStyleSheet(f"background-color: {bg}; border: 1px solid {border}; border-radius: 8px;")
+            f.setStyleSheet(f"background-color: {bg}; border: 1px solid {border}; border-radius: 6px;")
             l = QVBoxLayout(f)
             l.setContentsMargins(14, 12, 14, 12)
             l.setSpacing(2)
@@ -1079,7 +1079,7 @@ class DialogoProductosFrecuentes(DialogoModalIntegrado):
         self.tabla.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.tabla.setStyleSheet(f"""
             QTableWidget {{
-                border: 1px solid {COLOR_BORDER}; border-radius: 8px;
+                border: 1px solid {COLOR_BORDER}; border-radius: 6px;
                 gridline-color: {COLOR_BORDER};
                 background-color: {COLOR_CARD_BG}; outline: none; font-size: 13px;
                 color: {COLOR_TEXT_MAIN};
@@ -1180,9 +1180,9 @@ class DialogoAyudaStock(DialogoModalIntegrado):
         
         def add_section(icon, title, text):
             card = QFrame()
-            card.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
+            card.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 6px;")
             ly_card = QVBoxLayout(card)
-            ly_card.setContentsMargins(16, 16, 16, 16)
+            ly_card.setContentsMargins(24, 24, 24, 24)
             ly_card.setSpacing(8)
             
             lbl_title = QLabel(f"{icon} {title}")

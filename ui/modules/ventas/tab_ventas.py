@@ -30,7 +30,7 @@ class PestanaNuevaVenta(OperacionBaseWidget):
         lbl_desc = QLabel('Desc:')
         lbl_desc.setStyleSheet('color: #64748B; font-weight: 600;')
         ly_r1.addWidget(lbl_desc)
-        self.input_desc_gral.setFixedWidth(50)
+        self.input_desc_gral.setFixedWidth(60)
         self.input_desc_gral.setMaximumHeight(32)
         ly_r1.addWidget(self.input_desc_gral)
         lbl_perc = QLabel('%')
@@ -44,7 +44,7 @@ class PestanaNuevaVenta(OperacionBaseWidget):
         
         self.chk_iva.setStyleSheet("color: #475569; font-weight: 500;")
         ly_r1.addWidget(self.chk_iva)
-        self.input_iva_porc.setFixedWidth(50)
+        self.input_iva_porc.setFixedWidth(60)
         self.input_iva_porc.setMaximumHeight(32)
         ly_r1.addWidget(self.input_iva_porc)
         lbl_perc2 = QLabel('%')
@@ -70,10 +70,10 @@ class PestanaNuevaVenta(OperacionBaseWidget):
         ly_r1.addWidget(sep3)
         
         lbl_tot = QLabel('TOTAL:')
-        lbl_tot.setStyleSheet('font-weight: 900; color: #334155; font-size: 16px;')
+        lbl_tot.setStyleSheet('font-weight: 900; color: #64748B; font-size: 16px;')
         ly_r1.addWidget(lbl_tot)
         
-        self.lbl_total.setStyleSheet('font-weight: 900; color: #0F172A; font-size: 20px;')
+        self.lbl_total.setStyleSheet('font-weight: 900; color: #2563EB; font-size: 24px;')
         self.lbl_total.setMinimumWidth(120)
         self.lbl_total.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         ly_r1.addWidget(self.lbl_total)
@@ -81,7 +81,7 @@ class PestanaNuevaVenta(OperacionBaseWidget):
         ly_r1.addSpacing(16)
         
         self.btn_confirmar.setMinimumWidth(160)
-        self.btn_confirmar.setMaximumHeight(40)
+        self.btn_confirmar.setMaximumHeight(36)
         ly_r1.addWidget(self.btn_confirmar)
         
         ly_main.addLayout(ly_r1)

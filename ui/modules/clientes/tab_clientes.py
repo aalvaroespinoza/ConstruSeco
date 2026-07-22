@@ -80,7 +80,7 @@ class _TarjetaMetrica(QFrame):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(14, 12, 14, 12)
-        layout.setSpacing(3)
+        layout.setSpacing(16)
 
         self._lbl_titulo = QLabel(titulo)
         self._lbl_titulo.setStyleSheet(
@@ -103,7 +103,7 @@ class _TarjetaMetrica(QFrame):
             _TarjetaMetrica {{
                 background-color: {bg};
                 border: {border_width} solid {border_color};
-                border-radius: 8px;
+                border-radius: 6px;
                 border-left: 4px solid {self._color_borde};
             }}
             {hover}
@@ -132,7 +132,7 @@ class _PanelVacio(QFrame):
         super().__init__()
         self.setStyleSheet(
             f"background-color: {COLOR_CARD_BG}; "
-            f"border: 1px solid {COLOR_BORDER}; border-radius: 8px;"
+            f"border: 1px solid {COLOR_BORDER}; border-radius: 6px;"
         )
         ly = QVBoxLayout(self)
         ly.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -264,7 +264,7 @@ class _PanelDetalle(QScrollArea):
         # ── Cabecera ──────────────────────────────────────────────────────
         cabecera = QFrame()
         cabecera.setStyleSheet(
-            f"background-color: {COLOR_BG}; border-radius: 8px; "
+            f"background-color: {COLOR_BG}; border-radius: 6px; "
             f"border: 1px solid {COLOR_BORDER};"
         )
         ly_cab = QVBoxLayout(cabecera)
@@ -404,7 +404,7 @@ class _PanelDetalle(QScrollArea):
         self._btn_editar = QPushButton("✏  Editar cliente")
         self._btn_editar.setStyleSheet(
             f"background-color: {COLOR_PRIMARY}; color: white; border-radius: 6px; "
-            f"font-weight: bold; font-size: 13px; padding: 9px 14px; border: none;"
+            f"font-weight: bold; font-size: 13px; padding: 8px 16px; border: none;"
         )
         self._btn_editar.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_editar.setEnabled(False)
@@ -417,7 +417,7 @@ class _PanelDetalle(QScrollArea):
         self._btn_historial.setStyleSheet(
             f"background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; "
             f"border: 1px solid {COLOR_BORDER}; border-radius: 6px; "
-            f"font-weight: 600; font-size: 13px; padding: 9px 14px;"
+            f"font-weight: 600; font-size: 13px; padding: 8px 16px;"
         )
         self._btn_historial.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_historial.setEnabled(False)
@@ -678,7 +678,7 @@ class _PanelDetalle(QScrollArea):
         menu.setStyleSheet(
             f"QMenu {{ background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; "
             f"border-radius: 6px; padding: 4px; }}"
-            f"QMenu::item {{ padding: 6px 16px; border-radius: 4px; color: {COLOR_TEXT_MAIN}; font-size: 12px; }}"
+            f"QMenu::item {{ padding: 8px 16px; border-radius: 4px; color: {COLOR_TEXT_MAIN}; font-size: 12px; }}"
             f"QMenu::item:selected {{ background-color: {COLOR_BG}; }}"
         )
         act_edit = QAction("Editar", self)
@@ -762,7 +762,7 @@ class PestanaClientes(QWidget):
         self.setStyleSheet(self._stylesheet())
         ly = QVBoxLayout(self)
         ly.setContentsMargins(20, 16, 20, 16)
-        ly.setSpacing(14)
+        ly.setSpacing(16)
 
         ly.addLayout(self._construir_encabezado())
         ly.addLayout(self._construir_metricas())
@@ -792,7 +792,7 @@ class PestanaClientes(QWidget):
             QPushButton.secundario {{
                 background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN};
                 font-weight: 600; font-size: 13px;
-                padding: 8px 14px; border-radius: 6px;
+                padding: 8px 16px; border-radius: 6px;
                 border: 1px solid {COLOR_BORDER};
             }}
             QPushButton.secundario:hover {{ background-color: {COLOR_BG}; }}
@@ -804,7 +804,7 @@ class PestanaClientes(QWidget):
             QPushButton.pagina:hover {{ background-color: {COLOR_BG}; border-color: {COLOR_PRIMARY}; }}
             QPushButton.pagina:disabled {{ color: {COLOR_BORDER}; background-color: {COLOR_BG}; }}
             QTableWidget {{
-                border: 1px solid {COLOR_BORDER}; border-radius: 8px;
+                border: 1px solid {COLOR_BORDER}; border-radius: 6px;
                 gridline-color: {COLOR_BORDER};
                 background-color: {COLOR_CARD_BG}; outline: none; font-size: 13px;
             }}
@@ -1084,7 +1084,7 @@ class PestanaClientes(QWidget):
         contenedor_tabla = QFrame()
         contenedor_tabla.setStyleSheet(
             f"background-color: {COLOR_CARD_BG}; "
-            f"border: 1px solid {COLOR_BORDER}; border-radius: 8px;"
+            f"border: 1px solid {COLOR_BORDER}; border-radius: 6px;"
         )
         ly_ct = QVBoxLayout(contenedor_tabla)
         ly_ct.setContentsMargins(0, 0, 0, 0)
@@ -1122,7 +1122,7 @@ class PestanaClientes(QWidget):
         self._stack_panel.setMinimumWidth(270)
         self._stack_panel.setMaximumWidth(380)
         self._stack_panel.setStyleSheet(
-            f"border: 1px solid {COLOR_BORDER}; border-radius: 8px; "
+            f"border: 1px solid {COLOR_BORDER}; border-radius: 6px; "
             f"background-color: {COLOR_CARD_BG};"
         )
 

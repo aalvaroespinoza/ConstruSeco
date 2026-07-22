@@ -215,7 +215,7 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         self.tabla.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         self.tabla.setStyleSheet(f"""
             QTableWidget {{
-                border: 1px solid {COLOR_BORDER}; border-radius: 8px;
+                border: 1px solid {COLOR_BORDER}; border-radius: 6px;
                 gridline-color: {COLOR_BORDER};
                 background-color: {COLOR_CARD_BG}; outline: none; font-size: 13px;
                 color: {COLOR_TEXT_MAIN};

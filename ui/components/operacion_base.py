@@ -193,9 +193,9 @@ class DialogoVentaExitosa(DialogoModalIntegrado):
         
         # --- RESUMEN COMPACTO ---
         resumen_frame = QFrame()
-        resumen_frame.setStyleSheet("background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;")
+        resumen_frame.setStyleSheet("background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;")
         res_layout = QFormLayout(resumen_frame)
-        res_layout.setContentsMargins(16, 16, 16, 16)
+        res_layout.setContentsMargins(24, 24, 24, 24)
         res_layout.setSpacing(12)
         
         style_label = "color: #475569; font-size: 13px; font-weight: 600;"
@@ -224,19 +224,19 @@ class DialogoVentaExitosa(DialogoModalIntegrado):
         
         self.btn_cerrar = QPushButton("Cerrar")
         self.btn_cerrar.setObjectName("btn_secundario")
-        self.btn_cerrar.setFixedHeight(40)
+        self.btn_cerrar.setFixedHeight(36)
         self.btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_cerrar.clicked.connect(self.accept)
         
         self.btn_preview = QPushButton("Vista Previa")
         self.btn_preview.setObjectName("btn_secundario")
-        self.btn_preview.setFixedHeight(40)
+        self.btn_preview.setFixedHeight(36)
         self.btn_preview.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_preview.clicked.connect(self._vista_previa_pdf)
         
         self.btn_pdf = QPushButton("Generar PDF")
         self.btn_pdf.setObjectName("btn_primario")
-        self.btn_pdf.setFixedHeight(40)
+        self.btn_pdf.setFixedHeight(36)
         self.btn_pdf.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_pdf.clicked.connect(self._generar_pdf)
         
@@ -413,7 +413,7 @@ class OperacionBaseWidget(QWidget):
             QFrame#tarjeta_blanca {
                 background-color: #FFFFFF;
                 border: 1px solid #E2E8F0;
-                border-radius: 12px;
+                border-radius: 6px;
             }
             QPushButton#btn_tipo_doc {
                 background-color: #F8FAFC;
@@ -422,7 +422,7 @@ class OperacionBaseWidget(QWidget):
                 padding: 10px 16px;
                 font-weight: 600;
                 font-size: 13px;
-                border-radius: 8px;
+                border-radius: 6px;
             }
             QPushButton#btn_tipo_doc:checked {
                 background-color: #2563EB;
@@ -431,7 +431,7 @@ class OperacionBaseWidget(QWidget):
             }
             QLineEdit, QTextEdit {
                 border: 1px solid #E2E8F0;
-                border-radius: 8px;
+                border-radius: 6px;
                 padding: 8px 12px;
                 background-color: #FFFFFF;
                 selection-background-color: #2563EB;
@@ -449,8 +449,8 @@ class OperacionBaseWidget(QWidget):
             QPushButton#btn_primario {
                 background-color: #2563EB;
                 color: #FFFFFF;
-                border-radius: 8px;
-                padding: 12px 24px;
+                border-radius: 6px;
+                padding: 8px 16px;
                 font-weight: 600;
                 font-size: 14px;
                 border: none;
@@ -466,7 +466,7 @@ class OperacionBaseWidget(QWidget):
                 background-color: #FFFFFF;
                 color: #334155;
                 border: 1px solid #E2E8F0;
-                border-radius: 8px;
+                border-radius: 6px;
                 padding: 8px 16px;
                 font-weight: 600;
             }
@@ -482,7 +482,7 @@ class OperacionBaseWidget(QWidget):
                 background-color: #FFFFFF;
                 color: #EF4444;
                 border: 1px solid #FECACA;
-                border-radius: 8px;
+                border-radius: 6px;
                 padding: 8px 16px;
                 font-weight: 600;
                 font-size: 14px;
@@ -524,7 +524,7 @@ class OperacionBaseWidget(QWidget):
             }
             QTableWidget {
                 border: 1px solid #E2E8F0;
-                border-radius: 8px;
+                border-radius: 6px;
                 gridline-color: #E2E8F0;
                 background-color: #FFFFFF;
                 outline: none;
@@ -533,12 +533,12 @@ class OperacionBaseWidget(QWidget):
             QHeaderView::section {
                 background-color: #F8FAFC;
                 color: #475569;
-                font-weight: 700;
-                font-size: 13px;
+                font-weight: 600;
+                font-size: 12px;
                 border: none;
                 border-right: 1px solid #E2E8F0;
                 border-bottom: 2px solid #CBD5E1;
-                padding: 12px 8px;
+                padding: 8px;
             }
             QTableWidget::item {
                 border-right: 1px solid #F1F5F9;
@@ -587,7 +587,7 @@ class OperacionBaseWidget(QWidget):
         self.btn_vaciar_carrito.setObjectName("btn_peligro_sutil_chico")
         self.btn_vaciar_carrito.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_vaciar_carrito.clicked.connect(self.vaciar_carrito_directo)
-        self.btn_vaciar_carrito.setFixedHeight(32)
+        self.btn_vaciar_carrito.setMinimumHeight(38)
         
         ly_tit.addLayout(ly_izq)
         ly_tit.addStretch()
@@ -615,16 +615,16 @@ class OperacionBaseWidget(QWidget):
         
         self.input_cliente = QLineEdit()
         self.input_cliente.setPlaceholderText("Buscar por nombre o CUIT (F3)...")
-        self.input_cliente.setMinimumHeight(32)
-        self.input_cliente.setStyleSheet("QLineEdit { border: 1px solid #E2E8F0; border-radius: 6px; padding: 0 12px; font-size: 13px; background: #F8FAFC; } QLineEdit:focus { border: 1px solid #3B82F6; background: #FFFFFF; }")
+        self.input_cliente.setMinimumHeight(38)
+        self.input_cliente.setStyleSheet("QLineEdit { border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; font-size: 13px; background: #F8FAFC; } QLineEdit:focus { border: 1px solid #3B82F6; background: #FFFFFF; }")
         self.input_cliente.returnPressed.connect(self.procesar_input_cliente)
         
         self.btn_nuevo_cliente = QPushButton("+ Nuevo")
         self.btn_nuevo_cliente.setObjectName("btn_secundario")
-        self.btn_nuevo_cliente.setFixedHeight(32)
+        self.btn_nuevo_cliente.setMinimumHeight(38)
         self.btn_nuevo_cliente.setStyleSheet("""
             QPushButton#btn_secundario {
-                padding: 0px 12px;
+                padding: 0px 16px;
                 font-size: 13px;
                 text-align: center;
                 qproperty-iconSize: 16px;
@@ -638,7 +638,7 @@ class OperacionBaseWidget(QWidget):
         
         self.widget_tarjeta_cliente = QFrame()
         self.widget_tarjeta_cliente.setStyleSheet("background-color: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 6px;")
-        self.widget_tarjeta_cliente.setFixedHeight(32)
+        self.widget_tarjeta_cliente.setMinimumHeight(38)
         layout_tarjeta_cli = QHBoxLayout(self.widget_tarjeta_cliente)
         layout_tarjeta_cli.setContentsMargins(12, 0, 8, 0)
         layout_tarjeta_cli.setSpacing(12)
@@ -686,7 +686,7 @@ class OperacionBaseWidget(QWidget):
             QFrame#frame_buscador {
                 background-color: #F8FAFC;
                 border: 1px solid #E2E8F0;
-                border-radius: 8px;
+                border-radius: 6px;
             }
         """)
         
@@ -745,14 +745,14 @@ class OperacionBaseWidget(QWidget):
         self.combo_unidad.setCursor(Qt.CursorShape.PointingHandCursor)
         self.combo_unidad.installEventFilter(self)
         self.combo_unidad.currentIndexChanged.connect(self.on_unidad_cambiada)
-        self.combo_unidad.setStyleSheet("QComboBox { border: 1px solid #E2E8F0; border-radius: 8px; padding: 0 12px; font-size: 15px; background: #FFFFFF; }")
+        self.combo_unidad.setStyleSheet("QComboBox { border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; font-size: 15px; background: #FFFFFF; }")
         
         self.caja_cant_frame = QFrame()
         self.caja_cant_frame.setStyleSheet("""
             QFrame {
                 background-color: #FFFFFF;
                 border: 1px solid #E2E8F0;
-                border-radius: 8px;
+                border-radius: 6px;
             }
         """)
         self.caja_cant_frame.setFixedHeight(48)
@@ -789,7 +789,7 @@ class OperacionBaseWidget(QWidget):
         self.btn_agregar.setObjectName("btn_primario")
         self.btn_agregar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_agregar.clicked.connect(self.agregar_al_carrito)
-        self.btn_agregar.setFixedHeight(40)
+        self.btn_agregar.setFixedHeight(36)
         self.btn_agregar.setStyleSheet("""
             QPushButton {
                 background-color: #3B82F6;
@@ -826,7 +826,7 @@ class OperacionBaseWidget(QWidget):
             QFrame#panel_resultados {
                 background-color: #ffffff;
                 border: 1px solid #cbd5e1;
-                border-radius: 8px;
+                border-radius: 6px;
             }
             QListWidget {
                 border: none;
@@ -874,7 +874,7 @@ class OperacionBaseWidget(QWidget):
         lbl_tit_tabla.setStyleSheet("font-size: 16px; font-weight: 700; color: #0F172A; text-transform: uppercase; letter-spacing: 0.5px;")
         
         self.lbl_resumen_rapido = QLabel("0 productos · 0 unidades")
-        self.lbl_resumen_rapido.setStyleSheet("color: #64748B; font-weight: 600; font-size: 14px; background: #F8FAFC; padding: 6px 16px; border-radius: 14px; border: 1px solid #E2E8F0;")
+        self.lbl_resumen_rapido.setStyleSheet("color: #64748B; font-weight: 600; font-size: 14px; background: #F8FAFC; padding: 8px 16px; border-radius: 14px; border: 1px solid #E2E8F0;")
         
         cabecera_tabla.addWidget(lbl_tit_tabla)
         cabecera_tabla.addStretch()
@@ -906,7 +906,7 @@ class OperacionBaseWidget(QWidget):
         ly_vacio.addWidget(lbl_vacio_sub)
         
         self.lbl_estado_vacio = wid_vacio
-        self.lbl_estado_vacio.setStyleSheet("background-color: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 12px;")
+        self.lbl_estado_vacio.setStyleSheet("background-color: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 6px;")
         self.stack_tabla.addWidget(self.lbl_estado_vacio)
         
         # Tabla Principal
@@ -968,7 +968,7 @@ class OperacionBaseWidget(QWidget):
         self.lbl_subtotal.setStyleSheet("font-size: 16px; font-weight: 600; color: #334155;")
         
         self.input_desc_gral = QLineEdit("0")
-        self.input_desc_gral.setFixedWidth(50)
+        self.input_desc_gral.setFixedWidth(60)
         self.input_desc_gral.setFixedHeight(30)
         self.input_desc_gral.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.input_desc_gral.setStyleSheet("border: 1px solid #CBD5E1; border-radius: 4px; font-size: 13px; background-color: #FFFFFF; color: #2563EB; font-weight: bold; padding: 0;")
@@ -984,7 +984,7 @@ class OperacionBaseWidget(QWidget):
         self.chk_iva.stateChanged.connect(self.on_iva_toggled)
         
         self.input_iva_porc = QLineEdit("21")
-        self.input_iva_porc.setFixedWidth(50)
+        self.input_iva_porc.setFixedWidth(60)
         self.input_iva_porc.setFixedHeight(30)
         self.input_iva_porc.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.input_iva_porc.setStyleSheet("border: 1px solid #CBD5E1; border-radius: 4px; font-size: 13px; background-color: #FFFFFF; padding: 0;")
@@ -1007,7 +1007,7 @@ class OperacionBaseWidget(QWidget):
             
         self.btn_confirmar = QPushButton(texto_btn)
         self.btn_confirmar.setObjectName("btn_primario")
-        self.btn_confirmar.setFixedHeight(44)
+        self.btn_confirmar.setFixedHeight(36)
         self.btn_confirmar.setMinimumWidth(200)
         self.btn_confirmar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_confirmar.clicked.connect(lambda: self.confirmar_operacion(self.tipo_documento_seleccionado))
@@ -1015,7 +1015,7 @@ class OperacionBaseWidget(QWidget):
             QPushButton#btn_primario {
                 background-color: #2563EB;
                 color: #FFFFFF;
-                border-radius: 8px;
+                border-radius: 6px;
                 font-weight: 700;
                 font-size: 15px;
                 border: none;
@@ -1394,7 +1394,7 @@ class OperacionBaseWidget(QWidget):
                 QFrame#frame_buscador {
                     background-color: #FFFFFF;
                     border: 1px solid #3B82F6;
-                    border-radius: 8px;
+                    border-radius: 6px;
                 }
             """)
             # Mostrar sugerencias automáticamente si está vacío o tiene texto y no hay producto seleccionado
@@ -1411,7 +1411,7 @@ class OperacionBaseWidget(QWidget):
                 QFrame#frame_buscador {
                     background-color: #F8FAFC;
                     border: 1px solid #E2E8F0;
-                    border-radius: 8px;
+                    border-radius: 6px;
                 }
             """)
             QTimer.singleShot(100, self.chequear_foco_panel)

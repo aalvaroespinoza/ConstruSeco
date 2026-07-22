@@ -26,7 +26,7 @@ class DialogoAyudaContextual(DialogoModalIntegrado):
         # Contenedor escroleable para el texto
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setStyleSheet(f"QScrollArea {{ border: 1px solid {COLOR_BORDER}; border-radius: 8px; background-color: {COLOR_BG}; }}")
+        scroll.setStyleSheet(f"QScrollArea {{ border: 1px solid {COLOR_BORDER}; border-radius: 6px; background-color: {COLOR_BG}; }}")
         
         scroll_content = QFrame()
         scroll_content.setStyleSheet(f"background-color: {COLOR_BG};")

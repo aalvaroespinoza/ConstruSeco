@@ -21,7 +21,7 @@ class DialogoConfiguracionGeneral(DialogoModalIntegrado):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Configuración General de Stock")
-        self.setMinimumWidth(350)
+        self.setMinimumWidth(400)
         self.settings = QSettings("ConstrusecoPereyra", "StockConfig")
         self.init_ui()
 
@@ -136,7 +136,7 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
         self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.tabla.setStyleSheet(f"""
             QTableWidget {{
-                border: 1px solid {COLOR_BORDER}; border-radius: 8px;
+                border: 1px solid {COLOR_BORDER}; border-radius: 6px;
                 gridline-color: {COLOR_BORDER};
                 background-color: {COLOR_CARD_BG}; outline: none; font-size: 13px;
                 color: {COLOR_TEXT_MAIN};
@@ -279,7 +279,7 @@ class DialogoVisualizacionInventario(DialogoModalIntegrado):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Opciones de Visualización")
-        self.setMinimumWidth(300)
+        self.setMinimumWidth(400)
         self.settings = QSettings("ConstrusecoPereyra", "StockConfig")
         self.init_ui()
 

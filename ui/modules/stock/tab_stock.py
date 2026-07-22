@@ -40,7 +40,7 @@ class TarjetaMetrica(QFrame):
             TarjetaMetrica {{
                 background-color: {COLOR_CARD_BG};
                 border: 1px solid {COLOR_BORDER};
-                border-radius: 8px;
+                border-radius: 6px;
                 border-left: 4px solid {color_borde};
             }}
             TarjetaMetrica:hover {{
@@ -54,10 +54,10 @@ class TarjetaMetrica(QFrame):
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(4)
+        layout.setSpacing(16)
         
         lbl_titulo = QLabel(titulo)
-        lbl_titulo.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 13px; font-weight: bold;")
+        lbl_titulo.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 13px; font-weight: 800;")
         
         self.lbl_valor = QLabel(str(valor))
         self.lbl_valor.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; font-size: 22px; font-weight: 900; letter-spacing: -0.5px;")
@@ -82,7 +82,7 @@ class TarjetaFrecuente(QFrame):
             TarjetaFrecuente {{
                 background-color: {COLOR_CARD_BG};
                 border: 1px solid {COLOR_BORDER};
-                border-radius: 8px;
+                border-radius: 6px;
             }}
             TarjetaFrecuente:hover {{
                 border: 1px solid {COLOR_PRIMARY};
@@ -207,7 +207,7 @@ class PestanaStock(QWidget):
             
             /* Tabla */
             QTableWidget {{
-                border: 1px solid {COLOR_BORDER}; border-radius: 8px;
+                border: 1px solid {COLOR_BORDER}; border-radius: 6px;
                 gridline-color: {COLOR_BORDER};
                 background-color: {COLOR_CARD_BG}; outline: none; font-size: 13px;
                 color: {COLOR_TEXT_MAIN};
@@ -228,7 +228,7 @@ class PestanaStock(QWidget):
         
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(24, 24, 24, 24)
-        main_layout.setSpacing(24)
+        main_layout.setSpacing(16)
 
         # 1. ENCABEZADO
         header_layout = QHBoxLayout()
@@ -236,7 +236,7 @@ class PestanaStock(QWidget):
         titles_layout.setSpacing(4)
         
         lbl_titulo = QLabel("Control de Stock")
-        lbl_titulo.setStyleSheet(f"font-size: 26px; font-weight: 900; color: {COLOR_TEXT_MAIN};")
+        lbl_titulo.setStyleSheet(f"font-size: 26px; font-weight: 800; color: {COLOR_TEXT_MAIN};")
         lbl_subtitulo = QLabel("Gestión de inventario, disponibilidad y métricas operativas")
         lbl_subtitulo.setStyleSheet(f"font-size: 14px; color: {COLOR_TEXT_SEC};")
         
@@ -301,7 +301,7 @@ class PestanaStock(QWidget):
             QFrame {{
                 background-color: {COLOR_CARD_BG}; 
                 border: 1px solid {COLOR_BORDER}; 
-                border-radius: 8px;
+                border-radius: 6px;
                 border-left: 4px solid {COLOR_PRIMARY};
             }}
             QLabel {{ border: none; background: transparent; }}
@@ -360,7 +360,7 @@ class PestanaStock(QWidget):
             
         # Panel Alertas
         self.panel_alertas = QFrame()
-        self.panel_alertas.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
+        self.panel_alertas.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 6px;")
         ly_alertas = QVBoxLayout(self.panel_alertas)
         ly_alertas.setContentsMargins(16, 12, 16, 12)
         ly_alertas.setSpacing(8)
@@ -382,7 +382,7 @@ class PestanaStock(QWidget):
         
         # Panel Frecuentes
         self.panel_frecuentes = QFrame()
-        self.panel_frecuentes.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;")
+        self.panel_frecuentes.setStyleSheet(f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 6px;")
         ly_frecuentes = QVBoxLayout(self.panel_frecuentes)
         ly_frecuentes.setContentsMargins(16, 12, 16, 12)
         ly_frecuentes.setSpacing(8)
