@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import ( QDialog,
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint
 from PyQt6.QtGui import QColor, QAction, QKeySequence
+import logging
 
 from ui.core.theme import (
     COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG, COLOR_TEXT_MAIN,
@@ -1250,6 +1251,7 @@ class PestanaClientes(QWidget):
             self._t_ticket.set_valor(_fmt_moneda(m["ticket_promedio"]))
         except Exception as e:
             print(f"[Clientes] Error cargando métricas: {e}")
+            logging.warning(f"[Clientes] Error cargando métricas: {e}")
 
     def _cargar_tabla(self):
         try:
@@ -1265,6 +1267,7 @@ class PestanaClientes(QWidget):
             )
         except Exception as e:
             print(f"[Clientes] Error cargando tabla: {e}")
+            logging.warning(f"[Clientes] Error cargando tabla: {e}")
             return
 
         filas       = resultado["filas"]
@@ -1393,7 +1396,7 @@ class PestanaClientes(QWidget):
         try:
             self._panel_detalle.cargar(self.conn, id_cliente)
         except Exception as e:
-            print(f"[Clientes] Error cargando detalle: {e}")
+            QMessageBox.critical(self, "Error", "No se pudo cargar el detalle del cliente.")
             self._stack_panel.setCurrentIndex(0)
 
     def _on_por_pagina_cambiado(self, index: int):

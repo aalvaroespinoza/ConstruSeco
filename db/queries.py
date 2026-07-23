@@ -148,7 +148,7 @@ def obtener_metricas_globales(conn) -> dict:
     valor_inventario  = sum(p["stock_fisico"] * p["precio_venta"] for p in stocks)
     bajo_stock        = sum(
         1 for p in stocks
-        if p["stock_minimo"] > 0 and p["atp"] <= p["stock_minimo"]
+        if p["stock_minimo"] > 0 and 0 < p["atp"] <= p["stock_minimo"]
     )
     sin_stock         = sum(1 for p in stocks if p["atp"] <= 0)
     return {

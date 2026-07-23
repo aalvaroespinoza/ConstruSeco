@@ -9,6 +9,7 @@ from PyQt6.QtGui import QShortcut, QKeySequence, QColor, QFont, QPainter
 from datetime import datetime, timedelta
 import sqlite3
 import re
+import logging
 from db.queries import subquery_atp, obtener_stock_producto
 from ui.core.modal import ModalOverlay, ModalResult, DialogoModalIntegrado
 from ui.modules.clientes.dialogs_clientes import DialogoFormularioCliente
@@ -969,6 +970,11 @@ class OperacionBaseWidget(QWidget):
         
         # --- INICIALIZAR COMPONENTES COMPARTIDOS/NECESARIOS ---
         
+        self.chk_descontar = QCheckBox("Descontar stock")
+        self.chk_descontar.setChecked(True)
+        self.chk_descontar.setStyleSheet("color: #475569; font-weight: 500;")
+        self.chk_descontar.setToolTip("Si está destildado, la venta se registra sin descontar stock (ej. venta a cuenta o reserva).")
+
         self.input_observaciones = QLineEdit()
         self.input_observaciones.setPlaceholderText("Observaciones (opcional)...")
         self.input_observaciones.setMinimumHeight(36)
@@ -1186,6 +1192,7 @@ class OperacionBaseWidget(QWidget):
             self.input_cliente.setCompleter(self.completer_cliente)
         except Exception as e:
             print(f"Error cargando clientes: {e}")
+            logging.warning(f"Error cargando clientes: {e}")
 
     def procesar_input_cliente(self):
         texto = self.input_cliente.text().strip()
@@ -1268,6 +1275,7 @@ class OperacionBaseWidget(QWidget):
             self.catalogo = list(mapa.values())
         except Exception as e:
             print(f"Error cargando catálogo: {e}")
+            logging.warning(f"Error cargando catálogo: {e}")
             self.catalogo = []
 
     def filtrar_productos(self, texto: str) -> list[dict]:

@@ -1,7 +1,7 @@
 import shutil
 from pathlib import Path
 from datetime import datetime
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog
+from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QMessageBox
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from ui.core.theme import COLOR_BORDER, COLOR_BG, COLOR_PRIMARY
@@ -125,5 +125,5 @@ class ImageSelectorWidget(QFrame):
             shutil.copy2(p, dest)
             return dest.name
         except Exception as e:
-            print(f"Error copiando imagen: {e}")
+            QMessageBox.critical(self, "Error", "No se pudo copiar la imagen seleccionada.")
             return None

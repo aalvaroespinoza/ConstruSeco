@@ -3,6 +3,7 @@ import sqlite3
 import os
 
 import unicodedata
+import logging
 from utils.paths import get_data_path
 
 
@@ -82,6 +83,8 @@ def obtener_conexion():
     conn.execute("PRAGMA foreign_keys = ON;")
 
     conn.execute("PRAGMA busy_timeout = 5000;")
+
+    conn.execute("PRAGMA journal_mode=WAL;")
 
     
 
@@ -696,6 +699,7 @@ def limpiar_presupuestos_vencidos(conn):
         conn.rollback()
 
         print(f"Error crítico al limpiar presupuestos vencidos: {e}")
+        logging.warning(f"Error crítico al limpiar presupuestos vencidos: {e}")
 
         return -1
 

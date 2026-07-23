@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt6.QtCore import Qt, pyqtSignal, QRectF
 from PyQt6.QtGui import QCursor, QPainter, QColor, QPen, QPainterPath
 from datetime import datetime
+import logging
 from ui.core.theme import (COLOR_PRIMARY, COLOR_CARD_BG, COLOR_BORDER, 
                            COLOR_TEXT_MAIN, COLOR_TEXT_SEC, COLOR_SUCCESS, 
                            COLOR_WARNING, COLOR_DANGER)
@@ -447,6 +448,7 @@ class PestanaInicio(QWidget):
             self.grafico_ventas.actualizar_datos(productos_frecuentes)
         except Exception as e:
             print(f"[INICIO] Error al cargar datos del panel: {e}")
+            logging.warning(f"[INICIO] Error al cargar datos del panel: {e}")
 
     def _mostrar_ayuda(self):
         from ui.components.ayuda import DialogoAyudaContextual
