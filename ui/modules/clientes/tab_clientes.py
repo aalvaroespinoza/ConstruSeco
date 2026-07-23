@@ -403,7 +403,7 @@ class _PanelDetalle(QScrollArea):
 
         # ── Botón principal: Editar ───────────────────────────────────────
         self._layout.addSpacing(14)
-        self._btn_editar = QPushButton("✏ Editar cliente")
+        self._btn_editar = QPushButton("Editar Cliente")
         self._btn_editar.setStyleSheet(
             f"QPushButton {{ background-color: {COLOR_PRIMARY}; color: white; border-radius: 6px; "
             f"font-weight: bold; font-size: 13px; padding: 8px 16px; border: none; }}"
@@ -416,7 +416,7 @@ class _PanelDetalle(QScrollArea):
             if self._id_actual is not None else None
         )
 
-        self._btn_historial = QPushButton("📋 Ver historial completo")
+        self._btn_historial = QPushButton("Ver Historial Completo")
         self._btn_historial.setStyleSheet(
             f"QPushButton {{ background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; "
             f"border: 1px solid {COLOR_BORDER}; border-radius: 6px; "
@@ -474,7 +474,7 @@ class _PanelDetalle(QScrollArea):
         )
 
         if self._activo_actual:
-            act_editar = QAction("✏️ Editar cliente", self)
+            act_editar = QAction("Editar cliente", self)
             act_editar.triggered.connect(
                 lambda: self.editar_solicitado.emit(self._id_actual)
             )
@@ -663,7 +663,7 @@ class _PanelDetalle(QScrollArea):
             lbl_fecha.setStyleSheet(f"color: #a16207; font-size: 10px; font-weight: bold; border: none;")
             ly_top.addWidget(lbl_fecha, stretch=1)
 
-            btn_menu = QPushButton("⋯")
+            btn_menu = QPushButton("⋮")
             btn_menu.setFixedSize(20, 20)
             btn_menu.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_menu.setStyleSheet(f"color: #a16207; border: none; font-weight: 900;")
@@ -848,19 +848,51 @@ class PestanaClientes(QWidget):
     def _mostrar_ayuda(self):
         from ui.components.ayuda import DialogoAyudaContextual
         texto = (
-            "<p><b>FUNCIONES PRINCIPALES:</b></p>"
+            "<p><b>OBJETIVO:</b></p>"
+            "<p>Administrar la base de datos de clientes del corralón, permitiendo su registro, edición, seguimiento de historial y fidelización.</p>"
+            "<br>"
+            "<p><b>QUÉ PUEDE HACER EL USUARIO:</b></p>"
             "<ul>"
-            "<li><b>Búsqueda de clientes:</b> Utilizá la barra superior para buscar por nombre, CUIT, DNI o email.</li>"
-            "<li><b>Filtros:</b> Múltiples opciones para filtrar entre clientes activos, suspendidos, o inactivos.</li>"
-            "<li><b>Tarjetas KPI (Filtros Rápidos):</b> Al hacer clic en 'Total Clientes', 'Activos' o 'Con Compras' la tabla se filtrará automáticamente.</li>"
-            "<li><b>Métricas Informativas:</b> 'Ventas del Mes' y 'Ticket Promedio' son estadísticas globales puramente informativas basadas en el historial del corralón.</li>"
-            "<li><b>Creación y Edición:</b> Agregá nuevos perfiles o editá su condición de IVA y datos de contacto según necesites.</li>"
+            "<li>Buscar y filtrar clientes.</li>"
+            "<li>Dar de alta, editar y suspender o activar clientes.</li>"
+            "<li>Ver estadísticas rápidas del comportamiento de clientes.</li>"
+            "<li>Consultar el historial completo de compras y presupuestos de cada cliente.</li>"
             "</ul>"
+            "<br>"
+            "<p><b>SECCIONES DE LA PANTALLA:</b></p>"
+            "<ul>"
+            "<li><b>Tarjetas KPI (Superiores):</b> Métricas globales informativas y filtros rápidos interactivos (Total Clientes, Activos, Con Compras).</li>"
+            "<li><b>Barra de Búsqueda y Filtros:</b> Herramientas para localizar clientes específicos.</li>"
+            "<li><b>Tabla Principal:</b> Listado detallado de clientes con opciones de acción por fila.</li>"
+            "<li><b>Panel de Detalle (Lateral):</b> Muestra información completa del cliente seleccionado y acceso directo a su historial.</li>"
+            "</ul>"
+            "<br>"
+            "<p><b>EXPLICACIÓN DE BOTONES:</b></p>"
+            "<ul>"
+            "<li><b>＋ Nuevo Cliente:</b> Abre el formulario de alta.</li>"
+            "<li><b>Filtrar:</b> Aplica el filtro seleccionado en el menú desplegable (por estado).</li>"
+            "<li><b>... (Acciones en tabla):</b> Despliega un menú con opciones como Editar, Historial de Operaciones o Suspender.</li>"
+            "<li><b>Ver Historial de Operaciones:</b> Abre una ventana con todas las ventas y presupuestos del cliente seleccionado.</li>"
+            "</ul>"
+            "<br>"
+            "<p><b>FLUJO DE TRABAJO RECOMENDADO:</b></p>"
+            "<ol>"
+            "<li>Buscar a un cliente antes de crearlo para evitar duplicados.</li>"
+            "<li>Si no existe, registrarlo con la mayor cantidad de datos posible.</li>"
+            "<li>Consultar su historial para analizar compras previas.</li>"
+            "</ol>"
+            "<br>"
             "<p><b>ATAJOS DE TECLADO:</b></p>"
             "<ul>"
-            "<li><b>F2:</b> Foco directo en la barra de búsqueda.</li>"
-            "<li><b>Ctrl + N:</b> Crear un nuevo cliente rápidamente.</li>"
-            "<li><b>Escape:</b> Cerrar cualquier diálogo abierto.</li>"
+            "<li><b>F2:</b> Foco en la barra de búsqueda de clientes.</li>"
+            "<li><b>Ctrl + N:</b> Crear un nuevo cliente.</li>"
+            "<li><b>Escape:</b> Cerrar sugerencias, paneles o cancelar selección.</li>"
+            "</ul>"
+            "<br>"
+            "<p><b>CONSEJOS DE USO Y BUENAS PRÁCTICAS:</b></p>"
+            "<ul>"
+            "<li>Mantené el CUIT y la Condición frente al IVA actualizados para agilizar la facturación.</li>"
+            "<li>Evitá nombres ambiguos (ej. 'Cliente 1') para mantener una base de datos limpia.</li>"
             "</ul>"
         )
         dialogo = DialogoAyudaContextual("Ayuda: Base de Clientes", "Gestión y fidelización de contactos", texto, self)
@@ -878,7 +910,7 @@ class PestanaClientes(QWidget):
         self._input_busqueda.setFixedHeight(36)
         self._input_busqueda.textChanged.connect(self._on_texto_cambiado)
 
-        self._btn_filtros = QPushButton("⚙ Filtros")
+        self._btn_filtros = QPushButton("Filtros")
         self._btn_filtros.setProperty("class", "secundario")
         self._btn_filtros.setFixedHeight(36)
         self._btn_filtros.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1025,10 +1057,10 @@ class PestanaClientes(QWidget):
         if loc != "TODAS": activos += 1
         
         if activos > 0:
-            self._btn_filtros.setText(f"⚙ Filtros ({activos})")
+            self._btn_filtros.setText(f"Filtros ({activos})")
             self._btn_filtros.setStyleSheet(f"color: {COLOR_PRIMARY}; border-color: {COLOR_PRIMARY}; font-weight: bold;")
         else:
-            self._btn_filtros.setText("⚙ Filtros")
+            self._btn_filtros.setText("Filtros")
             self._btn_filtros.setStyleSheet("") # reset
             
         self._pagina_actual = 1
@@ -1168,7 +1200,7 @@ class PestanaClientes(QWidget):
             self._on_por_pagina_cambiado
         )
 
-        self._btn_prev = QPushButton("← Anterior")
+        self._btn_prev = QPushButton("Anterior")
         self._btn_prev.setProperty("class", "pagina")
         self._btn_prev.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_prev.clicked.connect(self._pagina_anterior)
@@ -1179,7 +1211,7 @@ class PestanaClientes(QWidget):
         )
         self._lbl_pagina.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self._btn_next = QPushButton("Siguiente →")
+        self._btn_next = QPushButton("Siguiente")
         self._btn_next.setProperty("class", "pagina")
         self._btn_next.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_next.clicked.connect(self._pagina_siguiente)

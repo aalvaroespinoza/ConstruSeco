@@ -16,7 +16,8 @@ from PyQt6.QtGui import QColor
 from db.queries import obtener_stocks_todos
 from ui.core.theme import (
     COLOR_PRIMARY, COLOR_CARD_BG,
-    COLOR_BORDER, COLOR_TEXT_MAIN, COLOR_SUCCESS, COLOR_DANGER
+    COLOR_BORDER, COLOR_TEXT_MAIN, COLOR_SUCCESS, COLOR_DANGER,
+    COLOR_BG, COLOR_TEXT_SEC
 )
 
 def normalizar_unidad(u: str) -> str:
@@ -166,7 +167,19 @@ def exportar_inventario_excel(conn, parent_window):
             ws.column_dimensions[col_letter].width = min(max_length + 2, 50)
             
         wb.save(ruta)
-        QMessageBox.information(parent_window, "Éxito", f"Inventario exportado correctamente a:\n{ruta}")
+        
+        from PyQt6.QtWidgets import QMessageBox
+        msg = QMessageBox(parent_window)
+        msg.setIcon(QMessageBox.Icon.Information)
+        msg.setWindowTitle("Éxito")
+        msg.setText("Inventario exportado correctamente.")
+        msg.setInformativeText(ruta)
+        btn_abrir = msg.addButton("Abrir Archivo", QMessageBox.ButtonRole.ActionRole)
+        btn_ok = msg.addButton("✓ Aceptar", QMessageBox.ButtonRole.AcceptRole)
+        msg.exec()
+        if msg.clickedButton() == btn_abrir:
+            import os
+            os.startfile(ruta)
     except Exception as e:
         QMessageBox.critical(parent_window, "Error", f"No se pudo exportar el inventario: {e}")
 
@@ -189,10 +202,10 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         
         # Panel superior
         ly_top = QHBoxLayout()
-        self.lbl_archivo = QLabel("← Seleccione un archivo Excel para comenzar")
+        self.lbl_archivo = QLabel("Seleccione un archivo Excel para comenzar")
         self.lbl_archivo.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; background-color: {COLOR_CARD_BG}; padding: 8px; border: 1px solid {COLOR_BORDER}; border-radius: 4px;")
         
-        btn_seleccionar = QPushButton("📂 Seleccionar Excel")
+        btn_seleccionar = QPushButton("Seleccionar Excel")
         btn_seleccionar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_seleccionar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px 20px; border-radius: 6px; font-weight: bold;")
         btn_seleccionar.clicked.connect(self.seleccionar_archivo)
@@ -236,7 +249,7 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         layout.addWidget(self.tabla)
         
         # Boton Confirmar
-        self.btn_confirmar = QPushButton("✅ Confirmar Importación")
+        self.btn_confirmar = QPushButton("Confirmar Importación")
         self.btn_confirmar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_confirmar.setStyleSheet(f"background-color: {COLOR_SUCCESS}; color: white; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 14px;")
         self.btn_confirmar.clicked.connect(self.ejecutar_importacion)

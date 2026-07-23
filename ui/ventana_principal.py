@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
                              QPushButton, QStackedWidget, QLabel, QFrame,
                              QGraphicsOpacityEffect, QMessageBox, QMenu, QScrollArea)
 from PyQt6.QtCore import Qt, QTimer, QVariantAnimation, QPropertyAnimation, QEasingCurve, QSettings, pyqtSignal
-from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont, QPainterPath
+from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont, QPainterPath, QPen
 from pathlib import Path
 from utils.paths import get_resource_path
 from ui.modules.stock.tab_stock import PestanaStock
@@ -39,6 +39,7 @@ class TarjetaOperacionSidebar(QFrame):
         
         # Textos
         self.contenedor_textos = QWidget()
+        self.contenedor_textos.setMaximumWidth(130)
         ly_textos = QVBoxLayout(self.contenedor_textos)
         ly_textos.setContentsMargins(0, 0, 0, 0)
         ly_textos.setSpacing(0)
@@ -52,11 +53,10 @@ class TarjetaOperacionSidebar(QFrame):
         ly_textos.addWidget(self.lbl_titulo)
         ly_textos.addWidget(self.lbl_detalle)
         
-        # Botón cerrar
         self.btn_cerrar = QPushButton("✕")
-        self.btn_cerrar.setFixedSize(20, 20)
+        self.btn_cerrar.setFixedSize(24, 24)
         self.btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_cerrar.setStyleSheet("QPushButton { color: #94a3b8; background: transparent; border: none; font-size: 14px; font-weight: bold; padding-bottom: 2px; } QPushButton:hover { color: #ef4444; }")
+        self.btn_cerrar.setStyleSheet("QPushButton { color: #94a3b8; background: transparent; border: none; font-size: 14px; font-weight: bold; padding: 0px; } QPushButton:hover { color: #ef4444; }")
         self.btn_cerrar.clicked.connect(self.cerrar_solicitado.emit)
         
         self.layout_principal.addWidget(self.lbl_icono, alignment=Qt.AlignmentFlag.AlignVCenter)
@@ -112,7 +112,7 @@ class TarjetaOperacionSidebar(QFrame):
         from ui.components.operacion_base import formato_arg
         
         if items > 0:
-            self.lbl_detalle.setText(f"{nombre} ({items} it. $ {formato_arg(total)})")
+            self.lbl_detalle.setText(f"{nombre} ({items} prod. $ {formato_arg(total)})")
         else:
             self.lbl_detalle.setText(nombre)
             
@@ -202,6 +202,12 @@ class SidebarButton(QPushButton):
             painter.setBrush(QColor("#3b82f6")) # COLOR_PRIMARY
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRoundedRect(margen_x + offset_x, ind_y, 4, ind_h, 2, 2)
+            
+        if self.hasFocus():
+            pen = QPen(QColor("#3b82f6"), 1, Qt.PenStyle.DashLine)
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRoundedRect(rect_bg.adjusted(1, 1, -1, -1), 7, 7)
             
         # Icono y texto 100% opacos SIEMPRE
         color_contenido = QColor("#f8fafc")
@@ -384,6 +390,7 @@ class VentanaPrincipal(QMainWindow):
         self.siguiente_id_operacion = 1
 
         self.init_ui()
+        self._cargar_operaciones_guardadas()
 
     def init_ui(self):
         # Componente central que divide la pantalla en dos (Izquierda: Menú, Derecha: Contenido)
@@ -515,10 +522,10 @@ class VentanaPrincipal(QMainWindow):
         self.menu_nueva_op = QMenu(self)
         self.menu_nueva_op.setStyleSheet("QMenu { background-color: #1e293b; color: #f8fafc; border: 1px solid #334155; } QMenu::item:selected { background-color: #3b82f6; }")
         
-        accion_venta = self.menu_nueva_op.addAction("🛒 Venta Rápida")
+        accion_venta = self.menu_nueva_op.addAction("Venta Rápida")
         accion_venta.triggered.connect(lambda: self.crear_operacion("VENTA"))
         
-        accion_presup = self.menu_nueva_op.addAction("📄 Nuevo Presupuesto")
+        accion_presup = self.menu_nueva_op.addAction("Nuevo Presupuesto")
         accion_presup.triggered.connect(lambda: self.crear_operacion("PRESUPUESTO"))
         
         self.btn_nueva_op.clicked.connect(lambda: self.menu_nueva_op.exec(self.btn_nueva_op.mapToGlobal(self.btn_nueva_op.rect().bottomLeft())))
@@ -532,6 +539,7 @@ class VentanaPrincipal(QMainWindow):
         # Scroll para tarjetas
         scroll_tarjetas = QScrollArea()
         scroll_tarjetas.setWidgetResizable(True)
+        scroll_tarjetas.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_tarjetas.setFrameShape(QFrame.Shape.NoFrame)
         scroll_tarjetas.setStyleSheet("background: transparent;")
         
@@ -832,27 +840,57 @@ class VentanaPrincipal(QMainWindow):
         if estado_previo != self.sidebar_colapsada:
             self.actualizar_estado_sidebar(animar=True)
             
-        if self.contenedor_vistas.currentWidget() == widget:
-            self._aplicar_foco(widget)
-            return
-            
-        self.fade_effect = QGraphicsOpacityEffect(self.contenedor_vistas)
-        self.contenedor_vistas.setGraphicsEffect(self.fade_effect)
-        self.fade_anim = QPropertyAnimation(self.fade_effect, b"opacity")
-        self.fade_anim.setDuration(250)
-        self.fade_anim.setStartValue(0.0)
-        self.fade_anim.setEndValue(1.0)
-        self.fade_anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
         self.contenedor_vistas.setCurrentWidget(widget)
-        self.fade_anim.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
-        self.fade_anim.finished.connect(lambda: self._on_transition_finished(widget))
-
-    def _on_transition_finished(self, widget):
-        self.contenedor_vistas.setGraphicsEffect(None)
         self._aplicar_foco(widget)
 
     def _aplicar_foco(self, widget):
-        if hasattr(widget, 'input_buscador'):
-            widget.input_buscador.setFocus()
-        elif hasattr(widget, 'input_busqueda'):
+        if hasattr(widget, 'input_busqueda'):
             widget.input_busqueda.setFocus()
+            
+    def closeEvent(self, event):
+        if self.operaciones_abiertas:
+            estados = {}
+            for id_op, (widget, _) in self.operaciones_abiertas.items():
+                estados[str(id_op)] = widget.get_estado_serializado()
+            import json
+            self.settings.setValue("operaciones_abiertas", json.dumps(estados))
+        else:
+            self.settings.setValue("operaciones_abiertas", "")
+        event.accept()
+
+    def _cargar_operaciones_guardadas(self):
+        import json
+        estados_json = self.settings.value("operaciones_abiertas", "", type=str)
+        if estados_json:
+            try:
+                estados = json.loads(estados_json)
+                for id_str, est in estados.items():
+                    tipo = est.get('tipo', 'VENTA')
+                    if tipo == 'PRESUPUESTO':
+                        from ui.modules.presupuestos.tab_presupuestos import PestanaNuevoPresupuesto
+                        widget = PestanaNuevoPresupuesto(self.conn, is_edicion=est.get('is_edicion', False), id_presupuesto_edicion=est.get('id_presupuesto_edicion'))
+                    else:
+                        from ui.modules.ventas.tab_ventas import PestanaNuevaVenta
+                        widget = PestanaNuevaVenta(self.conn, is_edicion=est.get('is_edicion', False), id_presupuesto_edicion=est.get('id_presupuesto_edicion'))
+                        
+                    widget.restaurar_estado(est)
+                    
+                    id_op = self.siguiente_id_operacion
+                    self.siguiente_id_operacion += 1
+                    
+                    tarjeta = TarjetaOperacionSidebar(id_op)
+                    tarjeta.clicked.connect(lambda op=id_op: self.seleccionar_operacion(op))
+                    tarjeta.cerrar_solicitado.connect(lambda op=id_op: self.cerrar_operacion(op))
+                    
+                    self.layout_tarjetas.insertWidget(self.layout_tarjetas.count()-1, tarjeta)
+                    self.contenedor_vistas.addWidget(widget)
+                    
+                    self.operaciones_abiertas[id_op] = (widget, tarjeta)
+                    widget.operacion_completada.connect(lambda _, op=id_op: self.cerrar_operacion(op))
+                    
+                    tarjeta.set_colapsada(self.sidebar_colapsada)
+                    tarjeta.actualizar_datos(est)
+                    widget.actualizar_etiqueta_sidebar.connect(tarjeta.actualizar_datos)
+            except Exception as e:
+                print("Error cargando ops guardadas", e)
+            self.settings.setValue("operaciones_abiertas", "")

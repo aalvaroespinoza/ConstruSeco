@@ -62,7 +62,7 @@ class DialogoNota(DialogoModalIntegrado):
         ly.addWidget(self._lbl_error)
 
         ly_btns = QHBoxLayout()
-        btn_cancelar = QPushButton("Cancelar")
+        btn_cancelar = QPushButton("✕ Cancelar")
         btn_cancelar.setStyleSheet(
             f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; "
             f"border-radius: 6px; padding: 8px 16px; color: {COLOR_TEXT_MAIN};"
@@ -164,7 +164,7 @@ class DialogoContacto(DialogoModalIntegrado):
         ly.addWidget(self._lbl_error)
 
         ly_btns = QHBoxLayout()
-        btn_cancelar = QPushButton("Cancelar")
+        btn_cancelar = QPushButton("✕ Cancelar")
         btn_cancelar.setStyleSheet(
             f"background-color: {COLOR_CARD_BG}; border: 1px solid {COLOR_BORDER}; "
             f"border-radius: 6px; padding: 8px 16px; color: {COLOR_TEXT_MAIN};"

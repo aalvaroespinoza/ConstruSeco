@@ -76,7 +76,7 @@ class DialogoHistorialCliente(QDialog):
         ly.addWidget(self.lbl_totales)
 
         # Botón Cerrar
-        btn_cerrar = QPushButton("Cerrar")
+        btn_cerrar = QPushButton("✕ Cerrar")
         btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_cerrar.setStyleSheet(
             f"background-color: {COLOR_PRIMARY}; color: white; border-radius: 6px; "

@@ -123,7 +123,7 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
         self.timer_busqueda.timeout.connect(self.cargar_datos)
         self.inp_buscar.textChanged.connect(self.timer_busqueda.start)
         
-        ly_busq.addWidget(QLabel("🔍 Buscar:"))
+        ly_busq.addWidget(QLabel("Buscar:"))
         ly_busq.addWidget(self.inp_buscar)
         
         self.cmb_tipo = QComboBox()

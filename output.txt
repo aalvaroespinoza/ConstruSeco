@@ -1,0 +1,10 @@
+tab_clientes.py: Siguiente ▶
+tab_presupuestos.py: Siguiente ▶
+dialogs_stock.py: Eliminar Producto
+dialogs_stock.py: Guardar Cambios
+dialogs_stock.py: Confirmar Operación
+dialogs_stock.py: Guardar Precio
+dialogs_stock.py: Desactivar producto\n(Recomendado. Conserva historial.)
+dialogs_stock.py: Eliminar definitivamente\n(Si el producto no tiene historial)
+tab_stock.py: Ver alertas
+tab_stock.py: Ver frecuentes

@@ -211,7 +211,7 @@ class DialogoVentaExitosa(DialogoModalIntegrado):
             
         add_row("Cliente:", cliente_txt)
         add_row("Fecha y hora:", fecha_hora)
-        add_row("Productos:", f"{cant_prods} ítem(s) ({cant_unidades:g} unidades)")
+        add_row("Productos:", f"{cant_prods} producto(s) ({cant_unidades:g} unidades)")
         add_row("Total final:", total)
         if is_presupuesto:
             add_row("Validez:", "48 horas desde su creación")
@@ -222,7 +222,7 @@ class DialogoVentaExitosa(DialogoModalIntegrado):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(12)
         
-        self.btn_cerrar = QPushButton("Cerrar")
+        self.btn_cerrar = QPushButton("✕ Cerrar")
         self.btn_cerrar.setObjectName("btn_secundario")
         self.btn_cerrar.setFixedHeight(36)
         self.btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -283,7 +283,17 @@ class DialogoVentaExitosa(DialogoModalIntegrado):
         if file_path:
             try:
                 if generar_pdf_documento(det, file_path, tipo):
-                    QMessageBox.information(self, "Éxito", f"PDF generado correctamente en:\n{file_path}")
+                    msg = QMessageBox(self)
+                    msg.setIcon(QMessageBox.Icon.Information)
+                    msg.setWindowTitle("Éxito")
+                    msg.setText(f"{tipo.capitalize()} exportado correctamente.")
+                    msg.setInformativeText(file_path)
+                    btn_abrir = msg.addButton("Abrir Documento", QMessageBox.ButtonRole.ActionRole)
+                    btn_ok = msg.addButton("✓ Aceptar", QMessageBox.ButtonRole.AcceptRole)
+                    msg.exec()
+                    if msg.clickedButton() == btn_abrir:
+                        import os
+                        os.startfile(file_path)
                 else:
                     QMessageBox.critical(self, "Error", "Error al generar el PDF.")
             except Exception as e:
@@ -767,6 +777,10 @@ class OperacionBaseWidget(QWidget):
         self.input_cantidad.setPlaceholderText("1")
         self.input_cantidad.setFixedWidth(60)
         self.input_cantidad.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        from PyQt6.QtGui import QDoubleValidator
+        val = QDoubleValidator(0.001, 999999.0, 3)
+        val.setNotation(QDoubleValidator.Notation.StandardNotation)
+        self.input_cantidad.setValidator(val)
         self.input_cantidad.setObjectName("input_cantidad")
         self.input_cantidad.setEnabled(False)
         self.input_cantidad.returnPressed.connect(self.agregar_al_carrito)
@@ -785,7 +799,7 @@ class OperacionBaseWidget(QWidget):
             }
         """)
         
-        self.btn_agregar = QPushButton("Agregar")
+        self.btn_agregar = QPushButton("+ Agregar")
         self.btn_agregar.setObjectName("btn_primario")
         self.btn_agregar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_agregar.clicked.connect(self.agregar_al_carrito)
@@ -1033,32 +1047,68 @@ class OperacionBaseWidget(QWidget):
     def armar_panel_inferior(self, layout):
         pass
 
-    # Las funciones _armar_footer_venta y _armar_footer_presupuesto fueron removidas.
-
     def _mostrar_ayuda(self):
         from ui.components.ayuda import DialogoAyudaContextual
         
         texto = (
-            "<p><b>FUNCIONES PRINCIPALES:</b></p>"
+            "<p><b>OBJETIVO:</b></p>"
+            "<p>Registrar comprobantes de venta o elaborar presupuestos descontando o reservando stock respectivamente, asociando los mismos a un cliente determinado.</p>"
+            "<br>"
+            "<p><b>QUÉ PUEDE HACER EL USUARIO:</b></p>"
             "<ul>"
-            "<li><b>Buscar productos:</b> Utilizá el buscador principal (F2) por código, descripción corta o escaner.</li>"
-            "<li><b>Sugerencias rápidas:</b> Al escribir, verás coincidencias inmediatas con su imagen en miniatura. Navegalas con las flechas del teclado y presioná Enter.</li>"
-            "<li><b>Consultar Stock (ATP):</b> El buscador y el carrito indican el stock <em>disponible real</em> para la venta, evitando vender mercadería ya comprometida.</li>"
-            "<li><b>Modificar el carrito:</b> Podés editar cantidades o aplicar descuentos por ítem haciendo doble clic o Enter sobre la celda correspondiente en la tabla.</li>"
-            "<li><b>Seleccionar Cliente:</b> Buscá un cliente registrado (F3) o crealo rápidamente desde el panel de cliente final.</li>"
+            "<li>Buscar y agregar productos al carrito.</li>"
+            "<li>Visualizar stock real disponible (ATP) en tiempo real.</li>"
+            "<li>Aplicar descuentos a productos individuales.</li>"
+            "<li>Asignar la operación a un cliente registrado o crear uno nuevo.</li>"
+            "<li>Seleccionar el método de pago de la operación.</li>"
             "</ul>"
-            "<p><b>DIFERENCIA ENTRE VENTA Y PRESUPUESTO:</b></p>"
+            "<br>"
+            "<p><b>SECCIONES DE LA PANTALLA:</b></p>"
             "<ul>"
-            "<li>Una <b>Venta</b> genera un comprobante definitivo y extrae físicamente el producto del inventario.</li>"
-            "<li>Un <b>Presupuesto</b> sólo genera un compromiso temporal del stock (reserva el ATP) sin tocar el físico, válido por 48 horas.</li>"
+            "<li><b>Buscador de Productos:</b> Barra superior para buscar por código o nombre; muestra coincidencias con imágenes.</li>"
+            "<li><b>Carrito de Compras:</b> Tabla central con los productos seleccionados, cantidades, precio unitario, descuentos y subtotales.</li>"
+            "<li><b>Panel de Cliente:</b> Sector lateral derecho donde se selecciona o crea el cliente para la operación.</li>"
+            "<li><b>Resumen de Totales:</b> Área inferior que muestra el cálculo total a abonar.</li>"
+            "<li><b>Panel de Cierre:</b> Botonera final para confirmar o cancelar la operación.</li>"
             "</ul>"
+            "<br>"
+            "<p><b>EXPLICACIÓN DE BOTONES:</b></p>"
+            "<ul>"
+            "<li><b>✕ Eliminar (en tabla):</b> Quita un producto específico del carrito.</li>"
+            "<li><b>＋ Nuevo Cliente:</b> Abre el formulario para registrar un cliente en la base de datos sin salir de la pantalla.</li>"
+            "<li><b>✕ Limpiar Cliente:</b> Desvincula al cliente actualmente seleccionado de la operación.</li>"
+            "<li><b>Cancelar (Esc):</b> Descarta la operación actual y limpia el carrito.</li>"
+            "<li><b>Confirmar Venta / Guardar Presupuesto:</b> Finaliza la operación y registra los datos en el sistema.</li>"
+            "</ul>"
+            "<br>"
+            "<p><b>FLUJO DE TRABAJO RECOMENDADO:</b></p>"
+            "<ol>"
+            "<li>Buscar y seleccionar los productos agregándolos al carrito.</li>"
+            "<li>Ajustar cantidades y aplicar descuentos si corresponde (doble clic en la tabla).</li>"
+            "<li>Asignar un cliente utilizando el buscador lateral.</li>"
+            "<li>Seleccionar el método de pago en el resumen de totales.</li>"
+            "<li>Revisar los montos y confirmar la operación.</li>"
+            "</ol>"
+            "<br>"
             "<p><b>ATAJOS DE TECLADO:</b></p>"
             "<ul>"
             "<li><b>F2:</b> Foco en el buscador de productos.</li>"
             "<li><b>F3:</b> Foco en el buscador de clientes.</li>"
             "<li><b>Flechas Arriba/Abajo:</b> Navegar la lista de sugerencias de productos.</li>"
-            "<li><b>Enter:</b> Seleccionar un producto de la lista, o editar celdas en el carrito.</li>"
-            "<li><b>Escape:</b> Cerrar las sugerencias o limpiar selección activa.</li>"
+            "<li><b>Enter:</b> Seleccionar un producto de la lista o confirmar edición en el carrito.</li>"
+            "<li><b>Escape:</b> Cerrar sugerencias o cancelar operación actual.</li>"
+            "</ul>"
+            "<br>"
+            "<p><b>CONSEJOS DE USO Y BUENAS PRÁCTICAS:</b></p>"
+            "<ul>"
+            "<li>Mantené actualizada tu base de clientes para agilizar el proceso de venta.</li>"
+            "<li>Revisá siempre el stock ATP; el sistema no permitirá facturar sin stock disponible.</li>"
+            "</ul>"
+            "<br>"
+            "<p><b>ADVERTENCIAS IMPORTANTES:</b></p>"
+            "<ul>"
+            "<li>Una <b>Venta</b> descontará físicamente el stock de manera definitiva.</li>"
+            "<li>Un <b>Presupuesto</b> reservará el stock temporalmente (ATP) y es válido por un período determinado.</li>"
             "</ul>"
         )
         
@@ -1067,7 +1117,7 @@ class OperacionBaseWidget(QWidget):
         else:
             titulo = "Ayuda: Venta"
             
-        dialogo = DialogoAyudaContextual(titulo, "Guía rápida para facturación y reservas", texto, self)
+        dialogo = DialogoAyudaContextual(titulo, "Guía rápida para ventas y presupuestos", texto, self)
         dialogo.exec()
 
     def hideEvent(self, event):
@@ -1823,7 +1873,7 @@ class OperacionBaseWidget(QWidget):
     def vaciar_carrito_directo(self):
         if self.carrito:
             resp = QMessageBox.warning(self, "Limpiar Venta", 
-                                       f"¿Borrar los {len(self.carrito)} productos actuales y reiniciar?",
+                                       f"¿Eliminar los {len(self.carrito)} productos actuales y reiniciar?",
                                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             if resp == QMessageBox.StandardButton.Yes:
                 self.tabla.setRowCount(0)
@@ -1988,8 +2038,6 @@ class OperacionBaseWidget(QWidget):
             self.actualizar_totales()
             self.deseleccionar_cliente()
             self.input_observaciones.clear()
-            self.input_buscador.setFocus()
-            
             if self.is_edicion:
                 self.is_edicion = False
                 self.id_presupuesto_edicion = None
@@ -2003,3 +2051,51 @@ class OperacionBaseWidget(QWidget):
         except Exception as e:
             self.conn.rollback()
             QMessageBox.critical(self, "Error Transaccional", f"Hubo un error al procesar la operación:\n{e}")
+
+    def get_estado_serializado(self):
+        return {
+            'tipo': self.tipo_documento_seleccionado,
+            'is_presupuesto': self.is_presupuesto,
+            'is_edicion': getattr(self, 'is_edicion', False),
+            'id_presupuesto_edicion': getattr(self, 'id_presupuesto_edicion', None),
+            'cliente_seleccionado': self.cliente_seleccionado,
+            'desc_gral': self.input_desc_gral.text(),
+            'chk_iva': self.chk_iva.isChecked(),
+            'iva_porc': self.input_iva_porc.text(),
+            'observaciones': self.input_observaciones.text(),
+            'carrito': self.carrito
+        }
+
+    def restaurar_estado(self, estado):
+        self.tipo_documento_seleccionado = estado.get('tipo', self.tipo_documento_seleccionado)
+        self.is_presupuesto = estado.get('is_presupuesto', self.is_presupuesto)
+        self.is_edicion = estado.get('is_edicion', getattr(self, 'is_edicion', False))
+        self.id_presupuesto_edicion = estado.get('id_presupuesto_edicion', getattr(self, 'id_presupuesto_edicion', None))
+        
+        self.cliente_seleccionado = estado.get('cliente_seleccionado', None)
+        if self.cliente_seleccionado:
+            self.actualizar_ui_cliente()
+            
+        self.input_desc_gral.setText(estado.get('desc_gral', '0'))
+        self.chk_iva.setChecked(estado.get('chk_iva', False))
+        self.input_iva_porc.setText(estado.get('iva_porc', '21'))
+        self.input_observaciones.setText(estado.get('observaciones', ''))
+        
+        for p in estado.get('carrito', []):
+            prod = {
+                'codigo': p['codigo'],
+                'desc': p['desc_prod'],
+                'unidad_base': p['unidad_base'],
+                'stock': p.get('stock', 0),
+                'precio_base': p['precio_base']
+            }
+            cant_base = p['cantidad'] * p['factor_conversion']
+            self.insertar_fila(prod, p['unidad_venta'], p['factor_conversion'], p['cantidad'], cant_base, p['precio_unit_mostrado'])
+            row = self.tabla.rowCount() - 1
+            if row >= 0:
+                self.carrito[row]['descuento'] = p['descuento']
+                self.tabla.blockSignals(True)
+                self.tabla.item(row, 6).setText(f"{p['descuento']:g}")
+                self.tabla.blockSignals(False)
+                
+        self.actualizar_totales()

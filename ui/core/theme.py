@@ -73,15 +73,15 @@ def aplicar_tema_claro(app):
     app.setStyleSheet(f"""
         QDialog, QMessageBox {{ background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; }}
         QDialog QLabel, QMessageBox QLabel {{ background: transparent; color: {COLOR_TEXT_MAIN}; }}
-        QDialog QLineEdit, QDialog QTextEdit, QDialog QPlainTextEdit,
-        QMessageBox QLineEdit, QMessageBox QTextEdit, QMessageBox QPlainTextEdit,
-        QComboBox {{
+        
+        QLineEdit, QTextEdit, QPlainTextEdit, QComboBox {{
             background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; border: 1px solid {COLOR_BORDER};
             border-radius: 6px; padding: 6px 8px; selection-background-color: {COLOR_PRIMARY};
             selection-color: {COLOR_CARD_BG};
         }}
-        QDialog QLineEdit:focus, QDialog QTextEdit:focus,
-        QDialog QPlainTextEdit:focus, QComboBox:focus {{ border-color: {COLOR_PRIMARY}; }}
+        QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus {{ 
+            border: 1px solid {COLOR_PRIMARY}; 
+        }}
         
         /* Botones Generales */
         QPushButton {{
@@ -94,6 +94,10 @@ def aplicar_tema_claro(app):
         }}
         QPushButton:pressed {{
             background-color: {COLOR_BORDER};
+        }}
+        QPushButton:focus {{
+            border: 1px solid {COLOR_PRIMARY};
+            outline: none;
         }}
         
         QDialog QPushButton:default, QMessageBox QPushButton:default {{
@@ -115,6 +119,9 @@ def aplicar_tema_claro(app):
         QComboBox QAbstractItemView, QListView, QListWidget {{
             background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; border: 1px solid {COLOR_BORDER};
             outline: none; selection-background-color: {COLOR_PRIMARY}; selection-color: {COLOR_CARD_BG};
+        }}
+        QComboBox QAbstractItemView:focus, QListView:focus, QListWidget:focus {{
+            border: 1px solid {COLOR_PRIMARY};
         }}
         QComboBox QAbstractItemView::item, QListView::item, QListWidget::item {{
             min-height: 24px; padding: 5px 8px;
@@ -142,6 +149,9 @@ def aplicar_tema_claro(app):
             selection-color: {COLOR_PRIMARY};
             alternate-background-color: #f1f5f9;
             outline: none;
+        }}
+        QTableWidget:focus {{
+            border: 1px solid {COLOR_PRIMARY};
         }}
         QTableWidget::item {{
             padding: 8px 10px;

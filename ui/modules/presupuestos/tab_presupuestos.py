@@ -226,7 +226,7 @@ class DialogoDetallePresupuesto(DialogoModalIntegrado):
         btn_pdf.setStyleSheet(f"background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; padding: 0 20px; border-radius: 6px; font-weight: bold; color: {COLOR_TEXT_MAIN};")
         btn_pdf.clicked.connect(self._generar_pdf)
         
-        btn_cerrar = QPushButton("Cerrar")
+        btn_cerrar = QPushButton("✕ Cerrar")
         btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_cerrar.setMinimumHeight(36)
         btn_cerrar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; color: white;")
@@ -275,7 +275,7 @@ class DialogoDetallePresupuesto(DialogoModalIntegrado):
                     msg_lbl = QLabel(f"PDF generado correctamente en:<br><br><b>{file_path}</b>")
                     msg_lbl.setWordWrap(True)
                     msg_ly.addWidget(msg_lbl)
-                    btn_ok = QPushButton("Aceptar")
+                    btn_ok = QPushButton("✓ Aceptar")
                     btn_ok.clicked.connect(msg.accept)
                     msg_ly.addWidget(btn_ok)
                     msg.exec()
@@ -559,7 +559,7 @@ class DialogoConfirmacionPresupuesto(DialogoModalIntegrado):
         ly_btns = QHBoxLayout()
         ly_btns.addStretch()
         
-        btn_cancelar = QPushButton("Cancelar")
+        btn_cancelar = QPushButton("✕ Cancelar")
         btn_cancelar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_cancelar.setStyleSheet(f"""
             QPushButton {{
@@ -659,26 +659,26 @@ class _CeldaAcciones(QWidget):
             }}
         """)
         
-        act_ver = menu.addAction("👁 Ver Detalle")
+        act_ver = menu.addAction("Ver Detalle")
         act_ver.triggered.connect(lambda: self.ver_solicitado.emit(self._id))
         
         if estado == "ACTIVO":
-            act_edit = menu.addAction("✎ Editar")
+            act_edit = menu.addAction("Editar")
             act_edit.triggered.connect(lambda: self.editar_solicitado.emit(self._id))
             menu.addSeparator()
             act_conf = menu.addAction("→ Confirmar como Venta")
             act_conf.triggered.connect(lambda: self.confirmar_solicitado.emit(self._id))
             menu.addSeparator()
             
-        act_prev = menu.addAction("📄 Vista Previa")
+        act_prev = menu.addAction("Vista Previa")
         act_prev.triggered.connect(lambda: self.preview_solicitado.emit(self._id))
         
-        act_pdf = menu.addAction("⬇ Guardar como PDF")
+        act_pdf = menu.addAction("Guardar como PDF")
         act_pdf.triggered.connect(lambda: self.pdf_solicitado.emit(self._id))
         
         if estado in ("ACTIVO", "VENCIDO"):
             menu.addSeparator()
-            act_anul = menu.addAction("❌ Anular Presupuesto")
+            act_anul = menu.addAction("✕ Anular Presupuesto")
             act_anul.triggered.connect(lambda: self.anular_solicitado.emit(self._id))
             
         btn_more.setMenu(menu)
@@ -810,7 +810,7 @@ class _PanelDetalle(QScrollArea):
         ly_btns = QGridLayout()
         ly_btns.setSpacing(8)
         
-        self._btn_ver = QPushButton("Ver detalle")
+        self._btn_ver = QPushButton("Ver Detalle")
         self._btn_ver.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_ver.setStyleSheet(f"background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; padding: 8px; border-radius: 6px; font-weight: bold; color: {COLOR_TEXT_MAIN};")
         self._btn_ver.clicked.connect(lambda: self.ver_detalle_solicitado.emit(self._id_actual) if self._id_actual else None)
@@ -830,12 +830,12 @@ class _PanelDetalle(QScrollArea):
         self._btn_pdf.setStyleSheet(f"background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; padding: 8px; border-radius: 6px; font-weight: bold; color: {COLOR_TEXT_MAIN};")
         self._btn_pdf.clicked.connect(lambda: self.pdf_solicitado.emit(self._id_actual) if self._id_actual else None)
         
-        self._btn_confirmar = QPushButton("Confirmar Venta")
+        self._btn_confirmar = QPushButton("✓ Confirmar Venta")
         self._btn_confirmar.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_confirmar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; border: 1px solid {COLOR_PRIMARY}; padding: 8px; border-radius: 6px; font-weight: bold; color: white;")
         self._btn_confirmar.clicked.connect(lambda: self.confirmar_solicitado.emit(self._id_actual) if self._id_actual else None)
         
-        self._btn_anular = QPushButton("Anular")
+        self._btn_anular = QPushButton("✕ Anular")
         self._btn_anular.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_anular.setStyleSheet(f"background-color: #fee2e2; border: 1px solid #fca5a5; padding: 8px; border-radius: 6px; font-weight: bold; color: {COLOR_DANGER};")
         self._btn_anular.clicked.connect(lambda: self.anular_solicitado.emit(self._id_actual) if self._id_actual else None)
@@ -888,7 +888,7 @@ class _PanelDetalle(QScrollArea):
                 self._lbl_validez.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {COLOR_SUCCESS};")
             else:
                 self._lbl_validez.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {COLOR_TEXT_SEC};")
-        self._lbl_items.setText(f"ítems: {len(det['detalles'])}")
+        self._lbl_items.setText(f"productos: {len(det['detalles'])}")
         self._lbl_total.setText(f"Total: {_fmt_moneda(det['total_final'])}")
         
         obs = det['observaciones']
@@ -996,26 +996,55 @@ class PestanaPresupuestos(QWidget):
     def _mostrar_ayuda(self):
         from ui.components.ayuda import DialogoAyudaContextual
         texto = (
-            "<p><b>FUNCIONES PRINCIPALES:</b></p>"
+            "<p><b>OBJETIVO:</b></p>"
+            "<p>Gestionar y hacer seguimiento del listado histórico de presupuestos emitidos a clientes y monitorear sus estados (activos, confirmados, vencidos, anulados).</p>"
+            "<br>"
+            "<p><b>QUÉ PUEDE HACER EL USUARIO:</b></p>"
             "<ul>"
-            "<li><b>Creación y Consulta:</b> Podés crear nuevos presupuestos y consultar el listado histórico completo.</li>"
-            "<li><b>Estados:</b> Cada presupuesto atraviesa distintas etapas: ACTIVO, VENCIDO, CONFIRMADO (venta realizada) o ANULADO.</li>"
-            "<li><b>Validez (Cuenta regresiva):</b> Tienen un vencimiento de 48 horas. Una cuenta regresiva visual te indica el tiempo restante en color verde, naranja (próximo a vencer) o rojo.</li>"
+            "<li>Visualizar un listado completo de todos los presupuestos emitidos.</li>"
+            "<li>Revisar el estado actual y el tiempo restante de validez de cada presupuesto.</li>"
+            "<li>Convertir un presupuesto en venta (confirmar), anularlo o editarlo.</li>"
+            "<li>Generar un documento PDF del presupuesto.</li>"
             "</ul>"
-            "<p><b>COMPROMISO DE STOCK (ATP):</b></p>"
+            "<br>"
+            "<p><b>SECCIONES DE LA PANTALLA:</b></p>"
             "<ul>"
-            "<li>Un presupuesto <b>ACTIVO</b> compromete temporalmente la disponibilidad de los artículos, para asegurar la reserva sin descontar el stock físico real.</li>"
-            "<li>Al vencerse, el sistema <b>libera automáticamente</b> este compromiso temporal.</li>"
+            "<li><b>Tarjetas KPI (Superiores):</b> Métricas globales y filtros rápidos interactivos (Total, Activos, Vencidos, Anulados).</li>"
+            "<li><b>Barra de Búsqueda y Fechas:</b> Filtra presupuestos por nombre de cliente, DNI/CUIT o rango de fechas.</li>"
+            "<li><b>Tabla Principal:</b> Listado detallado que incluye la cuenta regresiva de validez y opciones de acción.</li>"
+            "<li><b>Panel de Detalle (Lateral):</b> Muestra el detalle completo (ítems, totales y cliente) del presupuesto seleccionado.</li>"
             "</ul>"
-            "<p><b>ACCIONES POR PRESUPUESTO:</b></p>"
+            "<br>"
+            "<p><b>EXPLICACIÓN DE BOTONES:</b></p>"
             "<ul>"
-            "<li><b>👁 (Ver):</b> Abre el detalle completo, válido en cualquier estado.</li>"
-            "<li><b>✎ (Editar):</b> Permite modificar el presupuesto, <b>únicamente si está ACTIVO</b>.</li>"
-            "<li><b>⋮ (Menú de acciones):</b> Permite Confirmar como Venta (solo ACTIVO), Anular (solo ACTIVO), generar una Vista Previa o Exportar a PDF.</li>"
+            "<li><b>＋ Nuevo Presupuesto:</b> Abre la ventana de operación para crear uno.</li>"
+            "<li><b>👁 Ver (en tabla):</b> Abre el panel lateral con los detalles completos.</li>"
+            "<li><b>✎ Editar (en tabla):</b> Abre la ventana de edición, sólo aplicable a presupuestos ACTIVOS.</li>"
+            "<li><b>⋮ (Opciones en tabla):</b> Permite Confirmar (generar venta), Anular, ver PDF o Exportar, dependiendo del estado.</li>"
             "</ul>"
+            "<br>"
+            "<p><b>FLUJO DE TRABAJO RECOMENDADO:</b></p>"
+            "<ol>"
+            "<li>Revisar frecuentemente los presupuestos <b>ACTIVOS</b> próximos a vencer (color naranja).</li>"
+            "<li>Contactar al cliente si es necesario para confirmar antes del vencimiento.</li>"
+            "<li>Utilizar el menú <b>⋮</b> para confirmar el presupuesto si el cliente acepta, lo que generará la venta correspondiente.</li>"
+            "</ol>"
+            "<br>"
             "<p><b>ATAJOS DE TECLADO:</b></p>"
             "<ul>"
-            "<li><b>Escape:</b> Cerrar cualquier diálogo abierto.</li>"
+            "<li><b>Escape:</b> Cerrar paneles laterales o diálogos abiertos.</li>"
+            "</ul>"
+            "<br>"
+            "<p><b>CONSEJOS DE USO Y BUENAS PRÁCTICAS:</b></p>"
+            "<ul>"
+            "<li>Filtra por 'Activos' diariamente para focalizarte en las oportunidades de venta vigentes.</li>"
+            "<li>Evitá anular presupuestos manualmente a menos que el cliente indique explícitamente que no realizará la compra, ya que el sistema los vence automáticamente.</li>"
+            "</ul>"
+            "<br>"
+            "<p><b>ADVERTENCIAS IMPORTANTES:</b></p>"
+            "<ul>"
+            "<li>Un presupuesto <b>ACTIVO</b> compromete stock (ATP), limitando su venta a otro cliente.</li>"
+            "<li>Al pasar a estado <b>VENCIDO</b> (48 horas), el sistema libera el stock automáticamente.</li>"
             "</ul>"
         )
         dialogo = DialogoAyudaContextual("Ayuda: Módulo Presupuestos", "Gestión de presupuestos y compromisos de stock", texto, self)
@@ -1323,17 +1352,17 @@ class PestanaPresupuestos(QWidget):
         if file_path:
             try:
                 if generar_pdf_documento(det, file_path, "PRESUPUESTO"):
-                    from ui.core.modal import DialogoModalIntegrado
-                    msg = DialogoModalIntegrado(self.window())
+                    msg = QMessageBox(self)
+                    msg.setIcon(QMessageBox.Icon.Information)
                     msg.setWindowTitle("Éxito")
-                    msg_ly = QVBoxLayout(msg)
-                    msg_lbl = QLabel(f"PDF generado correctamente en:<br><br><b>{file_path}</b>")
-                    msg_lbl.setWordWrap(True)
-                    msg_ly.addWidget(msg_lbl)
-                    btn_ok = QPushButton("Aceptar")
-                    btn_ok.clicked.connect(msg.accept)
-                    msg_ly.addWidget(btn_ok)
+                    msg.setText("Presupuesto exportado correctamente.")
+                    msg.setInformativeText(file_path)
+                    btn_abrir = msg.addButton("Abrir Documento", QMessageBox.ButtonRole.ActionRole)
+                    btn_ok = msg.addButton("✓ Aceptar", QMessageBox.ButtonRole.AcceptRole)
                     msg.exec()
+                    if msg.clickedButton() == btn_abrir:
+                        import os
+                        os.startfile(file_path)
                 else:
                     QMessageBox.critical(self, "Error", "Error al generar el PDF.")
             except Exception as e:
@@ -1349,7 +1378,7 @@ class PestanaPresupuestos(QWidget):
             lbl = QLabel("Solo se pueden anular presupuestos activos o vencidos.")
             lbl.setStyleSheet(f"font-size: 14px; color: {COLOR_TEXT_MAIN};")
             msg_ly.addWidget(lbl)
-            btn = QPushButton("Aceptar")
+            btn = QPushButton("✓ Aceptar")
             btn.clicked.connect(msg.accept)
             msg_ly.addWidget(btn)
             msg.exec()
@@ -1383,7 +1412,7 @@ class PestanaPresupuestos(QWidget):
             lbl = QLabel("Solo se pueden confirmar presupuestos activos.")
             lbl.setStyleSheet(f"font-size: 14px; color: {COLOR_TEXT_MAIN};")
             msg_ly.addWidget(lbl)
-            btn = QPushButton("Aceptar")
+            btn = QPushButton("✓ Aceptar")
             btn.clicked.connect(msg.accept)
             msg_ly.addWidget(btn)
             msg.exec()
@@ -1395,7 +1424,7 @@ class PestanaPresupuestos(QWidget):
         detalles = (
             f"Cliente: <b>{det['cliente']['nombre_completo']}</b><br>"
             f"Total: <b>{total_formateado}</b><br>"
-            f"Productos: <b>{cant_prods} {'ítem' if cant_prods == 1 else 'ítems'}</b><br><br>"
+            f"Productos: <b>{cant_prods} {'producto' if cant_prods == 1 else 'productos'}</b><br><br>"
             f"Advertencia: Esta acción descuenta el stock y no se puede deshacer."
         )
         
@@ -1569,7 +1598,7 @@ class PestanaPresupuestos(QWidget):
             it_num.setData(Qt.ItemDataRole.UserRole, row["id_documento"])
             it_num.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             
-            it_cli = QTableWidgetItem(f"{row['cliente']}\n{row['cant_items']} ítems")
+            it_cli = QTableWidgetItem(f"{row['cliente']}\n{row['cant_items']} productos")
             it_cli.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             
             # Fecha con hora

@@ -237,13 +237,13 @@ class PestanaStock(QWidget):
         
         lbl_titulo = QLabel("Control de Stock")
         lbl_titulo.setStyleSheet(f"font-size: 26px; font-weight: 800; color: {COLOR_TEXT_MAIN};")
-        lbl_subtitulo = QLabel("Inventario, disponibilidad y métricas")
+        lbl_subtitulo = QLabel("Stock, disponibilidad y métricas")
         lbl_subtitulo.setStyleSheet(f"font-size: 14px; color: {COLOR_TEXT_SEC};")
         
         titles_layout.addWidget(lbl_titulo)
         titles_layout.addWidget(lbl_subtitulo)
         
-        btn_actualizar = QPushButton("🔄 Actualizar")
+        btn_actualizar = QPushButton("🗘 Actualizar")
         btn_actualizar.setToolTip("Forzar recarga de datos")
         btn_actualizar.setProperty("class", "secundario")
         btn_actualizar.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -254,26 +254,26 @@ class PestanaStock(QWidget):
         btn_ayuda.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_ayuda.clicked.connect(self._mostrar_ayuda)
         
-        btn_ajustes = QPushButton("⚙️ Ajustes")
+        btn_ajustes = QPushButton("Ajustes")
         btn_ajustes.setProperty("class", "secundario")
         btn_ajustes.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_ajustes.clicked.connect(self.abrir_configuracion_general)
 
-        btn_historial = QPushButton("📜 Historial")
+        btn_historial = QPushButton("Historial")
         btn_historial.setProperty("class", "secundario")
         btn_historial.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_historial.clicked.connect(self.abrir_historial_movimientos)
 
-        btn_excel = QPushButton("📊 Excel ▾")
+        btn_excel = QPushButton("Excel ▾")
         btn_excel.setProperty("class", "secundario")
         btn_excel.setCursor(Qt.CursorShape.PointingHandCursor)
         menu_excel = QMenu(btn_excel)
         menu_excel.setStyleSheet("QMenu { background-color: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px; } QMenu::item { padding: 8px 16px; border-radius: 4px; } QMenu::item:selected { background-color: #f1f5f9; }")
-        menu_excel.addAction("📥 Importar...").triggered.connect(self.abrir_importar_excel)
-        menu_excel.addAction("📤 Exportar...").triggered.connect(lambda: exportar_inventario_excel(self.conn, self))
+        menu_excel.addAction("Importar...").triggered.connect(self.abrir_importar_excel)
+        menu_excel.addAction("Exportar...").triggered.connect(lambda: exportar_inventario_excel(self.conn, self))
         btn_excel.setMenu(menu_excel)
 
-        btn_agregar = QPushButton("➕ Nuevo Producto")
+        btn_agregar = QPushButton("+ Nuevo Producto")
         btn_agregar.setProperty("class", "primario")
         btn_agregar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_agregar.clicked.connect(self.abrir_formulario_alta)
@@ -338,9 +338,9 @@ class PestanaStock(QWidget):
         row_stk.addWidget(self.lbl_res_stock)
         ly_datos.addLayout(row_stk)
         
-        # Fila Valor Inventario
+        # Fila Valor Stock
         row_val = QHBoxLayout()
-        lbl_val_tit = QLabel("Valor del Inventario:")
+        lbl_val_tit = QLabel("Valor del Stock:")
         lbl_val_tit.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 13px;")
         self.lbl_res_valor = QLabel("$0.00")
         self.lbl_res_valor.setStyleSheet(f"color: {COLOR_PRIMARY}; font-weight: 900; font-size: 16px;")
@@ -365,7 +365,7 @@ class PestanaStock(QWidget):
         head_alertas = QHBoxLayout()
         lbl_al_tit = QLabel("⚠️ Alertas de Inventario")
         lbl_al_tit.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; font-weight: bold; font-size: 14px; border: none;")
-        btn_ver_alertas = QPushButton("Ver alertas")
+        btn_ver_alertas = QPushButton("⚠️ Ver alertas")
         btn_ver_alertas.setStyleSheet(f"color: {COLOR_PRIMARY}; background: transparent; border: none; font-size: 12px; font-weight: bold;")
         btn_ver_alertas.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_ver_alertas.clicked.connect(self.abrir_alertas_inventario)
@@ -387,7 +387,7 @@ class PestanaStock(QWidget):
         head_frec = QHBoxLayout()
         lbl_fr_tit = QLabel("⭐ Productos Frecuentes")
         lbl_fr_tit.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; font-weight: bold; font-size: 14px; border: none;")
-        btn_ver_frec = QPushButton("Ver frecuentes")
+        btn_ver_frec = QPushButton("⭐ Ver frecuentes")
         btn_ver_frec.setStyleSheet(f"color: {COLOR_PRIMARY}; background: transparent; border: none; font-size: 12px; font-weight: bold;")
         btn_ver_frec.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_ver_frec.clicked.connect(self.abrir_frecuentes)
@@ -411,7 +411,7 @@ class PestanaStock(QWidget):
         filtros_layout.setSpacing(12)
         
         self.input_buscar = QLineEdit()
-        self.input_buscar.setPlaceholderText("🔍 Buscar producto por descripción o código...")
+        self.input_buscar.setPlaceholderText("Buscar producto por descripción o código...")
         self.input_buscar.setMinimumWidth(300)
         
         self.combo_estado = QComboBox()
@@ -477,7 +477,9 @@ class PestanaStock(QWidget):
         self.tabla.mousePressEvent = _custom_mouse_press
         
         header = self.tabla.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        for i in [0, 3, 4, 5, 6, 7, 8, 9]:
+            header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)  # Producto/Descripcion
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)    # Img
         self.tabla.setColumnWidth(1, 52)
@@ -518,6 +520,10 @@ class PestanaStock(QWidget):
         dialogo.exec()
 
     def cargar_datos(self):
+        from PyQt6.QtWidgets import QApplication
+        from PyQt6.QtCore import Qt
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        
         # 1. Cargar métricas globales
         metricas = obtener_metricas_globales(self.conn)
         self.lbl_res_total.setText(str(metricas['total_productos']))
@@ -613,6 +619,7 @@ class PestanaStock(QWidget):
             self.ly_items_alertas.addWidget(lbl_vacio)
             
         self.aplicar_filtros()
+        QApplication.restoreOverrideCursor()
 
     def aplicar_filtros(self):
         texto = self.input_buscar.text().strip().lower()
@@ -662,7 +669,10 @@ class PestanaStock(QWidget):
         self.renderizar_tabla(datos_filtrados)
 
     def renderizar_tabla(self, datos):
-
+        from PyQt6.QtWidgets import QApplication
+        from PyQt6.QtCore import Qt
+        
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         self.tabla.setUpdatesEnabled(False)
         self.tabla.setRowCount(0)
         settings = QSettings("ConstrusecoPereyra", "StockConfig")
@@ -791,7 +801,7 @@ class PestanaStock(QWidget):
             """
             
             if activo == 0:
-                btn_reactivar = QPushButton("♻️")
+                btn_reactivar = QPushButton("🗘")
                 btn_reactivar.setToolTip("Reactivar Producto")
                 btn_reactivar.setFixedSize(28, 28)
                 btn_reactivar.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -851,22 +861,22 @@ class PestanaStock(QWidget):
                     }}
                 """)
                 
-                act_ver = QAction("👁 Ver detalle", self)
+                act_ver = QAction("Ver detalle", self)
                 act_ver.triggered.connect(lambda checked, prod=p: self.abrir_vista_detalle(prod))
                 
-                act_edit = QAction("✏️ Editar producto", self)
+                act_edit = QAction("Editar producto", self)
                 act_edit.triggered.connect(lambda checked, prod=p: self.abrir_editar(prod))
                 
-                act_mod_precio = QAction("💲 Modificar precio", self)
+                act_mod_precio = QAction("Modificar precio", self)
                 act_mod_precio.triggered.connect(lambda checked, prod=p: self.abrir_modificar_precio(prod))
                 
-                act_entrada = QAction("📥 Entrada de stock", self)
+                act_entrada = QAction("Entrada de stock", self)
                 act_entrada.triggered.connect(lambda checked, prod=p: self.abrir_modificar_stock(prod, modo='ENTRADA'))
                 
                 act_ajuste = QAction("📦 Ajuste de stock", self)
                 act_ajuste.triggered.connect(lambda checked, prod=p: self.abrir_modificar_stock(prod, modo='AJUSTE'))
                 
-                act_eliminar = QAction("🗑️ Desactivar / Eliminar", self)
+                act_eliminar = QAction("Desactivar / Eliminar", self)
                 act_eliminar.triggered.connect(lambda checked, prod=p: self.eliminar_desactivar_producto(prod))
                 
                 menu.addAction(act_ver)
@@ -885,9 +895,13 @@ class PestanaStock(QWidget):
             self.tabla.setCellWidget(i, 10, w_acc)
             
             self.tabla.setRowHeight(i, 56)
+            
+            if i % 100 == 0:
+                QApplication.processEvents()
 
         self.tabla.setUpdatesEnabled(True)
         self._actualizar_colores_seleccion()
+        QApplication.restoreOverrideCursor()
 
     def reactivar_producto(self, prod):
         try:

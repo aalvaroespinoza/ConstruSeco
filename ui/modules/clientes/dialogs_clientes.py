@@ -198,9 +198,12 @@ class DialogoFormularioCliente(DialogoModalIntegrado):
         ly.setSpacing(16)
 
         # Encabezado interno
-        lbl_titulo = QLabel(
-            f"Editar: {self._det['nombre']}" if self._modo_edicion else "Nuevo Cliente"
-        )
+        if self._modo_edicion:
+            self._det = qc.obtener_detalle_cliente(self.conn, self._id_cliente)
+            lbl_titulo = QLabel(f"Editar: {self._det['nombre']}" if self._det else "Editar Cliente")
+        else:
+            self._det = None
+            lbl_titulo = QLabel("Nuevo Cliente")
         lbl_titulo.setStyleSheet(
             f"font-size: 18px; font-weight: 900; color: {COLOR_TEXT_MAIN};"
         )
@@ -307,7 +310,7 @@ class DialogoFormularioCliente(DialogoModalIntegrado):
         ly_btns = QHBoxLayout()
         ly_btns.setSpacing(8)
 
-        btn_cancelar = QPushButton("Cancelar")
+        btn_cancelar = QPushButton("✕ Cancelar")
         btn_cancelar.setStyleSheet(
             f"background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; "
             f"border: 1px solid {COLOR_BORDER}; border-radius: 6px; "
@@ -391,11 +394,18 @@ class DialogoFormularioCliente(DialogoModalIntegrado):
 
         # CUIT: opcional, pero si se ingresó debe tener formato válido
         cuit = self._txt("cuit_dni")
-        if cuit and not _RE_CUIT.match(cuit):
-            self._campos["cuit_dni"].set_error(
-                "Formato de CUIT inválido. Ejemplo: 20-12345678-9"
-            )
-            hay_error = True
+        if cuit:
+            # Auto-formato de CUIT sin guiones (10 u 11 dígitos)
+            if cuit.isdigit() and len(cuit) in (10, 11):
+                cuit = f"{cuit[:2]}-{cuit[2:-1]}-{cuit[-1]}"
+                self._campos["cuit_dni"].widget.setText(cuit)
+            
+            _RE_DNI = re.compile(r"^\d{7,8}$")
+            if not (_RE_CUIT.match(cuit) or _RE_DNI.match(cuit)):
+                self._campos["cuit_dni"].set_error(
+                    "Formato inválido. Ingrese CUIT (ej: 20-12345678-9) o DNI (7 u 8 dígitos)."
+                )
+                hay_error = True
 
         # Email: opcional, pero si se ingresó debe tener formato válido
         email = self._txt("email")

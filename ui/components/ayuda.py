@@ -53,7 +53,7 @@ class DialogoAyudaContextual(DialogoModalIntegrado):
         ly_btn = QHBoxLayout()
         ly_btn.addStretch()
         
-        btn_cerrar = QPushButton("Cerrar Ayuda")
+        btn_cerrar = QPushButton("✕ Cerrar Ayuda")
         btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_cerrar.setStyleSheet(f"""
             QPushButton {{

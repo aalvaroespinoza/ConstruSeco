@@ -47,7 +47,7 @@ class DialogoVistaPreviaPDF(DialogoModalIntegrado):
         btn_ly = QHBoxLayout()
         btn_ly.addStretch()
         
-        btn_cerrar = QPushButton("Cerrar")
+        btn_cerrar = QPushButton("✕ Cerrar")
         btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_cerrar.setStyleSheet(f"background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; padding: 8px 20px; border-radius: 6px; font-weight: bold;")
         btn_cerrar.clicked.connect(self.reject)

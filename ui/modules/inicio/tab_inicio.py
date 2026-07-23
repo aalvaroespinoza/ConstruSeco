@@ -214,13 +214,27 @@ class PestanaInicio(QWidget):
         layout.setSpacing(20)
         
         # Encabezado
+        ly_encabezado = QHBoxLayout()
+        ly_encabezado.setContentsMargins(0, 0, 0, 0)
+        
+        ly_textos = QVBoxLayout()
         lbl_saludo = QLabel("👋 ¡Bienvenido!")
         lbl_saludo.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; font-size: 24px; font-weight: bold;")
         lbl_fecha = QLabel(fecha_formateada())
         lbl_fecha.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 14px;")
+        ly_textos.addWidget(lbl_saludo)
+        ly_textos.addWidget(lbl_fecha)
         
-        layout.addWidget(lbl_saludo)
-        layout.addWidget(lbl_fecha)
+        btn_ayuda = QPushButton("ⓘ Ayuda")
+        btn_ayuda.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_ayuda.setStyleSheet(f"background-color: transparent; color: {COLOR_TEXT_SEC}; font-size: 13px; font-weight: 600; padding: 6px 12px; border: 1px solid {COLOR_BORDER}; border-radius: 6px;")
+        btn_ayuda.clicked.connect(self._mostrar_ayuda)
+        
+        ly_encabezado.addLayout(ly_textos)
+        ly_encabezado.addStretch()
+        ly_encabezado.addWidget(btn_ayuda, alignment=Qt.AlignmentFlag.AlignTop)
+        
+        layout.addLayout(ly_encabezado)
         layout.addSpacing(10)
         
         # Atajos
@@ -230,10 +244,10 @@ class PestanaInicio(QWidget):
         atajo_venta = TarjetaAtajo("🛒", "Nueva Venta", "Iniciar una venta rápida")
         atajo_venta.clicked.connect(self.nueva_venta_solicitada.emit)
         
-        atajo_presupuesto = TarjetaAtajo("📄", "Nuevo Presupuesto", "Crear cotización")
+        atajo_presupuesto = TarjetaAtajo("📄", "Nuevo Presupuesto", "Crear presupuesto")
         atajo_presupuesto.clicked.connect(self.nuevo_presupuesto_solicitado.emit)
         
-        atajo_stock = TarjetaAtajo("📦", "Ver Stock", "Consultar inventario")
+        atajo_stock = TarjetaAtajo("📦", "Ver Stock", "Consultar stock")
         atajo_stock.clicked.connect(self.ver_stock_solicitado.emit)
         
         atajo_clientes = TarjetaAtajo("👥", "Ver Clientes", "Gestionar clientes")
@@ -248,7 +262,7 @@ class PestanaInicio(QWidget):
         layout.addSpacing(10)
         
         # KPIs Stock
-        lbl_titulo_kpi = QLabel("📊 Estado del Inventario")
+        lbl_titulo_kpi = QLabel("📊 Estado del Stock")
         lbl_titulo_kpi.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; font-size: 16px; font-weight: bold;")
         layout.addWidget(lbl_titulo_kpi)
         
@@ -256,7 +270,7 @@ class PestanaInicio(QWidget):
         self.ly_kpis.setSpacing(15)
         
         self.kpi_total_val, frame_t = self._crear_kpi_card("Total Productos")
-        self.kpi_valor_val, frame_v = self._crear_kpi_card("Valor Inventario")
+        self.kpi_valor_val, frame_v = self._crear_kpi_card("Valor Stock")
         self.kpi_bajo_val, frame_b = self._crear_kpi_card("Stock Bajo")
         self.kpi_sin_val, frame_s = self._crear_kpi_card("Sin Stock")
         
@@ -281,7 +295,7 @@ class PestanaInicio(QWidget):
         ly_p.setContentsMargins(20, 15, 20, 15)
         
         ly_p_info = QVBoxLayout()
-        lbl_tit_p = QLabel("📄 Presupuestos")
+        lbl_tit_p = QLabel("Presupuestos")
         lbl_tit_p.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; font-weight: bold; font-size: 16px;")
         self.lbl_presup_activos = QLabel("0 activos")
         self.lbl_presup_activos.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 14px;")
@@ -321,7 +335,7 @@ class PestanaInicio(QWidget):
         self.frame_stock = QFrame()
         self.frame_stock.setObjectName("tarjeta_blanca")
         ly_stock = QVBoxLayout(self.frame_stock)
-        lbl_tit_stock = QLabel("Estado del Inventario")
+        lbl_tit_stock = QLabel("Estado del Stock")
         lbl_tit_stock.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; font-weight: bold; font-size: 16px;")
         self.grafico_stock = GraficoAnilloStock()
         
@@ -434,3 +448,46 @@ class PestanaInicio(QWidget):
         except Exception as e:
             print(f"[INICIO] Error al cargar datos del panel: {e}")
 
+    def _mostrar_ayuda(self):
+        from ui.components.ayuda import DialogoAyudaContextual
+        texto = (
+            "<p><b>OBJETIVO:</b></p>"
+            "<p>Proporcionar una vista general y rápida (Dashboard) del estado del negocio, permitiendo el acceso inmediato a las operaciones más comunes y resumiendo la información clave.</p>"
+            "<br>"
+            "<p><b>QUÉ PUEDE HACER EL USUARIO:</b></p>"
+            "<ul>"
+            "<li>Visualizar atajos rápidos para crear ventas, presupuestos, consultar clientes o stock.</li>"
+            "<li>Consultar indicadores rápidos (KPI) sobre el inventario valorizado y los presupuestos vigentes.</li>"
+            "<li>Recibir alertas tempranas sobre productos con stock bajo o nulo.</li>"
+            "<li>Observar el rendimiento de los productos más vendidos en los últimos 30 días.</li>"
+            "</ul>"
+            "<br>"
+            "<p><b>SECCIONES DE LA PANTALLA:</b></p>"
+            "<ul>"
+            "<li><b>Atajos Principales:</b> Botones de acceso rápido a las tareas cotidianas.</li>"
+            "<li><b>Tarjetas KPI (Stock y Presupuestos):</b> Resúmenes numéricos globales (valor total del inventario, productos sin stock, presupuestos activos/vencidos).</li>"
+            "<li><b>Gráfico de Inventario:</b> Distribución visual del stock por estado (Disponible, Bajo, Sin Stock).</li>"
+            "<li><b>Ranking de Ventas:</b> Gráfico de barras horizontales mostrando los productos más solicitados en el mes.</li>"
+            "</ul>"
+            "<br>"
+            "<p><b>EXPLICACIÓN DE BOTONES:</b></p>"
+            "<ul>"
+            "<li><b>Nueva Venta:</b> Inicia el comprobante de venta.</li>"
+            "<li><b>Nuevo Presupuesto:</b> Inicia la carga de un presupuesto temporal.</li>"
+            "<li><b>Ver Stock:</b> Abre el inventario completo.</li>"
+            "<li><b>Ver Clientes:</b> Abre el catálogo de clientes registrados.</li>"
+            "</ul>"
+            "<br>"
+            "<p><b>FLUJO DE TRABAJO RECOMENDADO:</b></p>"
+            "<ol>"
+            "<li>Al iniciar la jornada, revisar las alertas rojas (productos Sin Stock y Presupuestos Vencidos).</li>"
+            "<li>Utilizar los atajos superiores para saltar rápidamente a la operación requerida sin usar el menú lateral.</li>"
+            "</ol>"
+            "<br>"
+            "<p><b>CONSEJOS DE USO Y BUENAS PRÁCTICAS:</b></p>"
+            "<ul>"
+            "<li>Mantené el stock al día y configurá correctamente los mínimos para que los indicadores de esta pantalla sean precisos y útiles.</li>"
+            "</ul>"
+        )
+        dialogo = DialogoAyudaContextual("Ayuda: Dashboard de Inicio", "Vista general del sistema y accesos rápidos", texto, self)
+        dialogo.exec()

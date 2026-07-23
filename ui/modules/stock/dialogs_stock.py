@@ -533,7 +533,7 @@ class DialogoModificarStock(DialogoModalIntegrado):
         self.fisico_actual = float(self.p_data['stock_fisico'])
         self.modo_inicial = modo_inicial
         
-        titulo = "Entrada de Stock" if modo_inicial == 'ENTRADA' else "Ajuste de Inventario"
+        titulo = "Entrada de Stock" if modo_inicial == 'ENTRADA' else "Ajuste de Stock"
         self.setWindowTitle(f"{titulo}: {producto_data['descripcion']}")
         
         self.setMinimumWidth(600)
@@ -586,7 +586,7 @@ class DialogoModificarStock(DialogoModalIntegrado):
         
         self.radio_entrada = QRadioButton(" Entrada de Stock")
         self.radio_entrada.setStyleSheet(style_radio)
-        self.radio_ajuste = QRadioButton(" Ajuste de Inventario")
+        self.radio_ajuste = QRadioButton(" Ajuste de Stock")
         self.radio_ajuste.setStyleSheet(style_radio)
         self.radio_entrada.setChecked(self.modo_inicial == 'ENTRADA')
         self.radio_ajuste.setChecked(self.modo_inicial == 'AJUSTE')
@@ -594,7 +594,7 @@ class DialogoModificarStock(DialogoModalIntegrado):
         self.grupo_op.addButton(self.radio_entrada, 0)
         self.grupo_op.addButton(self.radio_ajuste, 1)
         
-        lbl_info_entrada = QLabel("Suma una cantidad al stock actual (Ej: Ingreso de mercadería)")
+        lbl_info_entrada = QLabel("Suma una cantidad al stock actual (Ej: Ingreso de productos)")
         lbl_info_entrada.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 12px; margin-left: 28px;")
         
         lbl_info_ajuste = QLabel("Reemplaza el stock actual por un nuevo valor contado (Ej: Recuento)")
@@ -678,7 +678,7 @@ class DialogoModificarStock(DialogoModalIntegrado):
         
         btn_ly = QHBoxLayout()
         btn_ly.addStretch()
-        self.btn_confirmar = QPushButton("Confirmar Operación")
+        self.btn_confirmar = QPushButton("✓ Confirmar Operación")
         self.btn_confirmar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_confirmar.setStyleSheet(f"QPushButton {{ background-color: {COLOR_PRIMARY}; color: white; padding: 10px 24px; font-weight: bold; border-radius: 6px; border: none; }} QPushButton:hover {{ background-color: #1d4ed8; }}")
         self.btn_confirmar.clicked.connect(self.guardar)
@@ -1004,7 +1004,7 @@ class VistaDetalleProducto(QFrame):
         # --- MÉTRICAS DE STOCK ---
         from PyQt6.QtWidgets import QGridLayout
         
-        lbl_stk_tit = QLabel("Métricas de Inventario")
+        lbl_stk_tit = QLabel("Métricas de Stock")
         lbl_stk_tit.setStyleSheet(f"font-size: 14px; font-weight: 800; color: {COLOR_TEXT_MAIN};")
         card_layout.addWidget(lbl_stk_tit)
         card_layout.addSpacing(12)
@@ -1190,7 +1190,7 @@ class DialogoAyudaStock(DialogoModalIntegrado):
         ly_content.setContentsMargins(24, 24, 24, 24)
         ly_content.setSpacing(16)
         
-        lbl_tit = QLabel("📖 Guía de Uso: Control de Stock")
+        lbl_tit = QLabel("Guía de Uso: Control de Stock")
         lbl_tit.setStyleSheet(f"font-size: 20px; font-weight: 900; color: {COLOR_TEXT_MAIN};")
         ly_content.addWidget(lbl_tit)
         
@@ -1212,54 +1212,53 @@ class DialogoAyudaStock(DialogoModalIntegrado):
             ly_card.addWidget(lbl_text)
             ly_content.addWidget(card)
             
-        add_section("📦", "¿Qué muestra esta pantalla?",
-                    "Esta pantalla centraliza el inventario.\n"
+        add_section("🎯", "Objetivo del Módulo",
+                    "Administrar y controlar el inventario de productos, gestionando el stock físico y visualizando en tiempo real la disponibilidad para la venta (ATP).")
+                    
+        add_section("✅", "Qué Puede Hacer el Usuario",
+                    "• Visualizar y buscar productos del catálogo.\n"
+                    "• Registrar entradas de stock (compras a proveedores).\n"
+                    "• Realizar ajustes manuales (faltantes, sobrantes, mermas).\n"
+                    "• Importar o exportar el catálogo completo vía Excel.\n"
+                    "• Configurar alertas de stock mínimo para cada producto.\n"
+                    "• Consultar el historial detallado de movimientos.")
+                    
+        add_section("🖥️", "Secciones de la Pantalla",
+                    "• <b>Tarjetas de Alerta (Superiores):</b> Avisos automáticos de productos sin stock o con stock bajo.\n"
+                    "• <b>Productos Frecuentes:</b> Acceso rápido a los artículos con mayor rotación.\n"
+                    "• <b>Barra de Herramientas:</b> Buscador general, filtros por familia y botones de acciones globales.\n"
+                    "• <b>Tabla Principal:</b> Listado completo del inventario con cantidades y precios.\n"
+                    "• <b>Panel Lateral (Detalle):</b> Muestra información completa del producto seleccionado y permite acciones directas (Ajuste, Entrada, Editar).")
+                    
+        add_section("🔘", "Explicación de Botones",
+                    "• <b>＋ Nuevo Producto:</b> Abre el formulario para dar de alta un nuevo artículo.\n"
+                    "• <b>⬇ Importar / ⬆ Exportar:</b> Herramientas para actualizar precios o cantidades masivamente vía Excel.\n"
+                    "• <b>🕒 Historial de movimientos:</b> Abre el registro completo de entradas y salidas del sistema.\n"
+                    "• <b>Entrada (Panel Lateral):</b> Suma unidades al stock físico por compra a proveedor.\n"
+                    "• <b>Ajuste (Panel Lateral):</b> Establece una nueva cantidad exacta para corregir discrepancias.\n"
+                    "• <b>Editar (Panel Lateral):</b> Permite modificar nombre, precio, código y demás datos del artículo.")
+                    
+        add_section("🔄", "Flujo de Trabajo Recomendado",
+                    "1. Revisá diariamente las alertas superiores de 'Sin Stock' o 'Stock Bajo'.\n"
+                    "2. Utilizá 'Entrada' cuando recibas mercadería de proveedores.\n"
+                    "3. Realizá recuentos físicos periódicos y utilizá 'Ajuste' si encontrás diferencias.\n"
+                    "4. Actualizá precios descargando el Excel, modificándolo y volviéndolo a importar.")
+                    
+        add_section("💡", "Consejos de Uso y Buenas Prácticas",
+                    "• Configura el <b>Stock Mínimo</b> en productos de alta rotación para no quedar desabastecido.\n"
+                    "• No uses 'Ajuste' para ingresos normales, utilizá 'Entrada' para mantener un buen historial.\n"
+                    "• Las imágenes ayudan a identificar rápido el producto, mantenelas actualizadas.")
+                    
+        add_section("⚠️", "Advertencias Importantes",
                     "• <b>Stock Físico:</b> Mercadería real en depósito.\n"
-                    "• <b>Stock Comprometido:</b> Mercadería reservada para ventas o presupuestos.\n"
-                    "• <b>ATP (Disponible):</b> Stock Físico menos el Stock Comprometido (lo que realmente puedes vender).\n"
-                    "• <b>Stock Mínimo:</b> Nivel para generar alertas de reposición.\n"
-                    "• <b>Estado:</b> Indica si está Disponible, con Stock Bajo o Sin Stock.")
-
-        add_section("🛠", "Barra superior",
-                    "• <b>Nuevo Producto:</b> Alta de un artículo al catálogo.\n"
-                    "• <b>Importar / Exportar:</b> Carga o descarga productos mediante Excel.\n"
-                    "• <b>Historial de movimientos:</b> Consulta el registro de todas las operaciones de inventario.\n"
-                    "• <b>Ayuda:</b> Muestra esta guía.")
-                    
-        add_section("⭐", "Productos frecuentes",
-                    "Muestra los artículos con más movimiento reciente. Se generan automáticamente y permiten acceso rápido. Haz clic en 'Ver todos' para el análisis completo de rotación.")
-                    
-        add_section("⚠️", "Alertas de inventario",
-                    "Aparecen cuando un artículo necesita atención:\n"
-                    "• <b>CRÍTICO (Sin Stock):</b> El ATP llegó a cero o es negativo.\n"
-                    "• <b>MEDIA (Stock Bajo):</b> El ATP es menor o igual al Stock Mínimo.\n"
-                    "Úsalas para planificar la reposición de mercadería.")
-                    
-        add_section("📋", "Tabla principal",
-                    "Muestra todos los artículos, cantidades, precios y estados. Puedes filtrar, buscar y ordenar. Desde la columna 'Acciones' o el panel lateral administras el stock.")
-                    
-        add_section("➡️", "Panel derecho",
-                    "Al seleccionar un producto, muestra toda su información:\n"
-                    "• <b>Datos generales:</b> Imagen, código, descripción, unidad, precio y estado.\n"
-                    "• <b>Cantidades:</b> Físico, Comprometido, ATP y Mínimo.\n"
-                    "• <b>Acciones disponibles:</b> Registrar Entradas, Ajustes, Editar datos o Configurar Stock Mínimo.")
-                    
-        add_section("🕒", "Historial de movimientos",
-                    "Muestra la trazabilidad detallada:\n"
-                    "• <b>Entradas / Compras:</b> Incrementan el stock.\n"
-                    "• <b>Salidas / Ventas:</b> Reducen el stock.\n"
-                    "• <b>Ajustes:</b> Correcciones manuales por sobrantes o faltantes (recuentos, mermas).")
-                    
-        add_section("💡", "Consejos",
-                    "• Configura el <b>Stock Mínimo</b> en artículos clave para evitar quiebres de stock.\n"
-                    "• Usa <b>Ajuste</b> solo para correcciones de inventario; para ingresos normales usa <b>Entrada</b>.\n"
-                    "• Mantén las imágenes actualizadas para evitar errores de selección.")
+                    "• <b>Stock Comprometido:</b> Mercadería reservada por presupuestos vigentes.\n"
+                    "• <b>ATP (Disponible):</b> Es el stock real que podés vender (Físico - Comprometido). ¡El sistema no te dejará facturar si el ATP es cero o negativo!")
                     
         ly_content.addStretch()
         scroll.setWidget(content)
         main_layout.addWidget(scroll)
         
-        btn_cerrar = QPushButton("Cerrar Ayuda")
+        btn_cerrar = QPushButton("✕ Cerrar Ayuda")
         btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_cerrar.setStyleSheet(f"background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; padding: 10px 20px; border-radius: 6px; border: 1px solid {COLOR_BORDER}; font-weight: bold;")
         btn_cerrar.clicked.connect(self.accept)
@@ -1364,7 +1363,7 @@ class DialogoDesactivarEliminar(DialogoModalIntegrado):
         layout.addWidget(btn_desactivar)
         layout.addWidget(btn_eliminar)
         
-        btn_cancelar = QPushButton("Cancelar")
+        btn_cancelar = QPushButton("✕ Cancelar")
         btn_cancelar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_cancelar.setStyleSheet(f"QPushButton {{ background-color: transparent; color: {COLOR_TEXT_SEC}; padding: 8px; border: none; font-weight: bold; }} QPushButton:hover {{ color: {COLOR_TEXT_MAIN}; }}")
         btn_cancelar.clicked.connect(self.reject)
@@ -1377,7 +1376,7 @@ class DialogoDesactivarEliminar(DialogoModalIntegrado):
             c = self.conn.cursor()
             c.execute("UPDATE productos SET activo=0 WHERE codigo=?", (self.p_data['codigo'],))
             self.conn.commit()
-            QMessageBox.information(self.parent_widget, "Desactivado", "El producto fue desactivado correctamente y ya no aparecerá en el catálogo activo.")
+            QMessageBox.information(self, "Desactivado", "El producto fue desactivado correctamente y ya no aparecerá en el catálogo activo.")
             self.accept()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error: {e}")
@@ -1387,9 +1386,9 @@ class DialogoDesactivarEliminar(DialogoModalIntegrado):
             from db.queries_stock import intentar_eliminar_producto
             res = intentar_eliminar_producto(self.conn, self.p_data['codigo'])
             if res == "DESACTIVADO":
-                QMessageBox.warning(self.parent_widget, "No se puede eliminar", "Este producto tiene movimientos o historial asociado. Fue desactivado en su lugar para mantener la trazabilidad.")
+                QMessageBox.warning(self, "No se puede eliminar", "Este producto tiene movimientos o historial asociado. Fue desactivado en su lugar para mantener la trazabilidad.")
             else:
-                QMessageBox.information(self.parent_widget, "Eliminado", "El producto fue eliminado definitivamente.")
+                QMessageBox.information(self, "Eliminado", "El producto fue eliminado definitivamente.")
             self.accept()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error: {e}")
