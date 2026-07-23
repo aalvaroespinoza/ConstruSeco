@@ -1193,6 +1193,7 @@ class OperacionBaseWidget(QWidget):
         except Exception as e:
             print(f"Error cargando clientes: {e}")
             logging.warning(f"Error cargando clientes: {e}")
+            QMessageBox.warning(self, "Error de Carga", f"No se pudo cargar la lista de clientes.\nDetalle: {e}")
 
     def procesar_input_cliente(self):
         texto = self.input_cliente.text().strip()
@@ -1276,6 +1277,7 @@ class OperacionBaseWidget(QWidget):
         except Exception as e:
             print(f"Error cargando catálogo: {e}")
             logging.warning(f"Error cargando catálogo: {e}")
+            QMessageBox.warning(self, "Error de Carga", f"No se pudo cargar el catálogo de productos.\nDetalle: {e}")
             self.catalogo = []
 
     def filtrar_productos(self, texto: str) -> list[dict]:
@@ -1976,8 +1978,14 @@ class OperacionBaseWidget(QWidget):
 
     def confirmar_operacion(self, tipo):
         self.setFocus()
+        
+        if hasattr(self, 'btn_confirmar'):
+            self.btn_confirmar.setEnabled(False)
+            
         if not self.carrito: 
             QMessageBox.information(self, "Venta Vacía", "Agrega al menos un producto para confirmar.")
+            if hasattr(self, 'btn_confirmar'):
+                self.btn_confirmar.setEnabled(True)
             return
             
         descontar_stock = not self.is_presupuesto
@@ -2059,6 +2067,8 @@ class OperacionBaseWidget(QWidget):
         except Exception as e:
             self.conn.rollback()
             QMessageBox.critical(self, "Error Transaccional", f"Hubo un error al procesar la operación:\n{e}")
+            if hasattr(self, 'btn_confirmar'):
+                self.btn_confirmar.setEnabled(True)
 
     def get_estado_serializado(self):
         return {

@@ -1268,6 +1268,7 @@ class PestanaClientes(QWidget):
         except Exception as e:
             print(f"[Clientes] Error cargando tabla: {e}")
             logging.warning(f"[Clientes] Error cargando tabla: {e}")
+            QMessageBox.warning(self, "Error de Carga", f"No se pudo cargar la tabla de clientes.\nDetalle: {e}")
             return
 
         filas       = resultado["filas"]

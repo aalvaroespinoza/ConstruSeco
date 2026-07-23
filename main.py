@@ -7,6 +7,7 @@ from ui.core.theme import aplicar_tema_claro
 from db.conexion import obtener_conexion, inicializar_base_datos, limpiar_presupuestos_vencidos
 from ui.ventana_principal import VentanaPrincipal
 from utils.paths import get_resource_path
+from utils.error_handler import manejar_excepcion
 
 
 if __name__ == "__main__":
@@ -42,4 +43,8 @@ if __name__ == "__main__":
     ventana = VentanaPrincipal(conexion)
     ventana.setWindowIcon(_icono)   # refuerzo en la QMainWindow
     ventana.showMaximized()
+    
+    # Instalar manejador de excepciones global
+    sys.excepthook = manejar_excepcion
+    
     sys.exit(app.exec())
