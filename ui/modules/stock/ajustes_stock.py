@@ -51,8 +51,8 @@ class DialogoConfiguracionGeneral(DialogoModalIntegrado):
         idx_days = self.cmb_freq_days.findData(self.settings.value("freq_days", 30, type=int))
         if idx_days >= 0: self.cmb_freq_days.setCurrentIndex(idx_days)
         
-        form.addRow("Stock mínimo predeterminado:", self.inp_min)
-        form.addRow("Productos en 'Frecuentes':", self.cmb_freq_limit)
+        form.addRow("Stock mínimo para nuevos productos:", self.inp_min)
+        form.addRow("Cantidad de productos frecuentes:", self.cmb_freq_limit)
         form.addRow("Período de análisis:", self.cmb_freq_days)
         
         layout.addLayout(form)
@@ -115,7 +115,7 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
         ly_busq = QHBoxLayout()
         ly_busq.setSpacing(12)
         self.inp_buscar = QLineEdit()
-        self.inp_buscar.setPlaceholderText("Buscar por código, producto o doc...")
+        self.inp_buscar.setPlaceholderText("Buscar por código, producto o documento...")
         
         self.timer_busqueda = QTimer()
         self.timer_busqueda.setSingleShot(True)
@@ -127,14 +127,14 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
         ly_busq.addWidget(self.inp_buscar)
         
         self.cmb_tipo = QComboBox()
-        self.cmb_tipo.addItems(["Todos", "ENTRADA", "SALIDA"])
+        self.cmb_tipo.addItems(["Todos", "Entrada", "Salida"])
         self.cmb_tipo.currentTextChanged.connect(self.cargar_datos)
         ly_busq.addWidget(self.cmb_tipo)
         layout.addLayout(ly_busq)
         
         # Tabla
         self.tabla = QTableWidget(0, 8)
-        self.tabla.setHorizontalHeaderLabels(["Fecha", "Código", "Producto", "Tipo", "Cant.", "Stk Ant.", "Stk Post.", "Origen / Notas"])
+        self.tabla.setHorizontalHeaderLabels(["Fecha", "Código", "Producto", "Tipo", "Cantidad", "Stock Antes", "Stock Después", "Origen / Notas"])
         self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.tabla.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         self.tabla.horizontalHeader().setSectionResizeMode(7, QHeaderView.ResizeMode.Stretch)
@@ -205,7 +205,7 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
         
         if tipo != "Todos":
             sql += " AND c.tipo_movimiento = ?"
-            params.append(tipo)
+            params.append(tipo.upper())
             
         sql += " ORDER BY c.fecha_hora DESC, c.id_movimiento DESC LIMIT 200"
         
@@ -247,7 +247,7 @@ class DialogoHistorialMovimientos(DialogoModalIntegrado):
             elif doc:
                 info_doc = f"{doc_tipo} #{doc}"
             else:
-                info_doc = "Entrada manual / Ajuste directo"
+                info_doc = "Ingreso manual"
                 
             if notas:
                 info_doc += f" | {notas}"
@@ -295,7 +295,7 @@ class DialogoVisualizacionInventario(DialogoModalIntegrado):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(16)
         
-        grp = QGroupBox("Columnas Visibles en Tabla Principal")
+        grp = QGroupBox("Columnas visibles")
         ly_grp = QVBoxLayout()
         ly_grp.setSpacing(12)
         
@@ -315,7 +315,7 @@ class DialogoVisualizacionInventario(DialogoModalIntegrado):
         
         layout.addWidget(grp)
         
-        self.btn_guardar = QPushButton("Aplicar")
+        self.btn_guardar = QPushButton("Guardar")
         self.btn_guardar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_guardar.setStyleSheet(f"background-color: {COLOR_PRIMARY}; color: white; padding: 10px 20px; border-radius: 6px; font-weight: bold;")
         self.btn_guardar.clicked.connect(self.guardar)

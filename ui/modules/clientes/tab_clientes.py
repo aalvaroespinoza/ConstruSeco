@@ -76,11 +76,11 @@ class _TarjetaMetrica(QFrame):
             
         self.setStyleSheet(self._style())
         self.setMinimumWidth(150)
-        self.setFixedHeight(80)
+        self.setMinimumHeight(75)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(14, 12, 14, 12)
-        layout.setSpacing(16)
+        layout.setSpacing(4)
 
         self._lbl_titulo = QLabel(titulo)
         self._lbl_titulo.setStyleSheet(
@@ -315,7 +315,7 @@ class _PanelDetalle(QScrollArea):
         fila_av.addWidget(self._btn_menu, alignment=Qt.AlignmentFlag.AlignTop)
 
         # Badge de estado
-        self._badge_estado = QLabel("ACTIVO")
+        self._badge_estado = QLabel("")
         self._badge_estado.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._badge_estado.setFixedHeight(22)
         self._badge_estado.setStyleSheet(
@@ -341,7 +341,7 @@ class _PanelDetalle(QScrollArea):
 
         # ── Información General ───────────────────────────────────────────
         sec_gral = _SeccionPanel("Información General")
-        self._f_cuit  = _FilaDetalle("CUIT / DNI")
+        self._f_cuit  = _FilaDetalle("CUIT/DNI")
         self._f_email = _FilaDetalle("Email")
         self._f_tel   = _FilaDetalle("Teléfono")
         self._f_dir   = _FilaDetalle("Dirección")
@@ -356,7 +356,7 @@ class _PanelDetalle(QScrollArea):
         self._f_ult_comp = _FilaDetalle("Última compra")
         self._f_pres_act = _FilaDetalle("Presupuestos")
         nota_saldo = QLabel(
-            "💡 Saldo y cuenta corriente disponibles cuando se implemente el módulo de pagos."
+            "Saldo: No disponible aún."
         )
         nota_saldo.setWordWrap(True)
         nota_saldo.setStyleSheet(
@@ -403,7 +403,7 @@ class _PanelDetalle(QScrollArea):
 
         # ── Botón principal: Editar ───────────────────────────────────────
         self._layout.addSpacing(14)
-        self._btn_editar = QPushButton("✏  Editar cliente")
+        self._btn_editar = QPushButton("✏ Editar cliente")
         self._btn_editar.setStyleSheet(
             f"QPushButton {{ background-color: {COLOR_PRIMARY}; color: white; border-radius: 6px; "
             f"font-weight: bold; font-size: 13px; padding: 8px 16px; border: none; }}"
@@ -416,7 +416,7 @@ class _PanelDetalle(QScrollArea):
             if self._id_actual is not None else None
         )
 
-        self._btn_historial = QPushButton("📋  Ver historial completo")
+        self._btn_historial = QPushButton("📋 Ver historial completo")
         self._btn_historial.setStyleSheet(
             f"QPushButton {{ background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; "
             f"border: 1px solid {COLOR_BORDER}; border-radius: 6px; "
@@ -474,7 +474,7 @@ class _PanelDetalle(QScrollArea):
         )
 
         if self._activo_actual:
-            act_editar = QAction("✏️  Editar cliente", self)
+            act_editar = QAction("✏️ Editar cliente", self)
             act_editar.triggered.connect(
                 lambda: self.editar_solicitado.emit(self._id_actual)
             )
@@ -482,9 +482,9 @@ class _PanelDetalle(QScrollArea):
             menu.addSeparator()
 
         if self._activo_actual:
-            act_estado = QAction("⊘   Desactivar cliente", self)
+            act_estado = QAction("⛔ Desactivar cliente", self)
         else:
-            act_estado = QAction("✓   Reactivar cliente", self)
+            act_estado = QAction("↩ Reactivar cliente", self)
         act_estado.triggered.connect(
             lambda: self.desactivar_solicitado.emit(self._id_actual)
         )
@@ -492,7 +492,7 @@ class _PanelDetalle(QScrollArea):
 
         menu.addSeparator()
 
-        act_eliminar = QAction("🗑   Eliminar cliente", self)
+        act_eliminar = QAction("🗑 Eliminar cliente...", self)
         act_eliminar.triggered.connect(
             lambda: self.eliminar_solicitado.emit(self._id_actual)
         )
@@ -547,11 +547,11 @@ class _PanelDetalle(QScrollArea):
         self._set_mini(self._mk_ticket,  _fmt_moneda(det["ticket_promedio"]))
 
         # Info General
-        self._f_cuit.set_valor(det["cuit_dni"] or "No registrado")
-        self._f_email.set_valor(det["email"] or "No registrado")
-        self._f_tel.set_valor(det["telefono"] or "No registrado")
-        self._f_dir.set_valor(det["direccion"] or "No registrada")
-        self._f_ciu.set_valor(det["ciudad"] or "No registrada")
+        self._f_cuit.set_valor(det["cuit_dni"] or "—")
+        self._f_email.set_valor(det["email"] or "—")
+        self._f_tel.set_valor(det["telefono"] or "—")
+        self._f_dir.set_valor(det["direccion"] or "—")
+        self._f_ciu.set_valor(det["ciudad"] or "—")
 
         # Info Comercial
         self._f_iva.set_valor(det["condicion_iva"])
@@ -559,7 +559,7 @@ class _PanelDetalle(QScrollArea):
         self._f_ult_comp.set_valor(ult[:10] if ult else "Sin compras")
         pres = det["presupuestos_activos"]
         self._f_pres_act.set_valor(
-            f"{pres} activo(s)" if pres else "Sin presupuestos activos"
+            f"{pres} {'presupuesto activo' if pres == 1 else 'presupuestos activos'}" if pres > 0 else "Ninguno"
         )
 
         # Actividad reciente
@@ -706,7 +706,7 @@ class _PanelDetalle(QScrollArea):
 
     def _on_eliminar_nota(self, id_nota: int):
         resp = QMessageBox.question(
-            self, "Eliminar Nota", "¿Está seguro de eliminar esta nota?",
+            self, "Eliminar Nota", "¿Seguro que querés eliminar esta nota?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
@@ -878,13 +878,13 @@ class PestanaClientes(QWidget):
         self._input_busqueda.setFixedHeight(36)
         self._input_busqueda.textChanged.connect(self._on_texto_cambiado)
 
-        self._btn_filtros = QPushButton("⚙  Filtros")
+        self._btn_filtros = QPushButton("⚙ Filtros")
         self._btn_filtros.setProperty("class", "secundario")
         self._btn_filtros.setFixedHeight(36)
         self._btn_filtros.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_filtros.clicked.connect(self._toggle_filtros)
 
-        self._btn_nuevo = QPushButton("＋  Nuevo Cliente")
+        self._btn_nuevo = QPushButton("+ Nuevo Cliente")
         self._btn_nuevo.setProperty("class", "primario")
         self._btn_nuevo.setFixedHeight(36)
         self._btn_nuevo.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1025,10 +1025,10 @@ class PestanaClientes(QWidget):
         if loc != "TODAS": activos += 1
         
         if activos > 0:
-            self._btn_filtros.setText(f"⚙  Filtros ({activos})")
+            self._btn_filtros.setText(f"⚙ Filtros ({activos})")
             self._btn_filtros.setStyleSheet(f"color: {COLOR_PRIMARY}; border-color: {COLOR_PRIMARY}; font-weight: bold;")
         else:
-            self._btn_filtros.setText("⚙  Filtros")
+            self._btn_filtros.setText("⚙ Filtros")
             self._btn_filtros.setStyleSheet("") # reset
             
         self._pagina_actual = 1
@@ -1159,7 +1159,7 @@ class PestanaClientes(QWidget):
         ly.addWidget(self._lbl_info_pagina)
         ly.addStretch()
 
-        lbl_pp = QLabel("Filas:")
+        lbl_pp = QLabel("Mostrar:")
         lbl_pp.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 12px;")
         self._combo_por_pagina = QComboBox()
         for op in self._OPCIONES_POR_PAGINA:
@@ -1288,7 +1288,7 @@ class PestanaClientes(QWidget):
         inicio = (self._pagina_actual - 1) * self._por_pagina + 1 if total_filas > 0 else 0
         fin    = min(self._pagina_actual * self._por_pagina, total_filas)
         self._lbl_info_pagina.setText(
-            f"Mostrando {inicio}–{fin} de {total_filas} cliente(s)"
+            f"Mostrando {inicio} a {fin} de {total_filas} {'cliente' if total_filas == 1 else 'clientes'}"
             if total_filas > 0 else "Sin clientes registrados"
         )
         self._lbl_pagina.setText(f"Página {self._pagina_actual} / {self._total_paginas}")
@@ -1426,7 +1426,7 @@ class PestanaClientes(QWidget):
             resp = QMessageBox.question(
                 self,
                 "Desactivar cliente",
-                f"¿Desactivar al cliente <b>{det['nombre']}</b>?<br><br>"
+                f"¿Desactivar al cliente {det['nombre']}?\n\n"
                 f"El cliente ya no aparecerá en las búsquedas activas, "
                 f"pero su historial se conservará.",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -1442,7 +1442,7 @@ class PestanaClientes(QWidget):
             resp = QMessageBox.question(
                 self,
                 "Reactivar cliente",
-                f"¿Reactivar al cliente <b>{det['nombre']}</b>?",
+                f"¿Reactivar al cliente {det['nombre']}?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.Yes,
             )
@@ -1469,10 +1469,10 @@ class PestanaClientes(QWidget):
             resp = QMessageBox.warning(
                 self,
                 "Cliente con historial comercial",
-                f"El cliente <b>{det['nombre']}</b> tiene documentos (ventas o "
-                f"presupuestos) asociados.<br><br>"
-                f"Eliminarlo podría comprometer el historial comercial del sistema.<br><br>"
-                f"<b>¿Desactivarlo en su lugar?</b> (el historial se conservará)",
+                f"El cliente {det['nombre']} tiene documentos (ventas o "
+                f"presupuestos) asociados.\n\n"
+                f"Eliminarlo podría comprometer el historial comercial del sistema.\n\n"
+                f"¿Desactivarlo en su lugar? (el historial se conservará)",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.Yes,
             )

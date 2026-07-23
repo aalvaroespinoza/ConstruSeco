@@ -21,7 +21,7 @@ TIPS = [
     "💡 Tip: Usá F2 para buscar productos rápidamente.",
     "💡 Tip: Usá F3 para buscar y asignar un cliente.",
     "💡 Tip: F11 vacía el carrito actual al instante.",
-    "💡 Tip: Presioná F12 para confirmar la operación actual."
+    "💡 Tip: Usá F12 para confirmar la operación actual."
 ]
 
 class GraficoAnilloStock(QWidget):
@@ -30,7 +30,9 @@ class GraficoAnilloStock(QWidget):
         self.total = 0
         self.bajo = 0
         self.sin = 0
-        self.setMinimumSize(200, 200)
+        self.setMinimumSize(160, 160)
+        from PyQt6.QtWidgets import QSizePolicy
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
     def actualizar_datos(self, metricas):
         self.total = metricas.get('total_productos', 0)
@@ -109,7 +111,7 @@ class GraficoMasVendidos(QWidget):
         if not self.productos:
             painter = QPainter(self)
             painter.setPen(QColor(COLOR_TEXT_SEC))
-            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "No hay suficientes datos de ventas recientes.")
+            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "Sin datos de ventas recientes")
             return
             
         painter = QPainter(self)
@@ -212,7 +214,7 @@ class PestanaInicio(QWidget):
         layout.setSpacing(20)
         
         # Encabezado
-        lbl_saludo = QLabel("👋 ¡Bienvenido de nuevo!")
+        lbl_saludo = QLabel("👋 ¡Bienvenido!")
         lbl_saludo.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; font-size: 24px; font-weight: bold;")
         lbl_fecha = QLabel(fecha_formateada())
         lbl_fecha.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 14px;")
@@ -234,7 +236,7 @@ class PestanaInicio(QWidget):
         atajo_stock = TarjetaAtajo("📦", "Ver Stock", "Consultar inventario")
         atajo_stock.clicked.connect(self.ver_stock_solicitado.emit)
         
-        atajo_clientes = TarjetaAtajo("👥", "Ver Clientes", "Gestionar agenda")
+        atajo_clientes = TarjetaAtajo("👥", "Ver Clientes", "Gestionar clientes")
         atajo_clientes.clicked.connect(self.ver_clientes_solicitado.emit)
         
         layout_atajos.addWidget(atajo_venta)
@@ -281,7 +283,7 @@ class PestanaInicio(QWidget):
         ly_p_info = QVBoxLayout()
         lbl_tit_p = QLabel("📄 Presupuestos")
         lbl_tit_p.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; font-weight: bold; font-size: 16px;")
-        self.lbl_presup_activos = QLabel("0 Activos")
+        self.lbl_presup_activos = QLabel("0 activos")
         self.lbl_presup_activos.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 14px;")
         ly_p_info.addWidget(lbl_tit_p)
         ly_p_info.addWidget(self.lbl_presup_activos)
@@ -319,7 +321,7 @@ class PestanaInicio(QWidget):
         self.frame_stock = QFrame()
         self.frame_stock.setObjectName("tarjeta_blanca")
         ly_stock = QVBoxLayout(self.frame_stock)
-        lbl_tit_stock = QLabel("Salud del Inventario")
+        lbl_tit_stock = QLabel("Estado del Inventario")
         lbl_tit_stock.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; font-weight: bold; font-size: 16px;")
         self.grafico_stock = GraficoAnilloStock()
         
@@ -342,7 +344,7 @@ class PestanaInicio(QWidget):
         self.frame_ventas = QFrame()
         self.frame_ventas.setObjectName("tarjeta_blanca")
         ly_ventas = QVBoxLayout(self.frame_ventas)
-        lbl_tit_ventas = QLabel("Productos más vendidos (30 días)")
+        lbl_tit_ventas = QLabel("Más vendidos · últimos 30 días")
         lbl_tit_ventas.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; font-weight: bold; font-size: 16px;")
         self.grafico_ventas = GraficoMasVendidos()
         ly_ventas.addWidget(lbl_tit_ventas)
@@ -387,44 +389,48 @@ class PestanaInicio(QWidget):
         self.cargar_datos()
         
     def cargar_datos(self):
-        # Tip
-        self.lbl_tip.setText(random.choice(TIPS))
-        
-        # KPIs Stock
-        metricas = obtener_metricas_globales(self.conn)
-        self.kpi_total_val.setText(str(metricas['total_productos']))
-        self.kpi_valor_val.setText(f"$ {formato_arg(metricas['valor_inventario'])}")
-        
-        BADGE_WARNING_STYLE = f"background-color: {COLOR_WARNING}; color: {COLOR_CARD_BG}; padding: 4px 10px; border-radius: 6px; font-size: 16px; font-weight: bold;"
-        BADGE_DANGER_STYLE = f"background-color: {COLOR_DANGER}; color: {COLOR_CARD_BG}; padding: 4px 10px; border-radius: 6px; font-size: 16px; font-weight: bold;"
-        DEFAULT_KPI_STYLE = f"color: {COLOR_TEXT_MAIN}; font-size: 24px; font-weight: bold; background-color: transparent; padding: 0px;"
+        try:
+            # Tip
+            self.lbl_tip.setText(random.choice(TIPS))
+            
+            # KPIs Stock
+            metricas = obtener_metricas_globales(self.conn)
+            self.kpi_total_val.setText(f"{metricas['total_productos']:,}".replace(",", "."))
+            self.kpi_valor_val.setText(f"$ {formato_arg(metricas['valor_inventario'])}")
+            
+            BADGE_WARNING_STYLE = f"background-color: {COLOR_WARNING}; color: {COLOR_CARD_BG}; padding: 4px 10px; border-radius: 6px; font-size: 16px; font-weight: bold;"
+            BADGE_DANGER_STYLE = f"background-color: {COLOR_DANGER}; color: {COLOR_CARD_BG}; padding: 4px 10px; border-radius: 6px; font-size: 16px; font-weight: bold;"
+            DEFAULT_KPI_STYLE = f"color: {COLOR_TEXT_MAIN}; font-size: 24px; font-weight: bold; background-color: transparent; padding: 0px;"
 
-        b = metricas['bajo_stock']
-        self.kpi_bajo_val.setText(str(b))
-        if b > 0:
-            self.kpi_bajo_val.setStyleSheet(BADGE_WARNING_STYLE)
-        else:
-            self.kpi_bajo_val.setStyleSheet(DEFAULT_KPI_STYLE)
-        
-        s = metricas['sin_stock']
-        self.kpi_sin_val.setText(str(s))
-        if s > 0:
-            self.kpi_sin_val.setStyleSheet(BADGE_DANGER_STYLE)
-        else:
-            self.kpi_sin_val.setStyleSheet(DEFAULT_KPI_STYLE)
+            b = metricas['bajo_stock']
+            self.kpi_bajo_val.setText(str(b))
+            if b > 0:
+                self.kpi_bajo_val.setStyleSheet(BADGE_WARNING_STYLE)
+            else:
+                self.kpi_bajo_val.setStyleSheet(DEFAULT_KPI_STYLE)
             
-        # KPIs Presupuestos
-        presup = obtener_kpis_presupuestos(self.conn)
-        self.lbl_presup_activos.setText(f"{presup['activos']} Activos")
-        v = presup['vencidos']
-        if v > 0:
-            self.lbl_presup_vencidos.setText(f"{v} presupuestos vencidos")
-            self.lbl_presup_vencidos.setStyleSheet(f"background-color: {COLOR_DANGER}; color: {COLOR_CARD_BG}; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;")
-            self.lbl_presup_vencidos.setVisible(True)
-        else:
-            self.lbl_presup_vencidos.setVisible(False)
-            
-        # Actualizar Gráficos
-        self.grafico_stock.actualizar_datos(metricas)
-        productos_frecuentes = obtener_productos_frecuentes(self.conn)
-        self.grafico_ventas.actualizar_datos(productos_frecuentes)
+            s = metricas['sin_stock']
+            self.kpi_sin_val.setText(str(s))
+            if s > 0:
+                self.kpi_sin_val.setStyleSheet(BADGE_DANGER_STYLE)
+            else:
+                self.kpi_sin_val.setStyleSheet(DEFAULT_KPI_STYLE)
+                
+            # KPIs Presupuestos
+            presup = obtener_kpis_presupuestos(self.conn)
+            self.lbl_presup_activos.setText(f"{presup['activos']} activos")
+            v = presup['vencidos']
+            if v > 0:
+                self.lbl_presup_vencidos.setText(f"{v} presupuesto{'s' if v != 1 else ''} vencido{'s' if v != 1 else ''}")
+                self.lbl_presup_vencidos.setStyleSheet(f"background-color: {COLOR_DANGER}; color: {COLOR_CARD_BG}; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;")
+                self.lbl_presup_vencidos.setVisible(True)
+            else:
+                self.lbl_presup_vencidos.setVisible(False)
+                
+            # Actualizar Gráficos
+            self.grafico_stock.actualizar_datos(metricas)
+            productos_frecuentes = obtener_productos_frecuentes(self.conn)
+            self.grafico_ventas.actualizar_datos(productos_frecuentes)
+        except Exception as e:
+            print(f"[INICIO] Error al cargar datos del panel: {e}")
+

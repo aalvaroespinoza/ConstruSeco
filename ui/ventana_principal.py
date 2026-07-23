@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
 from PyQt6.QtCore import Qt, QTimer, QVariantAnimation, QPropertyAnimation, QEasingCurve, QSettings, pyqtSignal
 from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont, QPainterPath
 from pathlib import Path
+from utils.paths import get_resource_path
 from ui.modules.stock.tab_stock import PestanaStock
 from ui.modules.ventas.tab_ventas import PestanaNuevaVenta
 from ui.modules.clientes.tab_clientes import PestanaClientes
@@ -356,7 +357,7 @@ class VentanaPrincipal(QMainWindow):
     def __init__(self, conexion_db):
         super().__init__()
         self.conn = conexion_db
-        self.setWindowTitle("ConstruSecoPereyra")
+        self.setWindowTitle("ConstruSeco Pereyra — Sistema ERP")
         # El tamaño inicial ahora está controlado por el sistema para arrancar maximizado
 
         # Forzamos el fondo claro en la ventana contenedora principal
@@ -420,9 +421,9 @@ class VentanaPrincipal(QMainWindow):
 
         # Intentamos cargar la imagen (si no existe, simplemente queda el espacio vacío)
         try:
-            # Ruta robusta al logo, basada en la ubicación real de este archivo
-            _logo_path = Path(__file__).resolve().parent.parent / "assets" / "logo.png"
-            pixmap = QPixmap(str(_logo_path)).scaled(
+            # Ruta robusta al logo, basada en la ubicación real de este archivo y compatible con PyInstaller
+            _logo_path = get_resource_path("assets/logo.png")
+            pixmap = QPixmap(_logo_path).scaled(
                 90, 90,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
@@ -469,7 +470,7 @@ class VentanaPrincipal(QMainWindow):
 
         # Creamos los botones del menú usando la nueva clase custom
         self.btn_inicio = SidebarButton("inicio", "Inicio")
-        self.btn_ventas = SidebarButton("ventas", "Venta")
+        self.btn_ventas = SidebarButton("ventas", "Ventas")
         self.btn_stock = SidebarButton("stock", "Control de Stock")
         self.btn_clientes = SidebarButton("clientes", "Clientes")
         self.btn_presupuestos = SidebarButton("presupuestos", "Presupuestos")
@@ -550,9 +551,9 @@ class VentanaPrincipal(QMainWindow):
         footer_layout.setContentsMargins(10, 10, 10, 20)
         footer_layout.setSpacing(4)
         
-        self.lbl_version = QLabel("Versión")
+        self.lbl_version = QLabel("v1.0.0")
         self.lbl_version.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_db = QLabel("SQLite")
+        self.lbl_db = QLabel("Base de Datos Local (SQLite)")
         self.lbl_db.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         footer_style = """
@@ -638,8 +639,8 @@ class VentanaPrincipal(QMainWindow):
         # Tamaño del logo
         size_logo = 40 if self.sidebar_colapsada else 90
         try:
-            _logo_path = Path(__file__).resolve().parent.parent / "assets" / "logo.png"
-            pixmap = QPixmap(str(_logo_path)).scaled(
+            _logo_path = get_resource_path("assets/logo.png")
+            pixmap = QPixmap(_logo_path).scaled(
                 size_logo, size_logo,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
@@ -654,7 +655,7 @@ class VentanaPrincipal(QMainWindow):
         for btn in self.botones_menu:
             btn.setToolTip(btn.texto if self.sidebar_colapsada else "")
             
-        self.btn_nueva_op.setToolTip("Nueva Operación" if self.sidebar_colapsada else "")
+        self.btn_nueva_op.setToolTip("Nueva Operación")
         
         # Actualizar tarjetas
         if hasattr(self, 'operaciones_abiertas'):
@@ -761,7 +762,7 @@ class VentanaPrincipal(QMainWindow):
         widget, tarjeta = self.operaciones_abiertas[id_op]
         
         if not forzar and not widget.esta_vacia():
-            res = QMessageBox.question(self, "Cerrar Operación", "¿Seguro que desea cerrar esta operación? Se perderán los ítems cargados.")
+            res = QMessageBox.question(self, "Cerrar Operación", f"¿Cerrar esta {tarjeta.tipo.lower()}? Los datos no confirmados se perderán.")
             if res != QMessageBox.StandardButton.Yes:
                 return
                 

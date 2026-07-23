@@ -175,7 +175,7 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         super().__init__(parent)
         self.conn = conexion_db
         self.setWindowTitle("Importar Productos desde Excel")
-        self.setMinimumWidth(900)
+        self.setMinimumWidth(750)
         self.setMinimumHeight(600)
         self.filas_procesadas = []
         self.columnas_map = {}
@@ -189,7 +189,7 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         
         # Panel superior
         ly_top = QHBoxLayout()
-        self.lbl_archivo = QLabel("Ningún archivo seleccionado")
+        self.lbl_archivo = QLabel("← Seleccione un archivo Excel para comenzar")
         self.lbl_archivo.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; background-color: {COLOR_CARD_BG}; padding: 8px; border: 1px solid {COLOR_BORDER}; border-radius: 4px;")
         
         btn_seleccionar = QPushButton("📂 Seleccionar Excel")
@@ -202,7 +202,7 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         layout.addLayout(ly_top)
         
         # Resumen
-        self.lbl_resumen = QLabel("Esperando archivo...")
+        self.lbl_resumen = QLabel("Seleccione un archivo Excel para ver el análisis previo.")
         self.lbl_resumen.setStyleSheet("font-weight: bold; margin-top: 10px; font-size: 13px;")
         layout.addWidget(self.lbl_resumen)
         
@@ -236,7 +236,7 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         layout.addWidget(self.tabla)
         
         # Boton Confirmar
-        self.btn_confirmar = QPushButton("✅ Confirmar Importación Segura")
+        self.btn_confirmar = QPushButton("✅ Confirmar Importación")
         self.btn_confirmar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_confirmar.setStyleSheet(f"background-color: {COLOR_SUCCESS}; color: white; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 14px;")
         self.btn_confirmar.clicked.connect(self.ejecutar_importacion)
@@ -359,14 +359,12 @@ class DialogoImportarExcel(DialogoModalIntegrado):
             
             if cod in codigos_db:
                 estado = "ACTUALIZAR"
-                mensaje = "Se actualizarán datos maestros. Stock inicial ignorado."
+                mensaje = "Se actualizarán datos del producto. El stock no se modifica (ver instrucciones)."
                 self.agregar_fila_tabla(i, cod, desc, "⚠ Advertencia", mensaje, "#fef08a")
                 self.stats['existentes'] += 1
             else:
                 estado = "NUEVO"
-                mensaje = "Se creará producto. "
-                if stk_ini > 0:
-                    mensaje += f"Generará movimiento de entrada por {stk_ini}."
+                mensaje = f"Producto nuevo{'.' if stk_ini == 0 else f'. Entrada inicial de {stk_ini}.'}"
                 self.agregar_fila_tabla(i, cod, desc, "✓ Válido", mensaje, "#f0fdf4")
                 self.stats['nuevos'] += 1
                 
@@ -399,12 +397,12 @@ class DialogoImportarExcel(DialogoModalIntegrado):
         st = self.stats
         resumen = (f"Total filas: {st['total']} | "
                    f"Nuevos: {st['nuevos']} | "
-                   f"Existentes (Actualizar): {st['existentes']} | "
+                   f"A actualizar: {st['existentes']} | "
                    f"Errores: {st['errores']} | "
                    f"Ignoradas: {st['ignoradas']}")
                    
         if st['errores'] > 0:
-            self.lbl_resumen.setText(f"❌ {resumen}. Hay errores que impedirán la importación.")
+            self.lbl_resumen.setText(f"❌ {resumen}\nHay errores que impedirán la importación.")
             self.lbl_resumen.setStyleSheet(f"color: {COLOR_DANGER}; font-weight: bold; margin-top: 10px; font-size: 13px;")
             self.btn_confirmar.setEnabled(False)
         else:

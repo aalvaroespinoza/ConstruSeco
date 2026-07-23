@@ -6,9 +6,9 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from ui.core.theme import COLOR_BORDER, COLOR_BG, COLOR_PRIMARY
 
-# Rutas - PROJECT_ROOT está a 3 niveles (ui/components/image_selector.py)
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-ASSETS_PROD_DIR = PROJECT_ROOT / "assets" / "productos"
+from utils.paths import get_data_path
+
+ASSETS_PROD_DIR = Path(get_data_path("assets/productos"))
 ASSETS_PROD_DIR.mkdir(parents=True, exist_ok=True)
 
 

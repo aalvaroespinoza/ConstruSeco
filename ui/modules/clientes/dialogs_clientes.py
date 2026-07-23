@@ -77,7 +77,7 @@ class _CampoFormulario(QFrame):
         self.setStyleSheet("_CampoFormulario#campo_formulario { border: none; background: transparent; }")
         ly = QVBoxLayout(self)
         ly.setContentsMargins(0, 0, 0, 0)
-        ly.setSpacing(16)
+        ly.setSpacing(4)
 
         # Etiqueta con asterisco para campos obligatorios
         texto_lbl = (
@@ -170,7 +170,7 @@ class DialogoFormularioCliente(DialogoModalIntegrado):
         self._modal_parent   = None
 
         self.setMinimumWidth(500)
-        self.setMaximumWidth(580)
+        self.setMaximumWidth(620)
         
         self.setObjectName("formulario_cliente_card")
         self.setStyleSheet(f"""
@@ -199,13 +199,13 @@ class DialogoFormularioCliente(DialogoModalIntegrado):
 
         # Encabezado interno
         lbl_titulo = QLabel(
-            "Editar Cliente" if self._modo_edicion else "Nuevo Cliente"
+            f"Editar: {self._det['nombre']}" if self._modo_edicion else "Nuevo Cliente"
         )
         lbl_titulo.setStyleSheet(
             f"font-size: 18px; font-weight: 900; color: {COLOR_TEXT_MAIN};"
         )
         lbl_sub = QLabel(
-            "Modifique los campos y guarde los cambios."
+            "Modificá los campos y guardá los cambios."
             if self._modo_edicion
             else "Complete los datos del cliente. Los campos marcados con * son obligatorios."
         )
@@ -228,7 +228,7 @@ class DialogoFormularioCliente(DialogoModalIntegrado):
         ly.addSpacing(6)
 
         inp_cuit = QLineEdit()
-        inp_cuit.setPlaceholderText("Ej: 20-12345678-9")
+        inp_cuit.setPlaceholderText("Ej: 20-12345678-9 (CUIT) o 12345678 (DNI)")
         inp_cuit.setMaxLength(13)
         campo_cuit = _CampoFormulario("CUIT / DNI", inp_cuit)
         self._campos["cuit_dni"] = campo_cuit
@@ -318,7 +318,7 @@ class DialogoFormularioCliente(DialogoModalIntegrado):
         btn_cancelar.setShortcut("Escape")
 
         self._btn_guardar = QPushButton(
-            "Guardar cambios" if self._modo_edicion else "Crear cliente"
+            "Guardar Cambios" if self._modo_edicion else "Crear Cliente"
         )
         self._btn_guardar.setStyleSheet(
             f"background-color: {COLOR_PRIMARY}; color: white; border: none; "
@@ -393,7 +393,7 @@ class DialogoFormularioCliente(DialogoModalIntegrado):
         cuit = self._txt("cuit_dni")
         if cuit and not _RE_CUIT.match(cuit):
             self._campos["cuit_dni"].set_error(
-                "Formato inválido. Use: 20-12345678-9"
+                "Formato de CUIT inválido. Ejemplo: 20-12345678-9"
             )
             hay_error = True
 
@@ -401,7 +401,7 @@ class DialogoFormularioCliente(DialogoModalIntegrado):
         email = self._txt("email")
         if email and not _RE_EMAIL.match(email):
             self._campos["email"].set_error(
-                "Formato de email inválido."
+                "Email inválido. Ejemplo: nombre@dominio.com"
             )
             hay_error = True
 
@@ -409,7 +409,7 @@ class DialogoFormularioCliente(DialogoModalIntegrado):
         tel = self._txt("telefono")
         if tel and not _RE_TEL.match(tel):
             self._campos["telefono"].set_error(
-                "Valor numérico/formato inválido."
+                "Solo se aceptan números y los caracteres: + - ( ) espacios"
             )
             hay_error = True
 
@@ -478,7 +478,7 @@ class DialogoFormularioCliente(DialogoModalIntegrado):
                     )
                     self._campos["nombre_completo"].widget.setFocus()
                 else:
-                    self._mostrar_error_global(f"Error de unicidad: {msg}")
+                    self._mostrar_error_global("El dato ingresado ya existe en otro cliente.")
             else:
                 self._mostrar_error_global(f"Error al guardar: {msg}")
         finally:

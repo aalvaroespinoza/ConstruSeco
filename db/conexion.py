@@ -3,6 +3,7 @@ import sqlite3
 import os
 
 import unicodedata
+from utils.paths import get_data_path
 
 
 
@@ -68,7 +69,7 @@ def obtener_conexion():
 
     # Creamos la base de datos en la raíz del proyecto
 
-    base_datos = "corralon_profesional.db"
+    base_datos = get_data_path("corralon_profesional.db")
 
     conn = sqlite3.connect(base_datos)
 

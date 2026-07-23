@@ -22,7 +22,7 @@ class DialogoHistorialCliente(QDialog):
         self.id_cliente = id_cliente
         self.historial_completo = []
 
-        self.setWindowTitle("Historial Completo del Cliente")
+        self.setWindowTitle("Historial de Operaciones")
         self.setMinimumWidth(750)
         self.setMinimumHeight(500)
         
@@ -43,7 +43,7 @@ class DialogoHistorialCliente(QDialog):
         lbl_filtro = QLabel("Tipo:")
         lbl_filtro.setStyleSheet(f"color: {COLOR_TEXT_SEC}; font-size: 12px; font-weight: bold;")
         self.cb_filtro = QComboBox()
-        self.cb_filtro.addItems(["TODOS", "VENTA", "PRESUPUESTO"])
+        self.cb_filtro.addItems(["Todos", "Ventas", "Presupuestos"])
         self.cb_filtro.setStyleSheet(
             f"border: 1px solid {COLOR_BORDER}; border-radius: 4px; padding: 4px 8px; "
             f"background-color: {COLOR_BG}; color: {COLOR_TEXT_MAIN};"
@@ -59,9 +59,7 @@ class DialogoHistorialCliente(QDialog):
         # Tabla
         self.tabla = QTableWidget()
         self.tabla.setColumnCount(5)
-        self.tabla.setHorizontalHeaderLabels([
-            "Fecha", "Tipo", "Número", "Total", "Estado"
-        ])
+        self.tabla.setHorizontalHeaderLabels(["Fecha", "Documento", "Número", "Total", "Estado"])
         self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.tabla.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -79,6 +77,7 @@ class DialogoHistorialCliente(QDialog):
 
         # Botón Cerrar
         btn_cerrar = QPushButton("Cerrar")
+        btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_cerrar.setStyleSheet(
             f"background-color: {COLOR_PRIMARY}; color: white; border-radius: 6px; "
             f"font-weight: bold; padding: 8px 16px;"
@@ -95,6 +94,9 @@ class DialogoHistorialCliente(QDialog):
 
     def _aplicar_filtro(self):
         tipo_filtro = self.cb_filtro.currentText()
+        if tipo_filtro == "Ventas": tipo_filtro = "VENTA"
+        elif tipo_filtro == "Presupuestos": tipo_filtro = "PRESUPUESTO"
+        else: tipo_filtro = "TODOS"
         
         filtrados = []
         for doc in self.historial_completo:
@@ -129,3 +131,4 @@ class DialogoHistorialCliente(QDialog):
 
         texto_tot = f"Total en Ventas Confirmadas: $ {total_monto:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         self.lbl_totales.setText(texto_tot)
+        self.lbl_totales.setWordWrap(True)

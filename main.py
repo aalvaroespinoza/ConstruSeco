@@ -1,12 +1,12 @@
 import sys
 import os
-from pathlib import Path
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
 from ui.core.theme import aplicar_tema_claro
 # Importamos la base de datos y tu pestaña recién creada
 from db.conexion import obtener_conexion, inicializar_base_datos, limpiar_presupuestos_vencidos
 from ui.ventana_principal import VentanaPrincipal
+from utils.paths import get_resource_path
 
 
 if __name__ == "__main__":
@@ -25,9 +25,9 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     aplicar_tema_claro(app)
 
-    # Ruta robusta al logo, independiente del directorio de ejecución
-    _BASE_DIR = Path(__file__).resolve().parent
-    _icono = QIcon(str(_BASE_DIR / "assets" / "logo.png"))
+    # Ruta robusta al logo, independiente del directorio de ejecución y empaquetado PyInstaller
+    _logo_path = get_resource_path("assets/logo.png")
+    _icono = QIcon(_logo_path)
     app.setWindowIcon(_icono)
 
     conexion = obtener_conexion()

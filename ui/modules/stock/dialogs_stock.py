@@ -48,7 +48,7 @@ class DialogoAgregarProducto(DialogoModalIntegrado):
         super().__init__(parent)
         self.conn = conexion_db
         self.setWindowTitle("Nuevo Producto")
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(600)
         self.es_existente = False
         self.init_ui()
 
@@ -311,8 +311,8 @@ class DialogoEditarProducto(DialogoModalIntegrado):
         super().__init__(parent)
         self.conn = conexion_db
         self.p_data = producto_data
-        self.setWindowTitle(f"Editar: {producto_data['codigo']}")
-        self.setMinimumWidth(400)
+        self.setWindowTitle(f"Editar producto — {producto_data['descripcion']}")
+        self.setMinimumWidth(600)
         self.init_ui()
 
     def init_ui(self):
@@ -336,7 +336,7 @@ class DialogoEditarProducto(DialogoModalIntegrado):
             f"<div style='text-align: center;'>"
             f"<span style='color: {COLOR_TEXT_SEC}; font-size: 11px; text-transform: uppercase;'>Stock Físico</span><br>"
             f"<span style='font-size: 16px; font-weight: bold; color: {COLOR_TEXT_MAIN};'>{self.p_data.get('stock_fisico',0):g} {self.p_data['unidad_base']}</span><br><br>"
-            f"<span style='color: {COLOR_TEXT_SEC}; font-size: 11px; text-transform: uppercase;'>ATP</span><br>"
+            f"<span style='color: {COLOR_TEXT_SEC}; font-size: 11px; text-transform: uppercase;'>Disponible (ATP)</span><br>"
             f"<span style='font-size: 16px; font-weight: bold; color: {COLOR_TEXT_MAIN};'>{self.p_data.get('atp',0):g} {self.p_data['unidad_base']}</span>"
             f"</div>"
         )
@@ -396,7 +396,7 @@ class DialogoEditarProducto(DialogoModalIntegrado):
         btn_layout.setSpacing(12)
         btn_layout.addStretch()
         
-        self.btn_eliminar = QPushButton("Eliminar producto")
+        self.btn_eliminar = QPushButton("Eliminar Producto")
         self.btn_eliminar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_eliminar.setStyleSheet(f"QPushButton {{ background-color: transparent; color: {COLOR_DANGER}; padding: 10px 20px; border-radius: 6px; font-weight: bold; border: 1px solid {COLOR_DANGER}; }} QPushButton:hover {{ background-color: #fef2f2; }}")
         self.btn_eliminar.clicked.connect(self.eliminar_producto)
@@ -416,7 +416,7 @@ class DialogoEditarProducto(DialogoModalIntegrado):
         
         reply = QMessageBox.question(
             self, "Confirmar Eliminación",
-            f"¿Está seguro que desea eliminar el producto?\n\nCódigo: {cod}\nDescripción: {desc}\n\nSi el producto tiene historial, será desactivado en lugar de eliminado.",
+            f"¿Está seguro de que desea eliminar el producto?\n\nCódigo: {cod}\nDescripción: {desc}\n\nSi el producto tiene historial, será desactivado en lugar de eliminado.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
@@ -428,7 +428,7 @@ class DialogoEditarProducto(DialogoModalIntegrado):
             if resultado == "DESACTIVADO":
                 QMessageBox.information(
                     self, "Producto Desactivado",
-                    "Este producto tiene historial asociado y no puede eliminarse definitivamente sin perder trazabilidad. Ha sido desactivado."
+                    "Este producto tiene historial asociado y no puede eliminarse definitivamente sin perder trazabilidad.\n\nHa sido desactivado."
                 )
             else:
                 QMessageBox.information(self, "Eliminado", "El producto fue eliminado definitivamente.")
@@ -475,7 +475,7 @@ class DialogoStockMinimo(DialogoModalIntegrado):
         self.conn = conexion_db
         self.p_data = producto_data
         self.setWindowTitle("Configurar Stock Mínimo")
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(600)
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 32, 32, 32)
@@ -491,7 +491,7 @@ class DialogoStockMinimo(DialogoModalIntegrado):
         self.inp_min = SelectAllLineEdit(str(producto_data.get('stock_minimo', 0)))
         self.inp_min.setStyleSheet(f"padding: 10px; border: 1px solid {COLOR_BORDER}; border-radius: 6px; background-color: {COLOR_BG}; font-size: 13px; color: {COLOR_TEXT_MAIN};")
         
-        lbl_alerta = QLabel("Alerta en Stock <= a:")
+        lbl_alerta = QLabel("Nivel mínimo de alerta:")
         lbl_alerta.setStyleSheet(f"font-weight: bold; color: {COLOR_TEXT_SEC}; font-size: 12px;")
         
         form.addRow(lbl_alerta, self.inp_min)
@@ -510,7 +510,7 @@ class DialogoStockMinimo(DialogoModalIntegrado):
         try:
             stk = float(self.inp_min.text().replace(',', '.'))
             if stk < 0: raise ValueError
-        except:
+        except (ValueError, TypeError):
             QMessageBox.warning(self, "Error", "Valor inválido.")
             return
             
@@ -534,9 +534,9 @@ class DialogoModificarStock(DialogoModalIntegrado):
         self.modo_inicial = modo_inicial
         
         titulo = "Entrada de Stock" if modo_inicial == 'ENTRADA' else "Ajuste de Inventario"
-        self.setWindowTitle(f"{titulo}: {producto_data['codigo']}")
+        self.setWindowTitle(f"{titulo}: {producto_data['descripcion']}")
         
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(600)
         self.init_ui()
 
     def init_ui(self):
@@ -711,7 +711,7 @@ class DialogoModificarStock(DialogoModalIntegrado):
             else:
                 self.lbl_diff_ajuste.setText("Diferencia: 0 (No hay ajuste)")
                 self.lbl_diff_ajuste.setStyleSheet("color: #64748b; font-weight: bold;")
-        except:
+        except (ValueError, TypeError):
             self.diferencia = 0.0
             self.lbl_diff_ajuste.setText("Diferencia: --")
             self.lbl_diff_ajuste.setStyleSheet("color: #64748b;")
@@ -762,7 +762,7 @@ class DialogoAlertasInventario(DialogoModalIntegrado):
     def __init__(self, datos_catalogo, callback_seleccionar, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Alertas de Inventario")
-        self.setFixedSize(650, 450)
+        self.setMinimumSize(650, 450)
         self.datos = datos_catalogo
         self.callback = callback_seleccionar
         
@@ -781,7 +781,7 @@ class DialogoAlertasInventario(DialogoModalIntegrado):
         layout.addWidget(lbl_info)
         
         self.tabla = QTableWidget(0, 5)
-        self.tabla.setHorizontalHeaderLabels(["Cód.", "Producto", "Disp.", "Mín.", "Prioridad"])
+        self.tabla.setHorizontalHeaderLabels(["Código", "Producto", "Disponible", "Mínimo", "Estado"])
         self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.tabla.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -846,7 +846,7 @@ class DialogoAlertasInventario(DialogoModalIntegrado):
             it_min = QTableWidgetItem(f"{al['stk_min']:g}")
             
             color = QColor("#ef4444") if al['estado'] == 2 else QColor("#f59e0b")
-            texto_estado = "CRÍTICO (Sin Stock)" if al['estado'] == 2 else "MEDIA (Stock Bajo)"
+            texto_estado = "⛔ Sin Stock" if al['estado'] == 2 else "⚠ Stock Bajo"
             
             it_est = QTableWidgetItem(texto_estado)
             it_est.setForeground(color)
@@ -1067,8 +1067,10 @@ class DialogoProductosFrecuentes(DialogoModalIntegrado):
         super().__init__(parent)
         self.conn = conexion_db
         self.callback = callback_seleccionar
-        self.setWindowTitle("Productos Más Frecuentes (Últimos 30 días)")
-        self.setFixedSize(700, 500)
+        settings = QSettings("ConstrusecoPereyra", "StockConfig")
+        dias = settings.value("freq_days", 30, type=int)
+        self.setWindowTitle(f"Productos Más Frecuentes (Últimos {dias} días)")
+        self.setMinimumSize(700, 500)
         
         self.init_ui()
         
@@ -1086,7 +1088,7 @@ class DialogoProductosFrecuentes(DialogoModalIntegrado):
         layout.addWidget(lbl_info)
         
         self.tabla = QTableWidget(0, 5)
-        self.tabla.setHorizontalHeaderLabels(["Cód.", "Producto", "Vendidos", "Stock Actual", "Sugerencia"])
+        self.tabla.setHorizontalHeaderLabels(["Código", "Producto", "Vendidos", "Disponible (ATP)", "Recomendación"])
         self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.tabla.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -1132,11 +1134,11 @@ class DialogoProductosFrecuentes(DialogoModalIntegrado):
             it_disp = QTableWidgetItem(f"{atp:g}")
             
             # Suggestion logic
-            sug = "Stock OK"
+            sug = "Stock suficiente"
             col = QColor("#64748b")
             
             if atp <= 0:
-                sug = "URGENTE Reponer"
+                sug = "⛔ Reponer urgente"
                 col = QColor("#ef4444")
             elif atp < vendidos * 0.5:
                 # Stock is less than half of what we sold last month
@@ -1257,7 +1259,7 @@ class DialogoAyudaStock(DialogoModalIntegrado):
         scroll.setWidget(content)
         main_layout.addWidget(scroll)
         
-        btn_cerrar = QPushButton("Cerrar")
+        btn_cerrar = QPushButton("Cerrar Ayuda")
         btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_cerrar.setStyleSheet(f"background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN}; padding: 10px 20px; border-radius: 6px; border: 1px solid {COLOR_BORDER}; font-weight: bold;")
         btn_cerrar.clicked.connect(self.accept)
@@ -1274,8 +1276,8 @@ class DialogoModificarPrecio(DialogoModalIntegrado):
         super().__init__(parent)
         self.conn = conexion_db
         self.p_data = producto_data
-        self.setWindowTitle(f"Modificar Precio: {producto_data['codigo']}")
-        self.setMinimumWidth(400)
+        self.setWindowTitle(f"Modificar Precio — {producto_data['descripcion']}")
+        self.setMinimumWidth(600)
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 32, 32, 32)
@@ -1330,8 +1332,8 @@ class DialogoDesactivarEliminar(DialogoModalIntegrado):
         super().__init__(parent)
         self.conn = conexion_db
         self.p_data = producto_data
-        self.setWindowTitle("¿Qué desea hacer?")
-        self.setMinimumWidth(400)
+        self.setWindowTitle(f"Opciones para: {producto_data['descripcion']}")
+        self.setMinimumWidth(600)
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 32, 32, 32)
@@ -1342,6 +1344,7 @@ class DialogoDesactivarEliminar(DialogoModalIntegrado):
         layout.addWidget(lbl)
         
         btn_desactivar = QPushButton("Desactivar producto\n(Recomendado. Conserva historial.)")
+        btn_desactivar.setMinimumHeight(60)
         btn_desactivar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_desactivar.setStyleSheet(f"""
             QPushButton {{ background-color: {COLOR_BG}; color: {COLOR_TEXT_MAIN}; padding: 16px; border: 1px solid {COLOR_BORDER}; border-radius: 6px; text-align: left; font-size: 13px; }}
@@ -1349,7 +1352,8 @@ class DialogoDesactivarEliminar(DialogoModalIntegrado):
         """)
         btn_desactivar.clicked.connect(self.desactivar)
         
-        btn_eliminar = QPushButton("Eliminar definitivamente\n(Solo si nunca será utilizado.)")
+        btn_eliminar = QPushButton("Eliminar definitivamente\n(Si el producto no tiene historial)")
+        btn_eliminar.setMinimumHeight(60)
         btn_eliminar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_eliminar.setStyleSheet(f"""
             QPushButton {{ background-color: #fff1f2; color: #be123c; padding: 16px; border: 1px solid #fecdd3; border-radius: 6px; text-align: left; font-size: 13px; }}

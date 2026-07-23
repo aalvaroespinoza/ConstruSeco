@@ -31,8 +31,8 @@ class DialogoNota(DialogoModalIntegrado):
         self.hubo_cambios = False
 
         self.setWindowTitle("Editar Nota" if self.modo_edicion else "Nueva Nota")
-        self.setMinimumWidth(600)
-        self.setMinimumHeight(400)
+        self.setMinimumWidth(480)
+        self.setMinimumHeight(300)
         
 
         self._construir_ui()
@@ -44,12 +44,12 @@ class DialogoNota(DialogoModalIntegrado):
         ly.setContentsMargins(24, 24, 24, 24)
         ly.setSpacing(16)
 
-        lbl_titulo = QLabel("Editar Nota" if self.modo_edicion else "Nueva Nota")
+        lbl_titulo = QLabel("Escribí el contenido de la nota:")
         lbl_titulo.setStyleSheet(f"font-size: 16px; font-weight: 800; color: {COLOR_TEXT_MAIN};")
         ly.addWidget(lbl_titulo)
 
         self.txt_contenido = QTextEdit()
-        self.txt_contenido.setPlaceholderText("Escriba el contenido de la nota aquí...")
+        self.txt_contenido.setPlaceholderText("Escribí el contenido de la nota...")
         self.txt_contenido.setStyleSheet(
             f"border: 1px solid {COLOR_BORDER}; border-radius: 6px; padding: 8px; "
             f"background-color: {COLOR_BG}; color: {COLOR_TEXT_MAIN}; font-size: 13px;"
@@ -119,7 +119,7 @@ class DialogoContacto(DialogoModalIntegrado):
         self.hubo_cambios = False
 
         self.setWindowTitle("Editar Contacto" if self.modo_edicion else "Nuevo Contacto")
-        self.setMinimumWidth(450)
+        self.setMinimumWidth(520)
         
 
         self._campos = {}
@@ -132,7 +132,7 @@ class DialogoContacto(DialogoModalIntegrado):
         ly.setContentsMargins(24, 24, 24, 24)
         ly.setSpacing(16)
 
-        lbl_titulo = QLabel("Editar Contacto" if self.modo_edicion else "Nuevo Contacto")
+        lbl_titulo = QLabel("Completá los datos del contacto:")
         lbl_titulo.setStyleSheet(f"font-size: 16px; font-weight: 800; color: {COLOR_TEXT_MAIN};")
         ly.addWidget(lbl_titulo)
 
@@ -154,6 +154,7 @@ class DialogoContacto(DialogoModalIntegrado):
         ly.addLayout(fila_te)
 
         self.chk_principal = QCheckBox("Marcar como contacto principal")
+        self.chk_principal.setToolTip("Al marcar este contacto como principal, el anterior principal pasará a secundario.")
         self.chk_principal.setStyleSheet(f"color: {COLOR_TEXT_MAIN}; font-size: 13px;")
         ly.addWidget(self.chk_principal)
 
@@ -203,17 +204,17 @@ class DialogoContacto(DialogoModalIntegrado):
         hay_error = False
         nombre = self._txt("nombre")
         if not nombre:
-            self._campos["nombre"].set_error("El nombre es obligatorio")
+            self._campos["nombre"].set_error("El nombre es obligatorio.")
             hay_error = True
 
         email = self._txt("email")
         if email and not _RE_EMAIL.match(email):
-            self._campos["email"].set_error("Email inválido")
+            self._campos["email"].set_error("Email inválido. Ejemplo: nombre@dominio.com")
             hay_error = True
 
         tel = self._txt("telefono")
         if tel and not _RE_TEL.match(tel):
-            self._campos["telefono"].set_error("Teléfono inválido")
+            self._campos["telefono"].set_error("Teléfono inválido. Solo se aceptan números y + - ( ).")
             hay_error = True
 
         if hay_error:

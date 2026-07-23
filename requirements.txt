@@ -1,3 +1,4 @@
 PyQt6==6.7.1
-openpyxl==3.1.5reportlab
+openpyxl==3.1.5
+reportlab
 PyMuPDF

@@ -28,8 +28,8 @@ class UIGlobalPolisher(QObject):
                 obj.setCursor(Qt.CursorShape.PointingHandCursor)
                 text = obj.text().lower()
                 name = obj.objectName().lower()
-                is_danger = any(k in text for k in ['cerrar', 'cancelar', 'eliminar', 'anular']) or \
-                            any(k in name for k in ['cerrar', 'cancelar', 'eliminar', 'anular'])
+                is_danger = any(k in text for k in ['cancelar', 'eliminar', 'anular', 'desactivar']) or \
+                            any(k in name for k in ['cancelar', 'eliminar', 'anular', 'desactivar'])
                 
                 if is_danger and not obj.property("class"):
                     obj.setProperty("class", "danger")
@@ -85,7 +85,7 @@ def aplicar_tema_claro(app):
         
         /* Botones Generales */
         QPushButton {{
-            min-height: 30px; background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN};
+            min-height: 32px; background-color: {COLOR_CARD_BG}; color: {COLOR_TEXT_MAIN};
             border: 1px solid {COLOR_BORDER}; border-radius: 6px; padding: 6px 14px;
             font-weight: 500;
         }}
@@ -100,7 +100,7 @@ def aplicar_tema_claro(app):
             background-color: {COLOR_PRIMARY}; color: {COLOR_CARD_BG}; border-color: {COLOR_PRIMARY};
         }}
         QDialog QPushButton:default:hover, QMessageBox QPushButton:default:hover {{
-            background-color: {COLOR_PRIMARY}; border-color: {COLOR_PRIMARY};
+            background-color: #1d4ed8; border-color: #1d4ed8;
         }}
         
         /* Botones Danger (Cerrar, Cancelar, Eliminar) */

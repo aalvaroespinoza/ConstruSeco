@@ -48,8 +48,8 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
     elements = []
     
     # 1. ENCABEZADO (Logo + Empresa vs Documento)
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    logo_path = os.path.join(base_dir, "assets", "logo.png")
+    from utils.paths import get_resource_path
+    logo_path = get_resource_path("assets/logo.png")
     
     img = None
     if os.path.exists(logo_path):

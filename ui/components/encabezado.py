@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore import Qt
-from ui.core.theme import COLOR_TEXT_MAIN, COLOR_TEXT_SEC
+from ui.core.theme import COLOR_TEXT_MAIN, COLOR_TEXT_SEC, COLOR_BORDER, COLOR_BG
 
 def crear_encabezado_estandar(icono_txt, titulo_txt, subtitulo_txt):
     """
@@ -31,20 +31,19 @@ def crear_encabezado_estandar(icono_txt, titulo_txt, subtitulo_txt):
     btn_ayuda = QPushButton("ⓘ Ayuda")
     btn_ayuda.setCursor(Qt.CursorShape.PointingHandCursor)
     btn_ayuda.setStyleSheet("""
-        QPushButton {
             background-color: transparent;
-            color: #64748B;
+            color: {COLOR_TEXT_SEC};
             font-size: 14px;
             font-weight: bold;
-            border: 1px solid #E2E8F0;
+            border: 1px solid {COLOR_BORDER};
             border-radius: 6px;
             padding: 8px 16px;
-        }
-        QPushButton:hover {
-            background-color: #F8FAFC;
-            color: #0F172A;
-            border-color: #CBD5E1;
-        }
+        }}
+        QPushButton:hover {{
+            background-color: {COLOR_BG};
+            color: {COLOR_TEXT_MAIN};
+            border-color: {COLOR_TEXT_SEC};
+        }}
     """)
     
     return ly_izq, btn_ayuda

@@ -18,6 +18,10 @@ class DialogoAyudaContextual(DialogoModalIntegrado):
         ly.setSpacing(16)
         ly.setContentsMargins(0, 0, 0, 0)
         
+        lbl_tit = QLabel(titulo)
+        lbl_tit.setStyleSheet(f"font-size: 20px; font-weight: 900; color: {COLOR_TEXT_MAIN};")
+        ly.addWidget(lbl_tit)
+        
         if subtitulo:
             lbl_sub = QLabel(subtitulo)
             lbl_sub.setStyleSheet(f"font-size: 15px; color: {COLOR_PRIMARY}; font-weight: bold; margin-bottom: 8px;")
@@ -62,7 +66,6 @@ class DialogoAyudaContextual(DialogoModalIntegrado):
                 font-size: 14px;
             }}
             QPushButton:hover {{
-                opacity: 0.9;
                 background-color: #1d4ed8;
             }}
         """)

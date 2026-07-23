@@ -643,8 +643,8 @@ class OperacionBaseWidget(QWidget):
         layout_tarjeta_cli.setContentsMargins(12, 0, 8, 0)
         layout_tarjeta_cli.setSpacing(12)
         
-        self.lbl_nombre_cliente = QLabel("<b>Nombre Cliente</b>")
-        self.lbl_nombre_cliente.setStyleSheet("color: #0F172A; font-size: 13px;")
+        self.lbl_nombre_cliente = QLabel("Nombre Cliente")
+        self.lbl_nombre_cliente.setStyleSheet(f"font-size: 13px; font-weight: 800; color: #0F172A;")
         self.lbl_datos_cliente = QLabel("CUIT/DNI - Tel")
         self.lbl_datos_cliente.setStyleSheet("color: #64748B; font-size: 12px;")
         
@@ -1158,7 +1158,7 @@ class OperacionBaseWidget(QWidget):
 
     def seleccionar_cliente(self, cliente):
         self.cliente_seleccionado = cliente
-        self.lbl_nombre_cliente.setText(f"<b>{cliente['nombre']}</b>")
+        self.lbl_nombre_cliente.setText(f"{cliente['nombre']}")
         
         datos = []
         if cliente.get('cuit'): datos.append(f"CUIT/DNI: {cliente['cuit']}")
