@@ -2066,6 +2066,22 @@ class OperacionBaseWidget(QWidget):
             
         except Exception as e:
             self.conn.rollback()
+            error_msg = str(e).lower()
+            if getattr(self, 'is_edicion', False) and tipo == 'PRESUPUESTO' and "estado" in error_msg:
+                res = QMessageBox.question(
+                    self, 
+                    "Presupuesto Inactivo", 
+                    f"No se pudo editar el presupuesto original porque ya no está activo.\nDetalle: {e}\n\n¿Deseás guardar estos datos como un PRESUPUESTO NUEVO?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if res == QMessageBox.StandardButton.Yes:
+                    self.is_edicion = False
+                    self.id_presupuesto_edicion = None
+                    if hasattr(self, 'btn_confirmar'):
+                        self.btn_confirmar.setText("Crear Presupuesto [F12]")
+                    self.confirmar_operacion(tipo)
+                    return
+
             QMessageBox.critical(self, "Error Transaccional", f"Hubo un error al procesar la operación:\n{e}")
             if hasattr(self, 'btn_confirmar'):
                 self.btn_confirmar.setEnabled(True)

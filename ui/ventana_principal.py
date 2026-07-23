@@ -473,6 +473,11 @@ class VentanaPrincipal(QMainWindow):
         # Inicializamos estado para operaciones abiertas
         self.operaciones_abiertas = {} # {id_operacion: (widget, tarjeta)}
         self.siguiente_id_operacion = 1
+        
+        self._timer_guardado = QTimer(self)
+        self._timer_guardado.setSingleShot(True)
+        self._timer_guardado.setInterval(2000)
+        self._timer_guardado.timeout.connect(self._guardar_estado_operaciones)
 
         self.init_ui()
         self._cargar_operaciones_guardadas()
@@ -910,9 +915,11 @@ class VentanaPrincipal(QMainWindow):
         tarjeta.cerrar_solicitado.connect(lambda: self.cerrar_operacion(id_op))
         
         widget.estado_cambiado.connect(tarjeta.actualizar_datos)
+        widget.estado_cambiado.connect(self._timer_guardado.start)
         widget.operacion_completada.connect(lambda _: self._on_operacion_completada(id_op))
         
         self.operaciones_abiertas[id_op] = (widget, tarjeta)
+        self._timer_guardado.start()
         
         self.contenedor_vistas.addWidget(widget)
         self.layout_tarjetas.insertWidget(self.layout_tarjetas.count() - 1, tarjeta)
@@ -956,6 +963,7 @@ class VentanaPrincipal(QMainWindow):
         tarjeta.deleteLater()
         
         del self.operaciones_abiertas[id_op]
+        self._timer_guardado.start()
         
         # Si cerramos la actual, ir a la última o a stock
         if self.contenedor_vistas.currentWidget() == widget:
@@ -1031,6 +1039,15 @@ class VentanaPrincipal(QMainWindow):
             widget.input_busqueda.setFocus()
             
     def closeEvent(self, event):
+        self._guardar_estado_operaciones()
+            
+        for w in list(self._workers_activos):
+            if w.isRunning():
+                w.wait(3000)
+                
+        event.accept()
+
+    def _guardar_estado_operaciones(self):
         if self.operaciones_abiertas:
             estados = {}
             for id_op, (widget, _) in self.operaciones_abiertas.items():
@@ -1039,12 +1056,6 @@ class VentanaPrincipal(QMainWindow):
             self.settings.setValue("operaciones_abiertas", json.dumps(estados))
         else:
             self.settings.setValue("operaciones_abiertas", "")
-            
-        for w in list(self._workers_activos):
-            if w.isRunning():
-                w.wait(3000)
-                
-        event.accept()
 
     def _cargar_operaciones_guardadas(self):
         import json
@@ -1079,7 +1090,7 @@ class VentanaPrincipal(QMainWindow):
                     tarjeta.set_colapsada(self.sidebar_colapsada)
                     tarjeta.actualizar_datos(est)
                     widget.actualizar_etiqueta_sidebar.connect(tarjeta.actualizar_datos)
+                    widget.estado_cambiado.connect(self._timer_guardado.start)
             except Exception as e:
                 print("Error cargando ops guardadas", e)
                 logging.warning(f"Error cargando ops guardadas: {e}")
-            self.settings.setValue("operaciones_abiertas", "")
