@@ -447,6 +447,7 @@ class VentanaPrincipal(QMainWindow):
     def __init__(self, conexion_db):
         super().__init__()
         self.conn = conexion_db
+        self._workers_activos = []
         self.setWindowTitle("ConstruSeco Pereyra — Sistema ERP")
         # El tamaño inicial ahora está controlado por el sistema para arrancar maximizado
 
@@ -744,14 +745,21 @@ class VentanaPrincipal(QMainWindow):
             QPushButton:hover {{ opacity: 0.8; }}
         """)
 
+    def _limpiar_worker(self, worker):
+        if worker in self._workers_activos:
+            self._workers_activos.remove(worker)
+        worker.deleteLater()
+
     def gestionar_sync_sheets(self):
         estado = self.settings.value("google_drive_status", "Sin conexión", type=str)
         if estado == "Sin conexión":
             self.dialogo_auth = DialogoGoogleAuth(self)
             
-            self.worker_auth = WorkerAuthGoogle(self)
-            self.worker_auth.finished_auth.connect(self._on_auth_terminado)
-            self.worker_auth.start()
+            worker = WorkerAuthGoogle(self)
+            self._workers_activos.append(worker)
+            worker.finished_auth.connect(self._on_auth_terminado)
+            worker.finished.connect(lambda w=worker: self._limpiar_worker(w))
+            worker.start()
             
             self.dialogo_auth.exec()
         else:
@@ -779,9 +787,11 @@ class VentanaPrincipal(QMainWindow):
         self.settings.setValue("google_drive_status", "Pendiente")
         self.actualizar_btn_sync()
         
-        self.worker_sync = WorkerSyncSheets(datos)
-        self.worker_sync.resultado_sync.connect(self._on_sync_terminado)
-        self.worker_sync.start()
+        worker = WorkerSyncSheets(datos)
+        self._workers_activos.append(worker)
+        worker.resultado_sync.connect(self._on_sync_terminado)
+        worker.finished.connect(lambda w=worker: self._limpiar_worker(w))
+        worker.start()
 
     def _on_sync_terminado(self, exito, mensaje):
         if exito:
@@ -1029,6 +1039,11 @@ class VentanaPrincipal(QMainWindow):
             self.settings.setValue("operaciones_abiertas", json.dumps(estados))
         else:
             self.settings.setValue("operaciones_abiertas", "")
+            
+        for w in list(self._workers_activos):
+            if w.isRunning():
+                w.wait(3000)
+                
         event.accept()
 
     def _cargar_operaciones_guardadas(self):
