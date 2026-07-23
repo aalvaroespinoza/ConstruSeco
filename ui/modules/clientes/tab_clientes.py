@@ -706,11 +706,16 @@ class _PanelDetalle(QScrollArea):
             self.recargar_solicitado.emit(self._id_actual)
 
     def _on_eliminar_nota(self, id_nota: int):
-        resp = QMessageBox.question(
-            self, "Eliminar Nota", "¿Seguro que querés eliminar esta nota?",
+        msg_box = QMessageBox(
+            QMessageBox.Icon.Question, 
+            "Eliminar Nota", 
+            "¿Seguro que querés eliminar esta nota?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            self
         )
+        msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+        msg_box.setStyleSheet("QPushButton { color: #172033; background-color: #f1f5f9; }")
+        resp = msg_box.exec()
         if resp == QMessageBox.StandardButton.Yes:
             qc.eliminar_nota(self._conn, id_nota)
             self.recargar_solicitado.emit(self._id_actual)

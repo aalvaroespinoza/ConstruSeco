@@ -630,6 +630,13 @@ class OperacionBaseWidget(QWidget):
         self.input_cliente.setStyleSheet("QLineEdit { border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; font-size: 13px; background: #F8FAFC; } QLineEdit:focus { border: 1px solid #3B82F6; background: #FFFFFF; }")
         self.input_cliente.returnPressed.connect(self.procesar_input_cliente)
         
+        # Bugfix: Recargar clientes al hacer foco
+        original_focus_in = self.input_cliente.focusInEvent
+        def focus_in_handler(event):
+            self.cargar_autocompletado_clientes()
+            original_focus_in(event)
+        self.input_cliente.focusInEvent = focus_in_handler
+        
         self.btn_nuevo_cliente = QPushButton("+ Nuevo")
         self.btn_nuevo_cliente.setObjectName("btn_secundario")
         self.btn_nuevo_cliente.setMinimumHeight(38)

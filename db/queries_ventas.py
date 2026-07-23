@@ -106,7 +106,7 @@ def registrar_operacion_venta(conn, tipo, descontar_stock, carrito, descuento_ge
             1 if iva_aplicado else 0,
             iva_porcentaje,
             iva_monto,
-            obs if obs else None
+            obs if obs else ""
         ))
         id_doc = cursor.lastrowid
         

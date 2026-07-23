@@ -437,7 +437,7 @@ def editar_presupuesto_activo(conn, id_documento: int, carrito: list, descuento_
             WHERE id_documento = ?
         """, (
             id_cliente_final, total_operacion, subtotal_bruto, descuento_general,
-            1 if iva_aplicado else 0, iva_porcentaje, iva_monto, obs if obs else None, id_documento
+            1 if iva_aplicado else 0, iva_porcentaje, iva_monto, obs if obs else "", id_documento
         ))
         
         # 6. Insertar nuevos Detalles y Compromisos
