@@ -8,6 +8,7 @@ from utils.google_backup import obtener_credenciales_google, agregar_fila_operac
 from pathlib import Path
 import logging
 from utils.paths import get_resource_path
+from utils.ui_utils import mostrar_confirmacion
 from ui.modules.stock.tab_stock import PestanaStock
 from ui.modules.ventas.tab_ventas import PestanaNuevaVenta
 from ui.modules.clientes.tab_clientes import PestanaClientes
@@ -953,8 +954,12 @@ class VentanaPrincipal(QMainWindow):
         widget, tarjeta = self.operaciones_abiertas[id_op]
         
         if not forzar and not widget.esta_vacia():
-            res = QMessageBox.question(self, "Cerrar Operación", f"¿Cerrar esta {tarjeta.tipo.lower()}? Los datos no confirmados se perderán.")
-            if res != QMessageBox.StandardButton.Yes:
+            res = mostrar_confirmacion(
+                self, 
+                "Cerrar Operación", 
+                f"¿Cerrar esta {tarjeta.tipo.lower()}? Los datos no confirmados se perderán."
+            )
+            if not res:
                 return
                 
         self.contenedor_vistas.removeWidget(widget)
@@ -996,9 +1001,13 @@ class VentanaPrincipal(QMainWindow):
         if "STOCK" in modulos:
             if hasattr(self, 'pestana_stock'):
                 self.pestana_stock.cargar_datos()
+            self.actualizar_catalogos_operaciones()
         if "CLIENTES" in modulos:
             if hasattr(self, 'pestana_clientes'):
                 self.pestana_clientes.recargar()
+            for id_op, (widget, _) in getattr(self, 'operaciones_abiertas', {}).items():
+                if hasattr(widget, 'cargar_autocompletado_clientes'):
+                    widget.cargar_autocompletado_clientes()
         if "PRESUPUESTOS" in modulos:
             if hasattr(self, 'pestana_historial_presupuestos'):
                 self.pestana_historial_presupuestos.recargar()

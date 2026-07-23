@@ -272,6 +272,7 @@ class DialogoVentaExitosa(DialogoModalIntegrado):
         from db.queries_presupuestos import obtener_detalle_presupuesto
         from utils.pdf_documento import generar_pdf_documento
         from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        from utils.ui_utils import mostrar_confirmacion
         
         det = obtener_detalle_presupuesto(self.conn, self.id_documento)
         if not det: return
@@ -629,13 +630,6 @@ class OperacionBaseWidget(QWidget):
         self.input_cliente.setMinimumHeight(38)
         self.input_cliente.setStyleSheet("QLineEdit { border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; font-size: 13px; background: #F8FAFC; } QLineEdit:focus { border: 1px solid #3B82F6; background: #FFFFFF; }")
         self.input_cliente.returnPressed.connect(self.procesar_input_cliente)
-        
-        # Bugfix: Recargar clientes al hacer foco
-        original_focus_in = self.input_cliente.focusInEvent
-        def focus_in_handler(event):
-            self.cargar_autocompletado_clientes()
-            original_focus_in(event)
-        self.input_cliente.focusInEvent = focus_in_handler
         
         self.btn_nuevo_cliente = QPushButton("+ Nuevo")
         self.btn_nuevo_cliente.setObjectName("btn_secundario")
@@ -1156,8 +1150,12 @@ class OperacionBaseWidget(QWidget):
         if formulario.exec() == QDialog.DialogCode.Accepted and formulario.id_guardado is not None:
             id_nuevo = formulario.id_guardado
             try:
-                # Actualizar el listado en memoria
-                self.cargar_autocompletado_clientes()
+                vp = self.window()
+                if hasattr(vp, 'notificar_cambios'):
+                    vp.notificar_cambios(["CLIENTES"])
+                else:
+                    self.cargar_autocompletado_clientes()
+                
                 # Seleccionarlo
                 det = qc.obtener_detalle_cliente(self.conn, id_nuevo)
                 if det:
@@ -2075,13 +2073,12 @@ class OperacionBaseWidget(QWidget):
             self.conn.rollback()
             error_msg = str(e).lower()
             if getattr(self, 'is_edicion', False) and tipo == 'PRESUPUESTO' and "estado" in error_msg:
-                res = QMessageBox.question(
-                    self, 
-                    "Presupuesto Inactivo", 
-                    f"No se pudo editar el presupuesto original porque ya no está activo.\nDetalle: {e}\n\n¿Deseás guardar estos datos como un PRESUPUESTO NUEVO?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                res = mostrar_confirmacion(
+                    self,
+                    "Presupuesto Inactivo",
+                    f"No se pudo editar el presupuesto original porque ya no está activo.\nDetalle: {e}\n\n¿Deseás guardar estos datos como un PRESUPUESTO NUEVO?"
                 )
-                if res == QMessageBox.StandardButton.Yes:
+                if res:
                     self.is_edicion = False
                     self.id_presupuesto_edicion = None
                     if hasattr(self, 'btn_confirmar'):

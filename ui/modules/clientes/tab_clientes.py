@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import ( QDialog,
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint
 from PyQt6.QtGui import QColor, QAction, QKeySequence
 import logging
+from utils.ui_utils import mostrar_confirmacion
 
 from ui.core.theme import (
     COLOR_PRIMARY, COLOR_BG, COLOR_CARD_BG, COLOR_TEXT_MAIN,
@@ -706,17 +707,14 @@ class _PanelDetalle(QScrollArea):
             self.recargar_solicitado.emit(self._id_actual)
 
     def _on_eliminar_nota(self, id_nota: int):
-        msg_box = QMessageBox(
-            QMessageBox.Icon.Question, 
+        resp = mostrar_confirmacion(
+            self, 
             "Eliminar Nota", 
             "¿Seguro que querés eliminar esta nota?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            self
+            texto_ok="Eliminar",
+            texto_cancel="Cancelar"
         )
-        msg_box.setDefaultButton(QMessageBox.StandardButton.No)
-        msg_box.setStyleSheet("QPushButton { color: #172033; background-color: #f1f5f9; }")
-        resp = msg_box.exec()
-        if resp == QMessageBox.StandardButton.Yes:
+        if resp:
             qc.eliminar_nota(self._conn, id_nota)
             self.recargar_solicitado.emit(self._id_actual)
 
@@ -1464,30 +1462,26 @@ class PestanaClientes(QWidget):
             return
 
         if det["activo"]:
-            resp = QMessageBox.question(
+            resp = mostrar_confirmacion(
                 self,
                 "Desactivar cliente",
                 f"¿Desactivar al cliente {det['nombre']}?\n\n"
                 f"El cliente ya no aparecerá en las búsquedas activas, "
-                f"pero su historial se conservará.",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
+                f"pero su historial se conservará."
             )
-            if resp == QMessageBox.StandardButton.Yes:
+            if resp:
                 qc.desactivar_cliente(self.conn, id_cliente)
                 self._id_cliente_seleccionado = id_cliente
                 self._notificar_cambios_globales()
                 self._panel_detalle.cargar(self.conn, id_cliente)
                 self._stack_panel.setCurrentIndex(1)
         else:
-            resp = QMessageBox.question(
+            resp = mostrar_confirmacion(
                 self,
                 "Reactivar cliente",
-                f"¿Reactivar al cliente {det['nombre']}?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.Yes,
+                f"¿Reactivar al cliente {det['nombre']}?"
             )
-            if resp == QMessageBox.StandardButton.Yes:
+            if resp:
                 qc.reactivar_cliente(self.conn, id_cliente)
                 self._id_cliente_seleccionado = id_cliente
                 self._notificar_cambios_globales()

@@ -12,6 +12,7 @@ from PyQt6.QtGui import QPixmap, QCursor
 
 from db.queries import UNIDADES_PERMITIDAS
 from ui.core.modal import DialogoModalIntegrado
+from utils.ui_utils import mostrar_confirmacion
 
 # Rutas
 
@@ -414,13 +415,12 @@ class DialogoEditarProducto(DialogoModalIntegrado):
         cod = self.p_data['codigo']
         desc = self.p_data['descripcion']
         
-        reply = QMessageBox.question(
+        reply = mostrar_confirmacion(
             self, "Confirmar Eliminación",
             f"¿Está seguro de que desea eliminar el producto?\n\nCódigo: {cod}\nDescripción: {desc}\n\nSi el producto tiene historial, será desactivado en lugar de eliminado.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            texto_ok="Eliminar", texto_cancel="Cancelar"
         )
-        if reply == QMessageBox.StandardButton.No:
+        if not reply:
             return
             
         try:
