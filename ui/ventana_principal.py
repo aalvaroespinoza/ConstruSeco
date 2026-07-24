@@ -874,13 +874,18 @@ class VentanaPrincipal(QMainWindow):
             widget.input_busqueda.setFocus()
             
     def closeEvent(self, event):
-        self._guardar_estado_operaciones()
-            
-        for w in list(self._workers_activos):
-            if w.isRunning():
-                w.wait(3000)
-                
-        event.accept()
+        resp = mostrar_confirmacion(
+            self,
+            "Confirmar Salida",
+            "¿Está seguro que quiere salir del sistema?",
+            texto_ok="Sí, salir",
+            texto_cancel="No"
+        )
+        if resp:
+            self._guardar_estado_operaciones()
+            event.accept()
+        else:
+            event.ignore()
 
     def _guardar_estado_operaciones(self):
         if self.operaciones_abiertas:
