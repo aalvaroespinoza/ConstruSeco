@@ -226,3 +226,7 @@ token_google.json
 *.db
 *.db-shm
 *.db-wal
+
+# Auditoría y pruebas
+AUDITORIA_NOCTURNA_*.md
+tests_pdf/
