@@ -13,6 +13,7 @@ from ui.modules.ventas.tab_ventas import PestanaNuevaVenta
 from ui.modules.clientes.tab_clientes import PestanaClientes
 from ui.modules.presupuestos.tab_presupuestos import PestanaPresupuestos, PestanaNuevoPresupuesto
 from ui.modules.inicio.tab_inicio import PestanaInicio
+from ui.modules.ajustes.tab_ajustes import PestanaAjustes
 
 class TarjetaOperacionSidebar(QFrame):
     clicked = pyqtSignal()
@@ -286,6 +287,17 @@ class SidebarButton(QPushButton):
             painter.drawLine(9, 7, 15, 7)
             painter.drawLine(9, 12, 15, 12)
             painter.drawLine(9, 17, 12, 17)
+        elif tipo == "ajustes":
+            painter.drawEllipse(6, 6, 12, 12)
+            painter.drawEllipse(9, 9, 6, 6)
+            painter.drawLine(12, 4, 12, 6)
+            painter.drawLine(12, 18, 12, 20)
+            painter.drawLine(4, 12, 6, 12)
+            painter.drawLine(18, 12, 20, 12)
+            painter.drawLine(6, 6, 8, 8)
+            painter.drawLine(16, 16, 18, 18)
+            painter.drawLine(6, 18, 8, 16)
+            painter.drawLine(16, 6, 18, 8)
             
         painter.restore()
 
@@ -491,11 +503,13 @@ class VentanaPrincipal(QMainWindow):
         self.btn_stock = SidebarButton("stock", "Control de Stock")
         self.btn_clientes = SidebarButton("clientes", "Clientes")
         self.btn_presupuestos = SidebarButton("presupuestos", "Presupuestos")
+        self.btn_ajustes = SidebarButton("ajustes", "Ajustes")
 
         # Agrupamos los botones para que actúen en conjunto
-        self.botones_menu = [self.btn_inicio, self.btn_ventas, self.btn_stock, self.btn_clientes, self.btn_presupuestos]
+        self.botones_menu = [self.btn_inicio, self.btn_ventas, self.btn_stock, self.btn_clientes, self.btn_presupuestos, self.btn_ajustes]
         for btn in self.botones_menu:
-            layout_sidebar.addWidget(btn)
+            if btn != self.btn_ajustes:
+                layout_sidebar.addWidget(btn)
 
         # Resorte inferior invisible para empujar los botones principales hacia arriba si hace falta
         # layout_sidebar.addStretch() # Quitado para que la lista de operaciones crezca.
@@ -584,6 +598,7 @@ class VentanaPrincipal(QMainWindow):
         self.lbl_version.setStyleSheet(footer_style)
         self.lbl_db.setStyleSheet(footer_style)
 
+        footer_layout.addWidget(self.btn_ajustes)
         footer_layout.addWidget(self.lbl_version)
         footer_layout.addWidget(self.lbl_db)
         
@@ -598,12 +613,14 @@ class VentanaPrincipal(QMainWindow):
         self.pestana_stock     = PestanaStock(self.conn)
         self.pestana_clientes  = PestanaClientes(self.conn)
         self.pestana_historial_presupuestos = PestanaPresupuestos(self.conn)
+        self.pestana_ajustes = PestanaAjustes()
 
         # Agregamos las vistas fijas al mazo de cartas (QStackedWidget)
         self.contenedor_vistas.addWidget(self.pestana_inicio)
         self.contenedor_vistas.addWidget(self.pestana_stock)             
         self.contenedor_vistas.addWidget(self.pestana_clientes)          
         self.contenedor_vistas.addWidget(self.pestana_historial_presupuestos)   
+        self.contenedor_vistas.addWidget(self.pestana_ajustes)   
 
         # Enlazamos los clics de los botones de navegación principal
         self.btn_inicio.clicked.connect(lambda: self.cambiar_pestana_fija(self.pestana_inicio, self.btn_inicio))
@@ -611,6 +628,7 @@ class VentanaPrincipal(QMainWindow):
         self.btn_stock.clicked.connect(lambda: self.cambiar_pestana_fija(self.pestana_stock, self.btn_stock))
         self.btn_clientes.clicked.connect(lambda: self.cambiar_pestana_fija(self.pestana_clientes, self.btn_clientes))
         self.btn_presupuestos.clicked.connect(lambda: self.cambiar_pestana_fija(self.pestana_historial_presupuestos, self.btn_presupuestos))
+        self.btn_ajustes.clicked.connect(lambda: self.cambiar_pestana_fija(self.pestana_ajustes, self.btn_ajustes))
         
         # Conectamos señales de la pestaña de inicio
         self.pestana_inicio.nueva_venta_solicitada.connect(lambda: self.crear_operacion("VENTA"))

@@ -5,6 +5,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
 from reportlab.lib import colors
+from PyQt6.QtCore import QSettings
 
 def _fmt_moneda(valor: float) -> str:
     if valor is None: return "0,00"
@@ -29,13 +30,13 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
     # Estilos de párrafo
     style_normal = ParagraphStyle('Normal_Custom', parent=styles['Normal'], fontName='Helvetica', fontSize=12, leading=16)
     style_bold = ParagraphStyle('Bold_Custom', parent=style_normal, fontName='Helvetica-Bold')
-    style_title = ParagraphStyle('Title', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=26, leading=30, textColor=colors.HexColor('#1e3a8a'), alignment=TA_RIGHT)
+    style_title = ParagraphStyle('Title', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=26, leading=30, textColor=colors.HexColor('#2563eb'), alignment=TA_RIGHT)
     style_subtitle = ParagraphStyle('Subtitle', parent=style_normal, fontName='Helvetica-Bold', fontSize=15, textColor=colors.HexColor('#475569'), alignment=TA_RIGHT)
     
-    style_company_name = ParagraphStyle('CompName', parent=style_bold, fontSize=22, textColor=colors.HexColor('#1e3a8a'))
+    style_company_name = ParagraphStyle('CompName', parent=style_bold, fontSize=22, textColor=colors.HexColor('#2563eb'))
     style_company_desc = ParagraphStyle('CompDesc', parent=style_normal, fontSize=12, textColor=colors.HexColor('#64748b'))
     
-    style_box_title = ParagraphStyle('BoxTitle', parent=style_bold, fontSize=13, textColor=colors.HexColor('#1e3a8a'), spaceAfter=8)
+    style_box_title = ParagraphStyle('BoxTitle', parent=style_bold, fontSize=13, textColor=colors.HexColor('#2563eb'), spaceAfter=8)
     
     style_table_header = ParagraphStyle('TableHeader', parent=style_bold, fontSize=12, textColor=colors.white, alignment=TA_CENTER)
     style_table_header_left = ParagraphStyle('TableHeaderL', parent=style_table_header, alignment=TA_LEFT)
@@ -62,11 +63,26 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
     
     num = det.get('numero_interno', '')
     
+    settings = QSettings("ConstruSeco", "ERP")
+    cuit = settings.value("empresa_cuit", "", type=str)
+    dir_empresa = settings.value("empresa_direccion", "", type=str)
+    tel = settings.value("empresa_telefono", "", type=str)
+    
     # Empresa Info
     empresa_p = [
         Paragraph("CONSTRUSECO PEREYRA", style_company_name),
         Paragraph("Materiales para la Construcción en Seco", style_company_desc)
     ]
+    
+    parts = []
+    if cuit: parts.append(f"CUIT: {cuit}")
+    if dir_empresa: parts.append(dir_empresa)
+    if tel: parts.append(f"Tel: {tel}")
+    
+    if parts:
+        style_company_details = ParagraphStyle('CompDet', parent=style_company_desc, fontSize=10, textColor=colors.HexColor('#64748b'))
+        det_text = " | ".join(parts)
+        empresa_p.append(Paragraph(det_text, style_company_details))
     
     # Doc Info
     doc_info_p = [
@@ -80,7 +96,7 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
         ('ALIGN', (0,0), (0,0), 'LEFT'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('ALIGN', (2,0), (2,0), 'RIGHT'),
-        ('LINEBELOW', (0,0), (-1,-1), 1.5, colors.HexColor('#1e3a8a')),
+        ('LINEBELOW', (0,0), (-1,-1), 1.5, colors.HexColor('#2563eb')),
         ('BOTTOMPADDING', (0,0), (-1,-1), 10),
     ]))
     elements.append(header_table)
@@ -165,7 +181,7 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
     t = Table(table_data, colWidths=[2.5*cm, 7.1*cm, 1.7*cm, 1.7*cm, 2.5*cm, 2.5*cm], repeatRows=1)
     
     ts = TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1e3a8a')),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#2563eb')),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('BOTTOMPADDING', (0,0), (-1,0), 10),
@@ -221,7 +237,7 @@ def generar_pdf_documento(det: dict, ruta_destino: str, tipo_documento: str = "P
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (0,0), (-1,-2), 1, colors.HexColor('#e2e8f0')),
         ('PADDING', (0,0), (-1,-2), 10),
-        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#1e3a8a')),
+        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#2563eb')),
         ('PADDING', (0,-1), (-1,-1), 14),
     ])
     totals_table.setStyle(tts)
