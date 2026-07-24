@@ -4,7 +4,6 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
 from PyQt6.QtCore import Qt, QTimer, QVariantAnimation, QPropertyAnimation, QEasingCurve, QSettings, pyqtSignal, QThread
 from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont, QPainterPath, QPen
 from ui.core.modal import DialogoModalIntegrado
-from utils.google_backup import obtener_credenciales_google, agregar_fila_operacion, desvincular_cuenta_google
 from pathlib import Path
 import logging
 from utils.paths import get_resource_path
@@ -364,91 +363,10 @@ class SidebarToggleButton(QPushButton):
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "☰")
 
 
-class WorkerAuthGoogle(QThread):
-    finished_auth = pyqtSignal(bool, str)
-    
-    def run(self):
-        try:
-            creds = obtener_credenciales_google()
-            if creds and creds.valid:
-                self.finished_auth.emit(True, "Autorización exitosa.")
-            else:
-                self.finished_auth.emit(False, "No se obtuvieron credenciales.")
-        except Exception as e:
-            self.finished_auth.emit(False, str(e))
-
-class WorkerSyncSheets(QThread):
-    resultado_sync = pyqtSignal(bool, str)
-    
-    def __init__(self, datos):
-        super().__init__()
-        self.datos = datos
-
-    def run(self):
-        exito, msj = agregar_fila_operacion(self.datos)
-        self.resultado_sync.emit(exito, msj)
-
-class DialogoGoogleAuth(DialogoModalIntegrado):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setFixedSize(350, 150)
-
-        ly = QVBoxLayout(self)
-        ly.setContentsMargins(24, 24, 24, 24)
-        ly.setSpacing(16)
-
-        lbl = QLabel("Esperando confirmación en el navegador...")
-        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl.setWordWrap(True)
-        lbl.setStyleSheet("color: #334155; font-size: 14px; font-weight: bold;")
-        
-        ly.addWidget(lbl)
-        ly.addStretch()
-
-class DialogoDesvincularGoogle(DialogoModalIntegrado):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setFixedSize(380, 220)
-
-        ly = QVBoxLayout(self)
-        ly.setContentsMargins(24, 24, 24, 24)
-        ly.setSpacing(16)
-
-        lbl_tit = QLabel("⚠️ Desvincular Cuenta")
-        lbl_tit.setStyleSheet("color: #ef4444; font-size: 18px; font-weight: bold;")
-        lbl_tit.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        lbl = QLabel("Estás por desvincular tu cuenta de Google.\n\nEsto es irreversible. Si lo hacés, las próximas operaciones NO se subirán al archivo de Google Sheets a menos que vuelvas a vincular tu cuenta autorizándolo desde tu navegador.\n\n¿Estás seguro de que querés continuar?")
-        lbl.setWordWrap(True)
-        lbl.setStyleSheet("color: #334155; font-size: 13px;")
-        
-        btn_ly = QHBoxLayout()
-        btn_ly.setSpacing(10)
-        
-        btn_cancelar = QPushButton("Cancelar")
-        btn_cancelar.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_cancelar.setStyleSheet("QPushButton { background-color: transparent; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; color: #475569; font-weight: bold; } QPushButton:hover { background-color: #f1f5f9; }")
-        btn_cancelar.clicked.connect(self.reject)
-        
-        btn_desvincular = QPushButton("Sí, Desvincular")
-        btn_desvincular.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_desvincular.setStyleSheet("QPushButton { background-color: #ef4444; color: white; border: none; border-radius: 4px; padding: 8px; font-weight: bold; } QPushButton:hover { background-color: #dc2626; }")
-        btn_desvincular.clicked.connect(self.accept)
-        
-        btn_ly.addStretch()
-        btn_ly.addWidget(btn_cancelar)
-        btn_ly.addWidget(btn_desvincular)
-
-        ly.addWidget(lbl_tit)
-        ly.addWidget(lbl)
-        ly.addStretch()
-        ly.addLayout(btn_ly)
-
 class VentanaPrincipal(QMainWindow):
     def __init__(self, conexion_db):
         super().__init__()
         self.conn = conexion_db
-        self._workers_activos = []
         self.setWindowTitle("ConstruSeco Pereyra — Sistema ERP")
         # El tamaño inicial ahora está controlado por el sistema para arrancar maximizado
 
@@ -665,15 +583,10 @@ class VentanaPrincipal(QMainWindow):
         """
         self.lbl_version.setStyleSheet(footer_style)
         self.lbl_db.setStyleSheet(footer_style)
-        
-        self.btn_sync = QPushButton(" 🌐 Sin conexión")
-        self.btn_sync.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_sync.clicked.connect(self.gestionar_sync_sheets)
-        self.actualizar_btn_sync()
-        
+
         footer_layout.addWidget(self.lbl_version)
         footer_layout.addWidget(self.lbl_db)
-        footer_layout.addWidget(self.btn_sync)
+        
         
         layout_sidebar.addWidget(footer_container)
 
@@ -725,88 +638,6 @@ class VentanaPrincipal(QMainWindow):
         # Abrimos la pestaña inicio por defecto
         QTimer.singleShot(0, lambda: self.cambiar_pestana_fija(self.pestana_inicio, self.btn_inicio))
 
-    def actualizar_btn_sync(self):
-        estado = self.settings.value("google_drive_status", "Sin conexión", type=str)
-        if estado == "Sincronizado":
-            bg = "#10b981"
-            txt = "🌐 Sincronizado"
-        elif estado == "Pendiente":
-            bg = "#f59e0b"
-            txt = "🌐 Pendiente..."
-        else:
-            bg = "#64748b"
-            txt = "🌐 Sin conexión"
-
-        self.btn_sync.setText(txt)
-        self.btn_sync.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {bg};
-                color: white;
-                border-radius: 4px;
-                padding: 4px;
-                font-size: 10px;
-                font-weight: bold;
-                border: none;
-            }}
-            QPushButton:hover {{ opacity: 0.8; }}
-        """)
-
-    def _limpiar_worker(self, worker):
-        if worker in self._workers_activos:
-            self._workers_activos.remove(worker)
-        worker.deleteLater()
-
-    def gestionar_sync_sheets(self):
-        estado = self.settings.value("google_drive_status", "Sin conexión", type=str)
-        if estado == "Sin conexión":
-            self.dialogo_auth = DialogoGoogleAuth(self)
-            
-            worker = WorkerAuthGoogle(self)
-            self._workers_activos.append(worker)
-            worker.finished_auth.connect(self._on_auth_terminado)
-            worker.finished.connect(lambda w=worker: self._limpiar_worker(w))
-            worker.start()
-            
-            self.dialogo_auth.exec()
-        else:
-            dialogo = DialogoDesvincularGoogle(self)
-            if dialogo.exec() == 1:
-                desvincular_cuenta_google()
-                self.settings.setValue("google_drive_status", "Sin conexión")
-                self.actualizar_btn_sync()
-
-    def _on_auth_terminado(self, exito, msj):
-        if hasattr(self, 'dialogo_auth') and self.dialogo_auth:
-            self.dialogo_auth.accept()
-        
-        if exito:
-            self.settings.setValue("google_drive_status", "Sincronizado")
-        else:
-            logging.error(f"Error auth: {msj}")
-            
-        self.actualizar_btn_sync()
-
-    def intentar_sync_sheets(self, datos):
-        estado = self.settings.value("google_drive_status", "Sin conexión", type=str)
-        if estado == "Sin conexión": return
-        
-        self.settings.setValue("google_drive_status", "Pendiente")
-        self.actualizar_btn_sync()
-        
-        worker = WorkerSyncSheets(datos)
-        self._workers_activos.append(worker)
-        worker.resultado_sync.connect(self._on_sync_terminado)
-        worker.finished.connect(lambda w=worker: self._limpiar_worker(w))
-        worker.start()
-
-    def _on_sync_terminado(self, exito, mensaje):
-        if exito:
-            self.settings.setValue("google_drive_status", "Sincronizado")
-        else:
-            self.settings.setValue("google_drive_status", "Pendiente")
-            logging.error(f"Sync failed: {mensaje}")
-        self.actualizar_btn_sync()
-
     def toggle_sidebar(self):
         self.sidebar_colapsada = not self.sidebar_colapsada
         self.settings.setValue("sidebar_colapsada", self.sidebar_colapsada)
@@ -821,8 +652,6 @@ class VentanaPrincipal(QMainWindow):
         self.lbl_version.setVisible(not self.sidebar_colapsada)
         self.lbl_db.setVisible(not self.sidebar_colapsada)
         self.lbl_en_curso.setVisible(not self.sidebar_colapsada)
-        if hasattr(self, 'btn_sync'):
-            self.btn_sync.setVisible(not self.sidebar_colapsada)
         if hasattr(self, 'btn_nueva_op'):
             self.btn_nueva_op.setVisible(not self.sidebar_colapsada)
         
@@ -984,9 +813,6 @@ class VentanaPrincipal(QMainWindow):
 
         self.cerrar_operacion(id_op, forzar=True)
         self.notificar_cambios(["STOCK", "CLIENTES", "PRESUPUESTOS"])
-        
-        if datos:
-            self.intentar_sync_sheets(datos)
 
     def actualizar_catalogos_operaciones(self):
         for id_op, (widget, tarjeta) in self.operaciones_abiertas.items():
